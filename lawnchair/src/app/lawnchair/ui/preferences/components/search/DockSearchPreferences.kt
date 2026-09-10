@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import app.lawnchair.hotseat.DisabledHotseat
 import app.lawnchair.hotseat.HotseatMode
 import app.lawnchair.hotseat.LawnchairHotseat
 import app.lawnchair.preferences.PreferenceAdapter
@@ -80,7 +79,7 @@ fun DockSearchPreference(
                         adapter = hotseatModeAdapter,
                     )
                 }
-                ExpandAndShrink(visible = hotseatModeAdapter.state.value != DisabledHotseat) {
+                ExpandAndShrink(visible = isLawnchairHotseat) {
                     Column {
                         DockSearchBarPreview(
                             provider = hotseatQsbProviderAdapter,

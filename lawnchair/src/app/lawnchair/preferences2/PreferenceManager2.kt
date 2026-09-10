@@ -130,6 +130,7 @@ class PreferenceManager2 @Inject constructor(
         defaultValue = HotseatMode.fromString(context.getString(R.string.config_default_hotseat_mode)),
         parse = { HotseatMode.fromString(it) },
         save = { it.toString() },
+        onSet = { reloadHelper.recreate() },
     )
 
     val iconShape = preference(
@@ -209,6 +210,13 @@ class PreferenceManager2 @Inject constructor(
         save = ColorOption::toString,
         onSet = { reloadHelper.restart() },
         defaultValue = ColorOption.fromString(context.getString(R.string.config_default_accent_color)),
+    )
+
+    // -1 preserves the legacy background switch until a mode is explicitly selected.
+    val hotseatBackgroundMode = preference(
+        key = intPreferencesKey("hotseat_background_mode"),
+        defaultValue = -1,
+        onSet = { reloadHelper.recreate() },
     )
 
     val hotseatBackgroundColor = preference(

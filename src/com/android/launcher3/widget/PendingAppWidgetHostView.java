@@ -251,6 +251,15 @@ public class PendingAppWidgetHostView extends LauncherAppWidgetHostView
             return;
         }
         if (mActivityContext instanceof Launcher launcher) {
+            android.view.ViewParent ancestor = getParent();
+            while (ancestor != null) {
+                if (ancestor instanceof WidgetStackView stackView) {
+                    stackView.replaceWidgetView(this,
+                            launcher.getItemInflater().inflateWidgetStackMember(info));
+                    return;
+                }
+                ancestor = ancestor.getParent();
+            }
             // Remove and rebind the current widget (which was inflated in the wrong
             // orientation), but don't delete it from the database
             launcher.removeItem(this, info, false  /* deleteFromDb */,

@@ -68,11 +68,23 @@ public class GestureNavContract {
         this.mCallback = callback;
     }
 
+    /** Invalidate the previous gesture's completion before this surface starts laying out. */
+    public void begin(ActivityContext context) {
+        if (sMessageReceiver == null) {
+            sMessageReceiver = new StaticMessageReceiver();
+        }
+        sMessageReceiver.setCurrentContext(context, this);
+    }
+
     /**
-     * Sends the position information to the receiver
+     * Sends valid position information; returns false if the receiver is unavailable.
      */
-    public void sendEndPosition(RectF position, ActivityContext context,
+    public boolean sendEndPosition(RectF position, ActivityContext context,
             @Nullable SurfaceControl surfaceControl) {
+        if (position.isEmpty() || !Float.isFinite(position.left) || !Float.isFinite(position.top)
+                || !Float.isFinite(position.right) || !Float.isFinite(position.bottom)) {
+            return false;
+        }
         Bundle result = new Bundle();
         result.putParcelable(EXTRA_ICON_POSITION, position);
         if (ATLEAST_Q) {
@@ -81,7 +93,7 @@ public class GestureNavContract {
         if (sMessageReceiver == null) {
             sMessageReceiver = new StaticMessageReceiver();
         }
-        result.putParcelable(EXTRA_ON_FINISH_CALLBACK, sMessageReceiver.setCurrentContext(context));
+        result.putParcelable(EXTRA_ON_FINISH_CALLBACK, sMessageReceiver.setCurrentContext(context, this));
 
         Message callback = Message.obtain();
         callback.copyFrom(mCallback);
@@ -89,8 +101,10 @@ public class GestureNavContract {
 
         try {
             callback.replyTo.send(callback);
+            return true;
         } catch (RemoteException e) {
             Log.e(TAG, "Error sending icon position", e);
+            return false;
         }
     }
 
@@ -151,18 +165,28 @@ public class GestureNavContract {
 
         private WeakReference<ActivityContext> mLastTarget = new WeakReference<>(null);
 
-        public Message setCurrentContext(ActivityContext context) {
+        private WeakReference<GestureNavContract> mLastContract = new WeakReference<>(null);
+        private int mGeneration;
+
+        public Message setCurrentContext(ActivityContext context, GestureNavContract contract) {
+            if (mLastContract.get() != contract) {
+                mGeneration++;
+                mLastContract = new WeakReference<>(contract);
+            }
             mLastTarget = new WeakReference<>(context);
 
             Message msg = Message.obtain();
             msg.replyTo = mMessenger;
             msg.what = MSG_CLOSE_LAST_TARGET;
+            msg.arg1 = mGeneration;
             return msg;
         }
 
         @Override
         public boolean handleMessage(@NonNull Message message) {
             if (message.what == MSG_CLOSE_LAST_TARGET) {
+                // A late completion from a previous gesture must not close the new icon surface.
+                if (message.arg1 != mGeneration) return true;
                 ActivityContext lastContext = mLastTarget.get();
                 if (lastContext != null) {
                     AbstractFloatingView.closeOpenViews(lastContext, false, TYPE_ICON_SURFACE);

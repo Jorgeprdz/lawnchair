@@ -74,6 +74,10 @@ class FolderAnimationSpringBuilderManager(
     companion object {
         /** Returns the list of "preview items" on {@param page}. */
         fun getPreviewIconsOnPage(folder: Folder, page: Int): List<View> {
+            if (folder.folderIcon.isLargeFolder) {
+                val preview = folder.folderIcon.getPreviewItemsOnPage(page)
+                return folder.getItemsOnPage(page).filter { it.tag in preview }
+            }
             return createFolderGridOrganizer(folder.mActivityContext.deviceProfile)
                 .setFolderInfo(folder.mInfo)
                 .previewItemsForPage(page, folder.iconsInReadingOrder)

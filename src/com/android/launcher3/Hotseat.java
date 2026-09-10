@@ -147,6 +147,10 @@ public class Hotseat extends FrameLayout implements Insettable {
             hotseatMode = LawnchairHotseat.INSTANCE;
             com.patrykmichalik.opto.core.PreferenceExtensionsKt.setBlocking(preferenceManager2.getHotseatMode(), hotseatMode);
         }
+        if (hotseatMode != app.lawnchair.hotseat.PixelSearchHotseat.INSTANCE
+                && mActivity instanceof Launcher) {
+            app.lawnchair.qsb.PixelSearchQsbFragment.release(context);
+        }
         int layoutId = hotseatMode.getLayoutResourceId();
 
         mIconsContainer = new FrameLayout(context);
@@ -172,7 +176,8 @@ public class Hotseat extends FrameLayout implements Insettable {
         mIconsContainer.addView(mPageIndicator);
         mPagedView.setPageIndicator(mPageIndicator);
 
-        if (Flags.enableQsbOnHotseat()) {
+        if (Flags.enableQsbOnHotseat()
+                && hotseatMode != app.lawnchair.hotseat.PixelSearchHotseat.INSTANCE) {
             mQsb = LayoutInflater.from(context).inflate(R.layout.qsb_container_hotseat, this,
                     false);
         } else {
@@ -201,8 +206,45 @@ public class Hotseat extends FrameLayout implements Insettable {
         setClipToPadding(false);
     }
 
+    private int getBackgroundMode() {
+        int mode = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatBackgroundMode());
+        return mode >= 0 && mode <= 3 ? mode : (preferenceManager.getHotseatBG().get() ? 1 : 0);
+    }
+
+    private final java.util.function.Consumer<Boolean> mBlurEnabledListener =
+            enabled -> setUpBackground();
+    private android.view.WindowManager mBlurWindowManager;
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (android.os.Build.VERSION.SDK_INT >= 31 && getBackgroundMode() >= 2) {
+            mBlurWindowManager = getContext().getSystemService(android.view.WindowManager.class);
+            if (mBlurWindowManager != null) {
+                mBlurWindowManager.addCrossWindowBlurEnabledListener(mBlurEnabledListener);
+            }
+        }
+        setUpBackground();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (android.os.Build.VERSION.SDK_INT >= 31 && mBlurWindowManager != null) {
+            mBlurWindowManager.removeCrossWindowBlurEnabledListener(mBlurEnabledListener);
+            mBlurWindowManager = null;
+        }
+        if (getBackground() != null) getBackground().setVisible(false, false);
+        setBackground(null);
+        super.onDetachedFromWindow();
+    }
+
     private void setUpBackground() {
-        if(!preferenceManager.getHotseatBG().get()) return;
+        if (getBackground() != null) getBackground().setVisible(false, false);
+        int mode = getBackgroundMode();
+        if (mode == 0) {
+            setBackground(null);
+            return;
+        }
 
         var bgColor = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatBackgroundColor());
         var transparency = preferenceManager.getHotseatBGAlpha().get();
@@ -222,7 +264,11 @@ public class Hotseat extends FrameLayout implements Insettable {
         GradientDrawable background = new GradientDrawable();
         background.setColor(finalColor);
         background.setCornerRadius(cornerRadius);
-        InsetDrawable bg = new InsetDrawable(background,
+        android.graphics.drawable.Drawable surface = mode >= 2
+                ? com.android.launcher3.graphics.DockGlassBackground.create(
+                        this, mode == 3, finalColor, cornerRadius)
+                : background;
+        InsetDrawable bg = new InsetDrawable(surface,
                 insetHorizontalLeft, insetVerticalTop, insetHorizontalRight, insetVerticalBottom);
         setBackground(bg);
     }

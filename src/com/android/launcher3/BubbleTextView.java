@@ -194,7 +194,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
     private boolean mLayoutHorizontal;
     private final boolean mIsRtl;
-    private final int mIconSize;
+    private int mIconSize;
+    private final int mNormalIconSize;
 
     @ViewDebug.ExportedProperty(category = "launcher")
     private boolean mHideBadge = false;
@@ -316,6 +317,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
         mIconSize = a.getDimensionPixelSize(R.styleable.BubbleTextView_iconSizeOverride,
                 defaultIconSize);
+        mNormalIconSize = mIconSize;
         a.recycle();
 
         mRunningAppIndicatorHeight =
@@ -1074,7 +1076,25 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int height = MeasureSpec.getSize(heightMeasureSpec);
-        if (mCenterVertically) {
+        boolean maxIcon = mDisplay == DISPLAY_WORKSPACE
+                && getTag() instanceof WorkspaceItemInfo info
+                && com.android.launcher3.util.WorkspaceItemSize.isMax(info);
+        int desiredIconSize = mNormalIconSize;
+        if (maxIcon) {
+            Paint.FontMetrics metrics = getPaint().getFontMetrics();
+            int labelHeight = (int) Math.ceil(metrics.bottom - metrics.top)
+                    * getCellSpecMaxTextLineCount() + getCompoundDrawablePadding();
+            int availableWidth = MeasureSpec.getSize(widthMeasureSpec)
+                    - getPaddingLeft() - getPaddingRight();
+            int availableHeight = height - labelHeight - getPaddingBottom();
+            desiredIconSize = Math.max(1, Math.min(mNormalIconSize * 2,
+                    Math.min(availableWidth, availableHeight)));
+        }
+        if (mIconSize != desiredIconSize) {
+            mIconSize = desiredIconSize;
+            applyCompoundDrawables(getIconOrTransparentColor());
+        }
+        if (mCenterVertically || maxIcon) {
             Paint.FontMetrics fm = getPaint().getFontMetrics();
             int cellHeightPx = mIconSize + getCompoundDrawablePadding() +
                     (int) Math.ceil(fm.bottom - fm.top) * getCellSpecMaxTextLineCount();

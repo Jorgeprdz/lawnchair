@@ -213,6 +213,7 @@ import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.model.data.PredictedContainerInfo;
 import com.android.launcher3.model.data.WorkspaceData;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.model.data.WidgetStackInfo;
 import com.android.launcher3.notification.NotificationListener;
 import com.android.launcher3.pm.PinRequestHelper;
 import com.android.launcher3.popup.ArrowPopup;
@@ -265,6 +266,7 @@ import com.android.launcher3.widget.PendingAddWidgetInfo;
 import com.android.launcher3.widget.PendingAppWidgetHostView;
 import com.android.launcher3.widget.WidgetAddFlowHandler;
 import com.android.launcher3.widget.WidgetManagerHelper;
+import com.android.launcher3.widget.WidgetStackView;
 import com.android.launcher3.widget.custom.CustomWidgetManager;
 import com.android.launcher3.widget.model.WidgetsListBaseEntry;
 import com.android.launcher3.widget.picker.WidgetsFullSheet;
@@ -850,8 +852,11 @@ public class Launcher extends StatefulActivity<LauncherState>
 
         if (requestCode == REQUEST_BIND_APPWIDGET) {
             // This is called only if the user did not previously have permissions to bind widgets
-            final int appWidgetId = data != null ?
+            final int returnedWidgetId = data != null ?
                     data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) : -1;
+            // A cancelled permission dialog can return no Intent. The pending request still
+            // owns the allocated ID, including when the destination is a widget stack.
+            final int appWidgetId = returnedWidgetId >= 0 ? returnedWidgetId : pendingAddWidgetId;
             if (resultCode == RESULT_CANCELED) {
                 completeTwoStageWidgetDrop(RESULT_CANCELED, appWidgetId, requestArgs);
                 mWorkspace.removeExtraEmptyScreenDelayed(
@@ -889,6 +894,10 @@ public class Launcher extends StatefulActivity<LauncherState>
                         ON_ACTIVITY_RESULT_ANIMATION_DELAY, false,
                         () -> getStateManager().goToState(NORMAL));
             } else {
+                if (requestArgs.container >= 0) {
+                    completeTwoStageWidgetDrop(resultCode, appWidgetId, requestArgs);
+                    return;
+                }
                 CellPos presenterPos = getCellPosMapper().mapModelToPresenter(requestArgs);
                 if (requestArgs.container == CONTAINER_DESKTOP) {
                     // When the screen id represents an actual screen (as opposed to a rank)
@@ -969,6 +978,24 @@ public class Launcher extends StatefulActivity<LauncherState>
     @Thunk
     void completeTwoStageWidgetDrop(
             final int resultCode, final int appWidgetId, final PendingRequestArgs requestArgs) {
+        if (requestArgs.container >= 0) {
+            if (resultCode == RESULT_OK) {
+                completeAddAppWidget(appWidgetId, requestArgs,
+                        mWorkspace.getWidgetForAppWidgetId(appWidgetId), null, false, true, null);
+            } else {
+                com.android.launcher3.widget.WidgetStackView stackView =
+                        com.android.launcher3.widget.WidgetStackController.findStack(
+                                this, requestArgs.container);
+                LauncherAppWidgetHostView memberView = mWorkspace.getWidgetForAppWidgetId(appWidgetId);
+                if (stackView != null && memberView != null
+                        && memberView.getTag() instanceof LauncherAppWidgetInfo member) {
+                    com.android.launcher3.widget.WidgetStackController.remove(this, stackView, member);
+                } else if (appWidgetId >= 0) {
+                    mAppWidgetHolder.deleteAppWidgetId(appWidgetId);
+                }
+            }
+            return;
+        }
         CellLayout cellLayout = mWorkspace.getScreenWithId(
                 getCellPosMapper().mapModelToPresenter(requestArgs).screenId);
         Runnable onCompleteRunnable = null;
@@ -1512,10 +1539,11 @@ public class Launcher extends StatefulActivity<LauncherState>
             // Show resize frame on the newly inflated LauncherAppWidgetHostView.
             LauncherAppWidgetHostView reInflatedHostView =
                     getWorkspace().getWidgetForAppWidgetId(appWidgetId);
-            showWidgetResizeFrame(
-                    reInflatedHostView,
-                    (LauncherAppWidgetInfo) reInflatedHostView.getTag(),
-                    presenterPos);
+            if (reInflatedHostView == null) return;
+            if (itemInfo.container < 0) {
+                showWidgetResizeFrame(reInflatedHostView,
+                        (LauncherAppWidgetInfo) reInflatedHostView.getTag(), presenterPos);
+            }
             // We always update widget size after re-inflating PendingAppWidgetHostView
             WidgetSizes.updateWidgetSizeRanges(
                     reInflatedHostView, this, itemInfo.spanX, itemInfo.spanY);
@@ -1529,6 +1557,10 @@ public class Launcher extends StatefulActivity<LauncherState>
         } else if (itemInfo instanceof PendingRequestArgs) {
             launcherInfo.sourceContainer =
                     ((PendingRequestArgs) itemInfo).getWidgetSourceContainer();
+        }
+        if (com.android.launcher3.widget.WidgetStackController.completeAdd(
+                this, itemInfo.container, launcherInfo, appWidgetInfo, hostView)) {
+            return;
         }
         getModelWriter().addItemToDatabase(launcherInfo,
                 itemInfo.container, presenterPos.screenId, presenterPos.cellX, presenterPos.cellY);
@@ -1863,7 +1895,10 @@ public class Launcher extends StatefulActivity<LauncherState>
         final boolean isActivityStarted = addFlowHandler.startConfigActivity(
                 this, appWidgetId, info, REQUEST_CREATE_APPWIDGET);
 
-        if (!enableAddAppWidgetViaConfigActivityV2() && isActivityStarted) {
+        // Stack membership is committed only after configuration succeeds. The existing
+        // PendingRequestArgs retains the stack container and owns cancellation cleanup.
+        if (isActivityStarted && (info.container >= 0
+                || !enableAddAppWidgetViaConfigActivityV2())) {
             return;
         }
 
@@ -2063,6 +2098,11 @@ public class Launcher extends StatefulActivity<LauncherState>
             if (deleteFromDb) {
                 getModelWriter().deleteItemFromDatabase(itemInfo, reason);
             }
+        } else if (itemInfo instanceof WidgetStackInfo stack) {
+            mWorkspace.removeWorkspaceItem(v);
+            if (deleteFromDb) {
+                getModelWriter().deleteWidgetStack(stack, getAppWidgetHolder(), reason);
+            }
         } else if (itemInfo instanceof CollectionInfo ci) {
             mWorkspace.removeWorkspaceItem(v);
             if (deleteFromDb) {
@@ -2254,6 +2294,9 @@ public class Launcher extends StatefulActivity<LauncherState>
             }
             if (enableWorkspaceInflation() && view instanceof LauncherAppWidgetHostView lv) {
                 view = getAppWidgetHolder().attachViewToHostAndGetAttachedView(lv);
+            }
+            if (enableWorkspaceInflation() && view instanceof WidgetStackView stackView) {
+                stackView.attachWidgetsToHost(getAppWidgetHolder());
             }
             workspace.addInScreenFromBind(view, item);
             if (boundAnim != null) {
@@ -2996,9 +3039,9 @@ public class Launcher extends StatefulActivity<LauncherState>
     public Stream<SystemShortcut.Factory> getSupportedShortcuts(int container) {
         if (enableLongPressRemoveShortcut()
                 && (container == CONTAINER_DESKTOP || container == CONTAINER_HOTSEAT)) {
-            return Stream.of(APP_INFO, WIDGETS, INSTALL, REMOVE);
+            return Stream.of(APP_INFO, WIDGETS, INSTALL, REMOVE, SystemShortcut.WORKSPACE_SIZE);
         }
-        return Stream.of(APP_INFO, WIDGETS, INSTALL);
+        return Stream.of(APP_INFO, WIDGETS, INSTALL, SystemShortcut.WORKSPACE_SIZE);
     }
 
     /**

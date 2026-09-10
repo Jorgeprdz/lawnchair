@@ -129,6 +129,7 @@ import com.android.launcher3.util.RunnableList;
 import com.android.launcher3.util.Thunk;
 import com.android.launcher3.util.WallpaperOffsetInterpolator;
 import com.android.launcher3.widget.LauncherAppWidgetHostView;
+import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
 import com.android.launcher3.widget.NavigableAppWidgetHostView;
 import com.android.launcher3.widget.PendingAddShortcutInfo;
 import com.android.launcher3.widget.PendingAddWidgetInfo;
@@ -444,6 +445,17 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                             (LauncherAppWidgetInfo) view.getTag();
                     WidgetSizes.updateWidgetSizeRanges((LauncherAppWidgetHostView) view,
                             mLauncher, launcherAppWidgetInfo.spanX, launcherAppWidgetInfo.spanY);
+                } else if (view instanceof com.android.launcher3.widget.WidgetStackView stackView
+                        && view.getTag() instanceof
+                                com.android.launcher3.model.data.WidgetStackInfo stack) {
+                    for (LauncherAppWidgetInfo member : stack.getContents()) {
+                        LauncherAppWidgetHostView host = stackView.findWidgetByAppWidgetId(
+                                member.appWidgetId);
+                        if (host != null) {
+                            WidgetSizes.updateWidgetSizeRanges(host, mLauncher,
+                                    stack.spanX, stack.spanY);
+                        }
+                    }
                 }
             }
         }
@@ -1958,6 +1970,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             if (btv.isDisplaySearchResult()) {
                 dragOptions.preDragEndScale = (float) mAllAppsIconSize / btv.getIconSize();
             }
+        } else if (child instanceof FolderIcon && !dragOptions.isAccessibleDrag) {
+            dragOptions.preDragCondition =
+                    com.android.launcher3.util.WorkspaceItemSize.showFolderActions(mLauncher, child);
         }
 
         boolean lockHomeScreen = PreferenceCacheExtensionsKt.firstCached(mPreferenceManager2.getLockHomeScreen());
@@ -2069,8 +2084,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             }
 
             int[] resultSpan = new int[2];
-            mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
-                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
+            mTargetCell = performReorderForItem(d.dragInfo, dropTargetLayout,
+                    (int) mDragViewVisualCenter[0], (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                     null, mTargetCell, resultSpan, CellLayout.MODE_ACCEPT_DROP);
             boolean foundCell = mTargetCell[0] >= 0 && mTargetCell[1] >= 0;
 
@@ -2097,6 +2112,10 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     }
 
     boolean willCreateUserFolder(ItemInfo info, View dropOverView, boolean considerTimeout) {
+        // Max items retain their workspace footprint until explicitly restored to normal size.
+        if (com.android.launcher3.util.WorkspaceItemSize.isMax(info)
+                || dropOverView != null && dropOverView.getTag() instanceof ItemInfo targetInfo
+                    && com.android.launcher3.util.WorkspaceItemSize.isMax(targetInfo)) return false;
         if (dropOverView != null) {
             CellLayoutLayoutParams lp = (CellLayoutLayoutParams) dropOverView.getLayoutParams();
             if (lp.useTmpCoords && (lp.getTmpCellX() != lp.getCellX()
@@ -2310,8 +2329,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (returnToOriginalCellToPreventShuffling) {
                     mTargetCell[0] = mTargetCell[1] = -1;
                 } else {
-                    mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
-                            (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
+                    mTargetCell = performReorderForItem(d.dragInfo, dropTargetLayout,
+                            (int) mDragViewVisualCenter[0], (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                             cell, mTargetCell, resultSpan, CellLayout.MODE_ON_DROP);
                 }
 
@@ -2321,9 +2340,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (foundCell && (cell instanceof AppWidgetHostView) &&
                         (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY)) {
                     resizeOnDrop = true;
+                    AppWidgetHostView awhv = (AppWidgetHostView) cell;
                     item.spanX = resultSpan[0];
                     item.spanY = resultSpan[1];
-                    AppWidgetHostView awhv = (AppWidgetHostView) cell;
                     WidgetSizes.updateWidgetSizeRanges(awhv, mLauncher, resultSpan[0],
                             resultSpan[1]);
                 }
@@ -2682,7 +2701,62 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
 
     private boolean isDragWidget(DragObject d) {
         return (d.dragInfo instanceof LauncherAppWidgetInfo ||
+                d.dragInfo instanceof com.android.launcher3.model.data.WidgetStackInfo ||
                 d.dragInfo instanceof PendingAddWidgetInfo);
+    }
+
+    /** Applies provider constraints before CellLayout reserves or reorders any cells. */
+    private int[] performReorderForItem(ItemInfo item, CellLayout layout, int pixelX, int pixelY,
+            int minSpanX, int minSpanY, int spanX, int spanY, View child,
+            int[] targetCell, int[] resultSpan, int mode) {
+        if (item instanceof com.android.launcher3.model.data.WidgetStackInfo
+                || com.android.launcher3.util.WorkspaceItemSize.isMax(item)) {
+            // Moving a stack preserves its all-member-compatible footprint. Explicit resizing
+            // goes through the stack editor and validates every provider first.
+            return layout.performReorder(pixelX, pixelY, item.spanX, item.spanY,
+                    item.spanX, item.spanY, child, targetCell, resultSpan, mode);
+        }
+        AppWidgetProviderInfo provider = null;
+        if (item instanceof PendingAddWidgetInfo) {
+            provider = ((PendingAddWidgetInfo) item).info;
+        } else if (child instanceof AppWidgetHostView) {
+            provider = ((AppWidgetHostView) child).getAppWidgetInfo();
+        }
+
+        if (provider != null
+                && !PreferenceCacheExtensionsKt.firstCached(mPreferenceManager2.getForceWidgetResize())) {
+            int maxSpanX = layout.getCountX();
+            int maxSpanY = layout.getCountY();
+            if (provider instanceof LauncherAppWidgetProviderInfo) {
+                LauncherAppWidgetProviderInfo info = (LauncherAppWidgetProviderInfo) provider;
+                minSpanX = Math.max(minSpanX, info.minSpanX);
+                minSpanY = Math.max(minSpanY, info.minSpanY);
+                maxSpanX = Math.min(maxSpanX, info.maxSpanX);
+                maxSpanY = Math.min(maxSpanY, info.maxSpanY);
+            }
+            // Moving a widget must preserve the current size of a non-resizable axis.
+            if ((provider.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
+                minSpanX = spanX;
+                maxSpanX = Math.min(maxSpanX, spanX);
+            }
+            if ((provider.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
+                minSpanY = spanY;
+                maxSpanY = Math.min(maxSpanY, spanY);
+            }
+            minSpanX = Math.max(1, minSpanX);
+            minSpanY = Math.max(1, minSpanY);
+            if (minSpanX > maxSpanX || minSpanY > maxSpanY) {
+                targetCell[0] = targetCell[1] = -1;
+                if (resultSpan != null) {
+                    resultSpan[0] = resultSpan[1] = -1;
+                }
+                return targetCell;
+            }
+            spanX = Math.max(minSpanX, Math.min(spanX, maxSpanX));
+            spanY = Math.max(minSpanY, Math.min(spanY, maxSpanY));
+        }
+        return layout.performReorder(pixelX, pixelY, minSpanX, minSpanY, spanX, spanY,
+                child, targetCell, resultSpan, mode);
     }
 
     public void onDragOver(DragObject d) {
@@ -2758,7 +2832,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         final View child = (mDragInfo == null) ? null : mDragInfo.cell;
         if (!nearestDropOccupied) {
             int[] span = new int[2];
-            mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            performReorderForItem(item, mDragTargetLayout, (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, item.spanX, item.spanY,
                     child, mTargetCell, span, CellLayout.MODE_SHOW_REORDER_HINT);
             mDragTargetLayout.visualizeDropLocation(mTargetCell[0], mTargetCell[1], span[0],
@@ -2773,7 +2847,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             mReorderAlarm.cancelAlarm();
             mLastReorderX = reorderX;
             mLastReorderY = reorderY;
-            mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            performReorderForItem(item, mDragTargetLayout, (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, item.spanX, item.spanY,
                     child, mTargetCell, new int[2], CellLayout.MODE_SHOW_REORDER_HINT);
             // Otherwise, if we aren't adding to or creating a folder and there's no pending
@@ -2849,7 +2923,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private boolean shouldUseHotseatAsDropLayout(DragObject dragObject) {
         if (mLauncher.getHotseat() == null
                 || mLauncher.getHotseat().getShortcutsAndWidgets() == null
-                || isDragWidget(dragObject)) {
+                || isDragWidget(dragObject)
+                || com.android.launcher3.util.WorkspaceItemSize.isMax(dragObject.dragInfo)) {
             return false;
         }
         View hotseatIcons = mLauncher.getHotseat().getPagedView();
@@ -3009,7 +3084,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, mDragTargetLayout,
                     mTargetCell);
 
-            mTargetCell = mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            mTargetCell = performReorderForItem(dragObject.dragInfo, mDragTargetLayout,
+                    (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                     child, mTargetCell, resultSpan, CellLayout.MODE_DRAG_OVER);
 
@@ -3093,9 +3169,16 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     minSpanY = item.minSpanY;
                 }
                 int[] resultSpan = new int[2];
-                mTargetCell = cellLayout.performReorder((int) mDragViewVisualCenter[0],
+                mTargetCell = performReorderForItem(item, cellLayout, (int) mDragViewVisualCenter[0],
                         (int) mDragViewVisualCenter[1], minSpanX, minSpanY, info.spanX, info.spanY,
                         null, mTargetCell, resultSpan, CellLayout.MODE_ON_DROP_EXTERNAL);
+
+                if (mTargetCell[0] < 0 || mTargetCell[1] < 0) {
+                    cellLayout.revertTempState();
+                    d.deferDragViewCleanupPostAnimation = false;
+                    onNoCellFound(cellLayout, item, d.logInstanceId);
+                    return;
+                }
 
                 if (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY) {
                     updateWidgetSize = true;
@@ -3656,6 +3739,16 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
      */
     public void removeWidget(int appWidgetId) {
         mapOverItems((info, view) -> {
+            if (info instanceof com.android.launcher3.model.data.WidgetStackInfo stack
+                    && view instanceof com.android.launcher3.widget.WidgetStackView stackView) {
+                for (LauncherAppWidgetInfo member : stack.getContents()) {
+                    if (member.appWidgetId == appWidgetId) {
+                        com.android.launcher3.widget.WidgetStackController.remove(
+                                mLauncher, stackView, member);
+                        return true;
+                    }
+                }
+            }
             if (info instanceof LauncherAppWidgetInfo) {
                 LauncherAppWidgetInfo appWidgetInfo = (LauncherAppWidgetInfo) info;
                 if (appWidgetInfo.appWidgetId == appWidgetId) {
@@ -3756,8 +3849,24 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     }
 
     public LauncherAppWidgetHostView getWidgetForAppWidgetId(final int appWidgetId) {
-        return (LauncherAppWidgetHostView) mapOverItems((info, v) ->
+        LauncherAppWidgetHostView widget = (LauncherAppWidgetHostView) mapOverItems((info, v) ->
                 (info instanceof LauncherAppWidgetInfo lawi) && lawi.appWidgetId == appWidgetId);
+        if (widget != null) {
+            return widget;
+        }
+        for (CellLayout layout : getWorkspaceAndHotseatCellLayouts()) {
+            ShortcutAndWidgetContainer children = layout.getShortcutsAndWidgets();
+            for (int i = 0; i < children.getChildCount(); i++) {
+                if (children.getChildAt(i) instanceof
+                        com.android.launcher3.widget.WidgetStackView stackView) {
+                    widget = stackView.findWidgetByAppWidgetId(appWidgetId);
+                    if (widget != null) {
+                        return widget;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     void clearDropTargets() {

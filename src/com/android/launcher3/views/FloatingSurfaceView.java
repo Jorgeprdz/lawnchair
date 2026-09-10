@@ -118,6 +118,7 @@ public class FloatingSurfaceView extends AbstractFloatingView implements
         FloatingSurfaceView view = launcher.getViewCache().getView(R.layout.floating_surface_view,
                 launcher, launcher.getDragLayer());
         view.mContract = contract;
+        contract.begin(launcher);
         view.mIsOpen = true;
 
         view.removeViewImmediate();

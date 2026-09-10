@@ -3,7 +3,6 @@ package app.lawnchair.hotseat
 import android.content.Context
 import androidx.annotation.LayoutRes
 import androidx.annotation.StringRes
-import app.lawnchair.util.isPackageInstalledAndEnabled
 import com.android.launcher3.R
 
 sealed class HotseatMode(
@@ -13,7 +12,7 @@ sealed class HotseatMode(
     companion object {
         fun fromString(value: String): HotseatMode = when (value) {
             "disabled" -> DisabledHotseat
-            "google_search" -> GoogleSearchHotseat
+            "google_search", "pixel_search" -> PixelSearchHotseat
             else -> LawnchairHotseat
         }
 
@@ -23,7 +22,7 @@ sealed class HotseatMode(
         fun values() = listOf(
             DisabledHotseat,
             LawnchairHotseat,
-            GoogleSearchHotseat,
+            PixelSearchHotseat,
         )
     }
 
@@ -38,13 +37,14 @@ object LawnchairHotseat : HotseatMode(
     override fun isAvailable(context: Context): Boolean = true
 }
 
-object GoogleSearchHotseat : HotseatMode(
-    nameResourceId = R.string.hotseat_mode_google_search,
-    layoutResourceId = R.layout.search_container_hotseat_google_search,
+object PixelSearchHotseat : HotseatMode(
+    nameResourceId = R.string.search_provider_pixel_search,
+    layoutResourceId = R.layout.search_container_hotseat_pixel_search,
 ) {
-    override fun toString(): String = "google_search"
+    override fun toString(): String = "pixel_search"
 
-    override fun isAvailable(context: Context): Boolean = context.packageManager.isPackageInstalledAndEnabled("com.google.android.googlequicksearchbox")
+    // Keep the choice across uninstall/reinstall; the native host displays Lawnchair fallback.
+    override fun isAvailable(context: Context): Boolean = true
 }
 
 object DisabledHotseat : HotseatMode(

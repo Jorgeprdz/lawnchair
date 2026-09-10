@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dock_background_frosty">Frosty</string>
+    <string name="folder_background_style">Background style</string>
+    <string name="glass_effect_intensity">Effect intensity</string>
+</resources>

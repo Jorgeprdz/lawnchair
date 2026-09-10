@@ -86,5 +86,18 @@
             android:visibility="gone"
             android:contentDescription="@string/widget_reconfigure_button_content_description" />
 
+        <ImageButton
+            android:id="@+id/widget_create_stack_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|start"
+            android:layout_marginBottom="@dimen/widget_reconfigure_button_margin"
+            android:layout_marginStart="@dimen/widget_reconfigure_button_margin"
+            android:src="@android:drawable/ic_input_add"
+            android:tint="?attr/workspaceAccentColor"
+            android:background="?android:attr/selectableItemBackground"
+            android:visibility="gone"
+            android:contentDescription="@string/widget_stack_create" />
+
     </FrameLayout>
 </com.android.launcher3.AppWidgetResizeFrame>

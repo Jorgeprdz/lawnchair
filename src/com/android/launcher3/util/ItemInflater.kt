@@ -18,11 +18,14 @@ package com.android.launcher3.util
 
 import android.appwidget.AppWidgetHostView
 import android.content.Context
+import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnFocusChangeListener
 import android.view.ViewGroup
+import android.widget.TextView
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.LauncherAppState
 import com.android.launcher3.LauncherSettings.Favorites
@@ -34,12 +37,14 @@ import com.android.launcher3.model.data.AppPairInfo
 import com.android.launcher3.model.data.FolderInfo
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.LauncherAppWidgetInfo
+import com.android.launcher3.model.data.WidgetStackInfo
 import com.android.launcher3.model.data.WorkspaceItemFactory
 import com.android.launcher3.model.data.WorkspaceItemInfo
 import com.android.launcher3.views.ActivityContext
 import com.android.launcher3.widget.LauncherWidgetHolder
 import com.android.launcher3.widget.PendingAppWidgetHostView
 import com.android.launcher3.widget.WidgetInflater
+import com.android.launcher3.widget.WidgetStackView
 
 /** Utility class to inflate View for a model item */
 class ItemInflater<T>(
@@ -94,6 +99,8 @@ class ItemInflater<T>(
                     item as AppPairInfo,
                     BubbleTextView.DISPLAY_WORKSPACE,
                 )
+            Favorites.ITEM_TYPE_WIDGET_STACK ->
+                return inflateWidgetStack(item as WidgetStackInfo)
             Favorites.ITEM_TYPE_APPWIDGET,
             Favorites.ITEM_TYPE_CUSTOM_APPWIDGET ->
                 return inflateAppWidget(item as LauncherAppWidgetInfo, context.modelWriter)
@@ -122,6 +129,42 @@ class ItemInflater<T>(
         if (container == Favorites.CONTAINER_HOTSEAT_PREDICTION) favorite.verifyHighRes()
         return favorite
     }
+
+    private fun inflateWidgetStack(stack: WidgetStackInfo): View {
+        val views = stack.getContents().map(::inflateWidgetStackMember)
+        val stackView = WidgetStackView(context)
+        stackView.bind(stack, context.modelWriter, views)
+        return stackView
+    }
+
+    /** Recreates a stack member without deleting its persistent membership on failure. */
+    fun inflateWidgetStackMember(member: LauncherAppWidgetInfo): View {
+        return try {
+            val result = widgetInflater.inflateAppWidget(member)
+            if (result.type == WidgetInflater.TYPE_DELETE) {
+                unavailableStackMember(member)
+            } else {
+                if (result.isUpdate) context.modelWriter.updateItemInDatabase(member)
+                val provider = result.widgetInfo
+                val view =
+                    if (result.type == WidgetInflater.TYPE_PENDING || provider == null)
+                        PendingAppWidgetHostView(context, widgetHolder, member, provider)
+                    else widgetHolder.createView(member.appWidgetId, provider)
+                prepareAppWidget(view, member)
+                view
+            }
+        } catch (e: RuntimeException) {
+            Log.w("WidgetStack", "Unable to inflate member ${member.id}", e)
+            unavailableStackMember(member)
+        }
+    }
+
+    private fun unavailableStackMember(member: LauncherAppWidgetInfo): View =
+        TextView(context).apply {
+            tag = member
+            setText(R.string.widget_stack_unavailable)
+            gravity = Gravity.CENTER
+        }
 
     private fun inflateAppWidget(item: LauncherAppWidgetInfo, writer: ModelWriter): View? {
         TraceHelper.INSTANCE.beginSection("BIND_WIDGET_id=" + item.appWidgetId)

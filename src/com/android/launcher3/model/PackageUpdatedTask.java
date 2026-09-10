@@ -60,6 +60,7 @@ import com.android.launcher3.util.PackageManagerHelper;
 import com.android.launcher3.util.PackageUserKey;
 import com.android.launcher3.util.SafeCloseable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -442,7 +443,23 @@ public class PackageUpdatedTask implements ModelUpdateTask {
                     ItemInfoMatcher.ofPackages(removedPackages, mUser)
                             .or(ItemInfoMatcher.ofComponents(removedComponents, mUser))
                             .and(ItemInfoMatcher.ofItemIds(forceKeepShortcuts).negate());
-            taskController.deleteAndBindComponentsRemoved(removeMatch,
+            // A missing provider is a removable page in a stack, not a reason to delete the
+            // collection or lose its order. Standalone widget removal remains unchanged.
+            final HashSet<Integer> retainedStackIds = new HashSet<>();
+            final ArrayList<ItemInfo> retainedStackMembers = new ArrayList<>();
+            for (ItemInfo item : dataModel.itemsIdMap) {
+                if (item instanceof LauncherAppWidgetInfo widget && removeMatch.test(item)
+                        && dataModel.itemsIdMap.get(item.container) instanceof
+                                com.android.launcher3.model.data.WidgetStackInfo) {
+                    widget.restoreStatus |= FLAG_PROVIDER_NOT_READY;
+                    taskController.getModelWriter().updateItemInDatabase(widget);
+                    retainedStackIds.add(widget.id);
+                    retainedStackMembers.add(widget);
+                }
+            }
+            taskController.bindUpdatedWorkspaceItems(retainedStackMembers);
+            taskController.deleteAndBindComponentsRemoved(
+                    removeMatch.and(item -> !retainedStackIds.contains(item.id)),
                     "removed because the corresponding package or component is removed. "
                             + "mOp=" + mOp + " removedPackages=" + removedPackages.stream().collect(
                                     Collectors.joining(",", "[", "]"))

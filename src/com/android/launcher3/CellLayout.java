@@ -940,6 +940,16 @@ public class CellLayout extends ViewGroup {
      * Returns the distance between the given coordinate and the visual center of the given cell.
      */
     public float getDistanceFromWorkspaceCellVisualCenter(float x, float y, int[] cell) {
+        View child = getChildAt(cell[0], cell[1]);
+        if (child instanceof com.android.launcher3.folder.FolderIcon folder
+                && folder.mInfo.isLargeFolder()) {
+            // Every part of the large preview is a drop target, including its other three cells.
+            folder.getWorkspaceVisualDragBounds(mTempRect);
+            mTempRect.offset(child.getLeft(), child.getTop());
+            float dx = Math.max(mTempRect.left - x, Math.max(0, x - mTempRect.right));
+            float dy = Math.max(mTempRect.top - y, Math.max(0, y - mTempRect.bottom));
+            return (float) Math.hypot(dx, dy);
+        }
         getWorkspaceCellVisualCenter(cell[0], cell[1], mTmpPoint);
         return (float) Math.hypot(x - mTmpPoint[0], y - mTmpPoint[1]);
     }
@@ -949,7 +959,8 @@ public class CellLayout extends ViewGroup {
         if (child instanceof DraggableView) {
             DraggableView draggableChild = (DraggableView) child;
             if (draggableChild.getViewType() == DRAGGABLE_ICON) {
-                cellToPoint(cellX, cellY, outPoint);
+                CellLayoutLayoutParams lp = (CellLayoutLayoutParams) child.getLayoutParams();
+                cellToPoint(lp.getCellX(), lp.getCellY(), outPoint);
                 draggableChild.getWorkspaceVisualDragBounds(mTempRect);
                 mTempRect.offset(outPoint[0], outPoint[1]);
                 outPoint[0] = mTempRect.centerX();
@@ -964,6 +975,11 @@ public class CellLayout extends ViewGroup {
      * Returns the max distance from the center of a cell that can accept a drop to create a folder.
      */
     public float getFolderCreationRadius(int[] targetCell) {
+        if (getChildAt(targetCell[0], targetCell[1]) instanceof
+                com.android.launcher3.folder.FolderIcon folder && folder.mInfo.isLargeFolder()) {
+            // Large-folder distance is measured from its preview rectangle, not a 1x1 center.
+            return 0;
+        }
         DeviceProfile grid = mActivity.getDeviceProfile();
         float iconVisibleRadius = ICON_VISIBLE_AREA_FACTOR * grid.iconSizePx / 2;
         // Halfway between reorder radius and icon.
@@ -1610,6 +1626,54 @@ public class CellLayout extends ViewGroup {
         return swapSolution.isSolution;
     }
 
+    /** Resizes a stack using the same occupancy solution and commit path as widget resizing. */
+    public boolean resizeWidgetStack(com.android.launcher3.widget.WidgetStackView stack,
+            int spanX, int spanY) {
+        return resizeWorkspaceItem(stack, spanX, spanY, false);
+    }
+
+    /** Shared footprint change for individual workspace icons and folders, including relocation. */
+    public boolean resizeWorkspaceItem(View item, int spanX, int spanY) {
+        if (!(item.getTag() instanceof ItemInfo info)
+                || info.container != Favorites.CONTAINER_DESKTOP) return false;
+        return resizeWorkspaceItem(item, spanX, spanY, true);
+    }
+
+    private boolean resizeWorkspaceItem(View item, int spanX, int spanY,
+            boolean allowNearestPlacement) {
+        if (item.getParent() != mShortcutsAndWidgets || spanX < 1 || spanY < 1
+                || spanX > getCountX() || spanY > getCountY()) return false;
+        CellLayoutLayoutParams lp = (CellLayoutLayoutParams) item.getLayoutParams();
+        int cellX = Math.min(lp.getCellX(), getCountX() - spanX);
+        int cellY = Math.min(lp.getCellY(), getCountY() - spanY);
+        int[] center = new int[2];
+        regionToCenterPoint(cellX, cellY, spanX, spanY, center);
+        int[] direction = {Integer.compare(spanX, lp.cellHSpan),
+                Integer.compare(spanY, lp.cellVSpan)};
+        ItemConfiguration solution = findReorderSolution(center[0], center[1], spanX, spanY,
+                spanX, spanY, direction, item, true);
+        if ((solution == null || !solution.isSolution) && allowNearestPlacement) {
+            // The standard solver also considers the nearest empty region. Do not shrink the
+            // requested footprint or reserve cells until a complete valid solution is available.
+            solution = calculateReorder(center[0], center[1], spanX, spanY, spanX, spanY, item);
+        }
+        if (solution == null || !solution.isSolution || solution.spanX != spanX
+                || solution.spanY != spanY) return false;
+        setUseTempCoords(true);
+        copySolutionToTempState(solution, item);
+        lp.setTmpCellX(solution.cellX);
+        lp.setTmpCellY(solution.cellY);
+        lp.cellHSpan = spanX;
+        lp.cellVSpan = spanY;
+        animateItemsToSolution(solution, item, true);
+        commitTempPlacement(null);
+        completeAndClearReorderPreviewAnimations();
+        setItemPlacementDirty(false);
+        setUseTempCoords(false);
+        mShortcutsAndWidgets.requestLayout();
+        return true;
+    }
+
     public ReorderAlgorithm createReorderAlgorithm() {
         return new ReorderAlgorithm(this);
     }
@@ -1942,7 +2006,8 @@ public class CellLayout extends ViewGroup {
 
     public boolean isOccupied(int x, int y) {
         if (x >= 0 && x < mCountX && y >= 0 && y < mCountY) {
-            return mOccupied.cells[x][y] && !PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap());
+            return mOccupied.cells[x][y] && (!PreferenceCacheExtensionsKt.firstCached(
+                    pref.getAllowWidgetOverlap()) || intersectsProtectedWorkspaceItem(x, y, 1, 1));
         }
         if (BuildConfigs.IS_STUDIO_BUILD) {
             throw new RuntimeException("Position exceeds the bound of this CellLayout");
@@ -2024,8 +2089,26 @@ public class CellLayout extends ViewGroup {
         return occupancy;
     }
 
+    /** Max items and stacks always own their complete footprint, even with widget overlap enabled. */
+    public boolean intersectsProtectedWorkspaceItem(int x, int y, int spanX, int spanY) {
+        for (int i = 0; i < mShortcutsAndWidgets.getChildCount(); i++) {
+            View child = mShortcutsAndWidgets.getChildAt(i);
+            if (!(child.getTag() instanceof ItemInfo info)
+                    || !(com.android.launcher3.util.WorkspaceItemSize.isMax(info)
+                    || info instanceof com.android.launcher3.model.data.WidgetStackInfo)) continue;
+            CellLayoutLayoutParams lp = (CellLayoutLayoutParams) child.getLayoutParams();
+            if (x < lp.getCellX() + lp.cellHSpan && x + spanX > lp.getCellX()
+                    && y < lp.getCellY() + lp.cellVSpan && y + spanY > lp.getCellY()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isRegionVacant(int x, int y, int spanX, int spanY) {
-        return mOccupied.isRegionVacant(x, y, spanX, spanY) || PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap());
+        return mOccupied.isRegionVacant(x, y, spanX, spanY)
+                || PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap())
+                && !intersectsProtectedWorkspaceItem(x, y, spanX, spanY);
     }
 
     public void setSpaceBetweenCellLayoutsPx(@Px int spaceBetweenCellLayoutsPx) {

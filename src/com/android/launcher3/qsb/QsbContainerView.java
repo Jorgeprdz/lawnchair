@@ -164,6 +164,7 @@ public class QsbContainerView extends FrameLayout {
 
         public static final int QSB_WIDGET_HOST_ID = 1026;
         private static final int REQUEST_BIND_QSB = 1;
+        private static final int REQUEST_CONFIGURE_QSB = 2;
 
         protected String mKeyWidgetId = "qsb_widget_id";
         private QsbWidgetHost mQsbWidgetHost;
@@ -194,7 +195,6 @@ public class QsbContainerView extends FrameLayout {
             mWrapper = createWrapper(getContext());
             // Only add the view when enabled
             if (isQsbEnabled()) {
-                mQsbWidgetHost.startListening();
                 mWrapper.addView(createQsb(mWrapper));
             }
             return mWrapper;
@@ -206,11 +206,24 @@ public class QsbContainerView extends FrameLayout {
         }
 
         private View createQsb(ViewGroup container) {
+            mQsb = null;
+            try {
+                return createQsbInternal(container);
+            } catch (RuntimeException unavailable) {
+                android.util.Log.w("QsbContainerView", "Search widget unavailable", unavailable);
+                return getDefaultView(container, false);
+            }
+        }
+
+        private View createQsbInternal(ViewGroup container) {
+            if (isInPreviewMode()) return getDefaultView(container, false);
             mWidgetInfo = getSearchWidgetProvider();
             if (mWidgetInfo == null) {
-                // There is no search provider, just show the default widget.
+                // Provider removal cleans only this QSB's IDs, never another widget host.
+                if (!isInPreviewMode()) clearWidgetIds();
                 return getDefaultView(container, false /* show setup icon */);
             }
+            if (getPendingWidgetId() >= 0) return getDefaultView(container, true);
             Bundle opts = createBindOptions();
             Context context = getContext();
             AppWidgetManager widgetManager = AppWidgetManager.getInstance(context);
@@ -223,16 +236,19 @@ public class QsbContainerView extends FrameLayout {
             int oldWidgetId = widgetId;
             if (!isWidgetBound && !isInPreviewMode()) {
                 if (widgetId > -1) {
-                    // widgetId is already bound and its not the correct provider. reset host.
-                    mQsbWidgetHost.deleteHost();
+                    mQsbWidgetHost.deleteAppWidgetId(widgetId);
+                    saveWidgetId(-1);
                 }
 
                 widgetId = mQsbWidgetHost.allocateAppWidgetId();
-                isWidgetBound = widgetManager.bindAppWidgetIdIfAllowed(
-                        widgetId, mWidgetInfo.getProfile(), mWidgetInfo.provider, opts);
-                if (!isWidgetBound) {
-                    mQsbWidgetHost.deleteAppWidgetId(widgetId);
-                    widgetId = -1;
+                try {
+                    isWidgetBound = widgetManager.bindAppWidgetIdIfAllowed(
+                            widgetId, mWidgetInfo.getProfile(), mWidgetInfo.provider, opts);
+                } finally {
+                    if (!isWidgetBound) {
+                        mQsbWidgetHost.deleteAppWidgetId(widgetId);
+                        widgetId = -1;
+                    }
                 }
 
                 if (oldWidgetId != widgetId) {
@@ -241,9 +257,13 @@ public class QsbContainerView extends FrameLayout {
             }
 
             if (isWidgetBound) {
+                if (!isInPreviewMode() && needsConfiguration(widgetId)) {
+                    return getDefaultView(container, true);
+                }
                 mQsb = (QsbWidgetHostView) mQsbWidgetHost.createView(context, widgetId,
                         mWidgetInfo);
                 mQsb.setId(R.id.qsb_widget);
+                onWidgetCreated(mQsb);
 
                 if (!isInPreviewMode()) {
                     if (!containsAll(AppWidgetManager.getInstance(context)
@@ -262,14 +282,88 @@ public class QsbContainerView extends FrameLayout {
             LauncherPrefs.getPrefs(getContext()).edit().putInt(mKeyWidgetId, widgetId).apply();
         }
 
+        private int getPendingWidgetId() {
+            return LauncherPrefs.getPrefs(getContext()).getInt(mKeyWidgetId + "_pending", -1);
+        }
+
+        private void savePendingWidgetId(int id) {
+            LauncherPrefs.getPrefs(getContext()).edit().putInt(mKeyWidgetId + "_pending", id).apply();
+        }
+
+        private boolean needsConfiguration(int id) {
+            return mWidgetInfo.configure != null
+                    && LauncherPrefs.getPrefs(getContext()).getInt(mKeyWidgetId + "_configured", -1) != id;
+        }
+
+        private void clearWidgetIds() {
+            int bound = LauncherPrefs.getPrefs(getContext()).getInt(mKeyWidgetId, -1);
+            int pending = getPendingWidgetId();
+            if (bound >= 0) mQsbWidgetHost.deleteAppWidgetId(bound);
+            if (pending >= 0 && pending != bound) mQsbWidgetHost.deleteAppWidgetId(pending);
+            saveWidgetId(-1);
+            savePendingWidgetId(-1);
+            LauncherPrefs.getPrefs(getContext()).edit().remove(mKeyWidgetId + "_configured").apply();
+        }
+
         @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
-            if (requestCode == REQUEST_BIND_QSB) {
-                if (resultCode == Activity.RESULT_OK) {
-                    saveWidgetId(data.getIntExtra(EXTRA_APPWIDGET_ID, -1));
+            try {
+                handleWidgetResult(requestCode, resultCode, data);
+            } catch (RuntimeException unavailable) {
+                // Retain tracked IDs for cleanup/retry if the widget service is temporarily down.
+                android.util.Log.w("QsbContainerView", "Search widget result unavailable", unavailable);
+                rebindFragment();
+            }
+        }
+
+        private void handleWidgetResult(int requestCode, int resultCode, Intent data) {
+            if (requestCode != REQUEST_BIND_QSB && requestCode != REQUEST_CONFIGURE_QSB) {
+                super.onActivityResult(requestCode, resultCode, data);
+                return;
+            }
+            // Some providers return RESULT_OK without an Intent. The allocated ID is authoritative.
+            int id = getPendingWidgetId();
+            if (id < 0) return;
+            AppWidgetProviderInfo bound = id < 0 ? null
+                    : AppWidgetManager.getInstance(getContext()).getAppWidgetInfo(id);
+            mWidgetInfo = getSearchWidgetProvider();
+            if (resultCode == Activity.RESULT_OK && bound != null && mWidgetInfo != null
+                    && bound.provider.equals(mWidgetInfo.provider)) {
+                saveWidgetId(id);
+                if (requestCode == REQUEST_BIND_QSB && needsConfiguration(id)) {
+                    requestConfiguration(id);
+                    return;
+                }
+                LauncherPrefs.getPrefs(getContext()).edit()
+                        .putInt(mKeyWidgetId + "_configured", id).apply();
+                savePendingWidgetId(-1);
+            } else {
+                clearWidgetIds();
+            }
+            rebindFragment();
+        }
+
+        private void requestConfiguration(int id) {
+            savePendingWidgetId(id);
+            try {
+                startActivityForResult(new Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+                        .setComponent(mWidgetInfo.configure).putExtra(EXTRA_APPWIDGET_ID, id),
+                        REQUEST_CONFIGURE_QSB);
+            } catch (RuntimeException unavailable) {
+                clearWidgetIds();
+                rebindFragment();
+            }
+        }
+
+        @Override
+        public void onStart() {
+            super.onStart();
+            if (!isInPreviewMode() && isQsbEnabled()) {
+                try {
+                    mQsbWidgetHost.startListening();
+                } catch (RuntimeException unavailable) {
+                    android.util.Log.w("QsbContainerView", "Unable to listen to search widget", unavailable);
                     rebindFragment();
-                } else {
-                    mQsbWidgetHost.deleteHost();
                 }
             }
         }
@@ -277,15 +371,19 @@ public class QsbContainerView extends FrameLayout {
         @Override
         public void onResume() {
             super.onResume();
+            mOrientation = getContext().getResources().getConfiguration().orientation;
             if (mQsb != null && mQsb.isReinflateRequired(mOrientation)) {
                 rebindFragment();
             }
         }
 
         @Override
-        public void onDestroy() {
-            mQsbWidgetHost.stopListening();
-            super.onDestroy();
+        public void onStop() {
+            try {
+                if (!isInPreviewMode()) mQsbWidgetHost.stopListening();
+            } finally {
+                super.onStop();
+            }
         }
 
         private void rebindFragment() {
@@ -304,6 +402,8 @@ public class QsbContainerView extends FrameLayout {
             return BuildConfigs.QSB_ON_FIRST_SCREEN;
         }
 
+        protected void onWidgetCreated(QsbWidgetHostView host) { }
+
         protected Bundle createBindOptions() {
             InvariantDeviceProfile idp = LauncherAppState.getIDP(getContext());
             return WidgetSizes.getWidgetSizeOptions(getContext(), mWidgetInfo.provider,
@@ -315,7 +415,6 @@ public class QsbContainerView extends FrameLayout {
             View v = QsbWidgetHostView.getDefaultView(container);
             // pE-TODO(??): Why are we using isInPreviewMode() check to prevent crash?
             if (showSetupIcon && !isInPreviewMode()) {
-                requestQsbCreate();
                 View setupButton = v.findViewById(R.id.btn_qsb_setup);
                 setupButton.setVisibility(View.VISIBLE);
                 setupButton.setOnClickListener((v2) -> requestQsbCreate());
@@ -323,12 +422,30 @@ public class QsbContainerView extends FrameLayout {
             return v;
         }
 
-        void requestQsbCreate() {
-            startActivityForResult(
-                    new Intent(ACTION_APPWIDGET_BIND)
-                            .putExtra(EXTRA_APPWIDGET_ID, mQsbWidgetHost.allocateAppWidgetId())
-                            .putExtra(EXTRA_APPWIDGET_PROVIDER, mWidgetInfo.provider),
-                    REQUEST_BIND_QSB);
+        protected void requestQsbCreate() {
+            if (isInPreviewMode() || getContext() == null) return;
+            try {
+                mWidgetInfo = getSearchWidgetProvider();
+                if (mWidgetInfo == null) return;
+                int bound = LauncherPrefs.getPrefs(getContext()).getInt(mKeyWidgetId, -1);
+                if (bound >= 0 && needsConfiguration(bound)) {
+                    requestConfiguration(bound);
+                    return;
+                }
+                int previous = getPendingWidgetId();
+                if (previous >= 0) mQsbWidgetHost.deleteAppWidgetId(previous);
+                int id = mQsbWidgetHost.allocateAppWidgetId();
+                savePendingWidgetId(id);
+                startActivityForResult(new Intent(ACTION_APPWIDGET_BIND)
+                        .putExtra(EXTRA_APPWIDGET_ID, id)
+                        .putExtra(EXTRA_APPWIDGET_PROVIDER, mWidgetInfo.provider)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, mWidgetInfo.getProfile())
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_OPTIONS, createBindOptions()),
+                        REQUEST_BIND_QSB);
+            } catch (RuntimeException unavailable) {
+                clearWidgetIds();
+                rebindFragment();
+            }
         }
 
 
@@ -342,6 +459,26 @@ public class QsbContainerView extends FrameLayout {
         protected AppWidgetProviderInfo getSearchWidgetProvider() {
             return getSearchWidgetProviderInfo(getContext());
         }
+    }
+
+    /** The QSB host has its own restored ID map, separate from workspace widget rows. */
+    public static void restoreWidgetIds(Context context, int[] oldIds, int[] newIds) {
+        if (oldIds == null || newIds == null || oldIds.length != newIds.length) return;
+        var prefs = LauncherPrefs.getPrefs(context);
+        var editor = prefs.edit();
+        for (String key : new String[]{"qsb_widget_id", "pixel_search_widget_id"}) {
+            for (String suffix : new String[]{"", "_pending", "_configured"}) {
+                int old = prefs.getInt(key + suffix, -1);
+                if (old < 0) continue;
+                for (int index = 0; index < oldIds.length; index++) {
+                    if (old == oldIds[index] && newIds[index] >= 0) {
+                        editor.putInt(key + suffix, newIds[index]);
+                        break;
+                    }
+                }
+            }
+        }
+        editor.apply();
     }
 
     public static class QsbWidgetHost extends AppWidgetHost {

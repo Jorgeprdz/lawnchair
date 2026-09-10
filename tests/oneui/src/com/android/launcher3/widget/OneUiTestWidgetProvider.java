@@ -1,0 +1,57 @@
+/*
+ * Copyright (C) 2026 Lawnchair
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy at http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied.
+ */
+package com.android.launcher3.widget;
+
+import android.app.PendingIntent;
+import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProvider;
+import android.content.Context;
+import android.content.Intent;
+import android.widget.RemoteViews;
+
+/** A real Android provider installed only with the instrumentation APK. */
+public class OneUiTestWidgetProvider extends AppWidgetProvider {
+    private static final String TAP = "com.android.launcher3.oneui.test.WIDGET_TAP";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (TAP.equals(intent.getAction())) {
+            int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
+            if (id >= 0) render(context, AppWidgetManager.getInstance(context), id, true);
+        }
+    }
+
+    @Override
+    public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        for (int id : ids) render(context, manager, id, false);
+    }
+
+    private static void render(Context context, AppWidgetManager manager, int id, boolean clicked) {
+        int layout = context.getResources().getIdentifier("oneui_test_widget_content", "layout", context.getPackageName());
+        RemoteViews views = new RemoteViews(context.getPackageName(), layout);
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            var rows = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
+            for (int row = 0; row < 20; row++) {
+                RemoteViews entry = new RemoteViews("android", android.R.layout.simple_list_item_1);
+                entry.setTextViewText(android.R.id.text1, "Widget row " + row);
+                rows.addItem(row, entry);
+            }
+            views.setRemoteAdapter(android.R.id.list, rows.build());
+        }
+        views.setTextViewText(android.R.id.text1,
+                (clicked ? "Clicked widget " : "OneUI test widget ") + id);
+        Intent tap = new Intent(context, OneUiTestWidgetProvider.class).setAction(TAP)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(android.R.id.text1, PendingIntent.getBroadcast(context, id,
+                tap, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        manager.updateAppWidget(id, views);
+    }
+}

@@ -645,6 +645,7 @@
     <string name="gesture_handler_open_app_drawer">Open app drawer</string>
     <string name="gesture_handler_open_app_search">Open app search</string>
     <string name="gesture_handler_open_search">Open search</string>
+    <string name="gesture_handler_open_one_ui_finder" translatable="false">One UI Finder</string>
     <string name="gesture_handler_open_assistant">Open assistant</string>
 
     <string name="pick_app_for_gesture">Pick app</string>
@@ -1068,4 +1069,29 @@
     <string name="lawnchair_action_failed">Failed to trigger action</string>
 
     <string name="please_wait">Please wait…</string>
+    <string name="widget_stack_unavailable">Widget unavailable</string>
+    <string name="widget_stack_incompatible">This widget cannot fit in this stack.</string>
+    <string name="widget_stack_title">Widget stack</string>
+    <string name="widget_stack_active">Active widget</string>
+    <string name="widget_stack_add">Add widget</string>
+    <string name="widget_stack_remove">Remove</string>
+    <string name="widget_stack_move">Move stack</string>
+    <string name="widget_stack_create">Create widget stack</string>
+    <string name="widget_stack_create_failed">Could not create the widget stack. Try again.</string>
+    <string name="widget_stack_dimensions">Size: %1$d × %2$d</string>
+    <string name="widget_stack_narrower">Narrower</string>
+    <string name="widget_stack_wider">Wider</string>
+    <string name="widget_stack_shorter">Shorter</string>
+    <string name="widget_stack_taller">Taller</string>
+    <string name="widget_stack_resize_failed">No valid space for this size, or a widget does not support it.</string>
+    <string name="widget_grid_incompatible">This grid cannot safely fit all current widgets. Keep a larger grid or resize the affected widgets first.</string>
+    <string name="widget_stack_page">Widget %1$d of %2$d</string>
+    <string name="workspace_item_maximize">Maximize</string>
+    <string name="workspace_item_normal_size">Normal size</string>
+    <string name="workspace_item_resize_unavailable">Not enough space to enlarge this item</string>
+    <string name="dock_background_off">Off</string>
+    <string name="dock_background_solid">Solid</string>
+    <string name="dock_background_blur">Blur</string>
+    <string name="dock_background_crystal">Crystal</string>
+    <string name="widget_grid_preserved">Previous grid kept so your widgets remain in place</string>
 </resources>

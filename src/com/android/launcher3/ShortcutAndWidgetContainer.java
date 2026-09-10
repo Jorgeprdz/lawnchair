@@ -176,6 +176,17 @@ public class ShortcutAndWidgetContainer extends ViewGroup implements FolderIcon.
             final PointF appWidgetScale = dp.getAppWidgetScale((ItemInfo) child.getTag());
             lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
                     appWidgetScale.x, appWidgetScale.y, mBorderSpace, dp.widgetPadding);
+        } else if (child instanceof com.android.launcher3.widget.WidgetStackView) {
+            // A stack uses widget content bounds, not the icon/label centering inset.
+            lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
+                    1f, 1f, mBorderSpace, dp.widgetPadding);
+            child.setPadding(0, 0, 0, 0);
+        } else if (child.getTag() instanceof ItemInfo info
+                && com.android.launcher3.util.WorkspaceItemSize.isMax(info)) {
+            lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
+                    mBorderSpace);
+            // Large items own the whole footprint; their views position icon, preview and label.
+            child.setPadding(dp.workspaceCellPaddingXPx, 0, dp.workspaceCellPaddingXPx, 0);
         } else if (isChildQsb(child)) {
             lp.setup(mCellWidth, mCellHeight, invertLayoutHorizontally(), mCountX, mCountY,
                     mBorderSpace);

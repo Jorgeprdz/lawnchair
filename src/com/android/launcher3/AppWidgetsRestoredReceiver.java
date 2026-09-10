@@ -25,6 +25,12 @@ public class AppWidgetsRestoredReceiver extends BroadcastReceiver {
         if (AppWidgetManager.ACTION_APPWIDGET_HOST_RESTORED.equals(intent.getAction())) {
             int hostId = intent.getIntExtra(AppWidgetManager.EXTRA_HOST_ID, 0);
             Log.d(TAG, "onReceive: Widget ID map received for host:" + hostId);
+            if (hostId == com.android.launcher3.qsb.QsbContainerView.QsbFragment.QSB_WIDGET_HOST_ID) {
+                com.android.launcher3.qsb.QsbContainerView.restoreWidgetIds(context,
+                        intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_OLD_IDS),
+                        intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS));
+                return;
+            }
             if (hostId != LauncherWidgetHolder.APPWIDGET_HOST_ID) {
                 Log.w(TAG,  "onReceive: hostId does not match Launcher."
                         + " Expected: " + LauncherWidgetHolder.APPWIDGET_HOST_ID

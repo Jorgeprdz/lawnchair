@@ -39,6 +39,33 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
 
     /** Id of the specific widget. */
     @JvmField var appWidgetId: Int = NO_ID
+    @JvmField var workspaceSizeOptions: Int? = null
+    @JvmField var activeWidgetId: Int = NO_ID
+    @JvmField var activeWidgetHostId: Int = NO_ID
+    // Aggregate provider bounds used only while placing a stack during migration.
+    @JvmField var stackMaxSpanX: Int = Int.MAX_VALUE
+    @JvmField var stackMaxSpanY: Int = Int.MAX_VALUE
+
+    /** Keep intentional Max items square; only a genuinely smaller grid restores normal size. */
+    fun prepareWorkspaceSize(targetX: Int, targetY: Int) {
+        val options = workspaceSizeOptions ?: return
+        val flag = when (itemType) {
+            ITEM_TYPE_APPLICATION -> com.android.launcher3.model.data.WorkspaceItemInfo.FLAG_MAX_ICON
+            ITEM_TYPE_FOLDER -> com.android.launcher3.model.data.FolderInfo.FLAG_LARGE_FOLDER
+            else -> return
+        }
+        val maximized = options and flag != 0 && spanX == 2 && spanY == 2
+        if (maximized && targetX >= 2 && targetY >= 2) {
+            minSpanX = 2
+            minSpanY = 2
+        } else {
+            spanX = 1
+            spanY = 1
+            minSpanX = 1
+            minSpanY = 1
+            workspaceSizeOptions = options and flag.inv()
+        }
+    }
 
     /** Comparator according to the reading order */
     override fun compareTo(other: DbEntry): Int {
@@ -70,6 +97,7 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
             put(CELLY, cellY)
             put(SPANX, spanX)
             put(SPANY, spanY)
+            workspaceSizeOptions?.let { put(LauncherSettings.Favorites.OPTIONS, it) }
         }
 
     override fun writeToValues(writer: ContentWriter) {
@@ -89,6 +117,8 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
      */
     private fun getEntryMigrationId(): String? {
         when (itemType) {
+            LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK ->
+                return "stack:$activeWidgetHostId:${mFolderItems.keys.sorted().joinToString()}"
             ITEM_TYPE_FOLDER,
             ITEM_TYPE_APP_PAIR -> return getFolderMigrationId()
             ITEM_TYPE_APPWIDGET ->

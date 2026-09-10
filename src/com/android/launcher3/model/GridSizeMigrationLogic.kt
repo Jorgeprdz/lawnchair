@@ -15,12 +15,15 @@
  */
 package com.android.launcher3.model
 
+import android.appwidget.AppWidgetProviderInfo
+import android.content.ComponentName
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Point
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import app.lawnchair.preferences2.PreferenceManager2
+import app.lawnchair.preferences2.firstCached
 import com.android.launcher3.BuildConfig
 import com.android.launcher3.BuildConfigs
 import com.android.launcher3.Flags
@@ -44,7 +47,9 @@ import com.android.launcher3.provider.LauncherDbUtils.shiftWorkspaceByXCells
 import com.android.launcher3.util.CellAndSpan
 import com.android.launcher3.util.GridOccupancy
 import com.android.launcher3.util.IntArray
-import app.lawnchair.preferences2.firstCached
+import com.android.launcher3.widget.LauncherAppWidgetProviderInfo
+import com.android.launcher3.widget.WidgetManagerHelper
+import kotlin.math.roundToInt
 
 class GridSizeMigrationLogic {
     /**
@@ -75,7 +80,8 @@ class GridSizeMigrationLogic {
         )
 
         val shouldMigrateToStrtictlyTallerGrid =
-            shouldMigrateToStrictlyTallerGrid(isDestNewDb, srcDeviceState, destDeviceState)
+            shouldMigrateToStrictlyTallerGrid(isDestNewDb, srcDeviceState, destDeviceState) &&
+                !GridSizeMigrationDBController.hasWorkspaceWidgets(source)
         if (shouldMigrateToStrtictlyTallerGrid) {
             copyTable(source, TABLE_NAME, target.writableDatabase, TABLE_NAME, context)
         } else {
@@ -130,7 +136,14 @@ class GridSizeMigrationLogic {
                     idsInUse,
                 )
                 // Migrate workspace.
-                migrateWorkspace(srcReader, destReader, target, targetSize, idsInUse)
+                migrateWorkspace(
+                    srcReader,
+                    destReader,
+                    target,
+                    targetSize,
+                    idsInUse,
+                    Point(srcDeviceState.columns, srcDeviceState.rows),
+                )
 
                 dropTable(t.db, TMP_TABLE)
                 t.commit()
@@ -253,6 +266,7 @@ class GridSizeMigrationLogic {
         helper: DatabaseHelper,
         targetSize: Point,
         idsInUse: MutableList<Int>,
+        sourceSize: Point = targetSize,
     ) {
         val srcWorkspaceItems = srcReader.loadAllWorkspaceEntries()
 
@@ -287,6 +301,8 @@ class GridSizeMigrationLogic {
             )
         }
 
+        scaleWidgetsForGrid(workspaceToBeAdded, sourceSize, targetSize, destReader.mContext)
+
         val remainingDstWorkspaceItems = destReader.loadAllWorkspaceEntries()
         placeWorkspaceItems(
             workspaceToBeAdded,
@@ -298,6 +314,80 @@ class GridSizeMigrationLogic {
             destReader,
             idsInUse,
         )
+    }
+
+    /** Shared by the Kotlin and legacy Java migration entry points. */
+    fun scaleWidgetsForGrid(entries: List<DbEntry>, sourceSize: Point, targetSize: Point, context: Context) {
+        if (sourceSize != targetSize) {
+            val widgetManager = WidgetManagerHelper(context)
+            for (entry in entries) {
+                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
+                    scaleWidgetFootprint(entry, sourceSize, targetSize,
+                        AppWidgetProviderInfo.RESIZE_BOTH, entry.minSpanX, entry.minSpanY,
+                        entry.stackMaxSpanX, entry.stackMaxSpanY)
+                    continue
+                }
+                if (entry.itemType != LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET) continue
+                val component = entry.mProvider?.let { ComponentName.unflattenFromString(it) }
+                val provider = try {
+                    widgetManager.getLauncherAppWidgetInfo(entry.appWidgetId, component)
+                } catch (e: RuntimeException) {
+                    Log.w(TAG, "Unable to resolve widget ${entry.id} while migrating", e)
+                    null
+                }
+                if (provider != null) {
+                    scaleWidgetForGrid(entry, sourceSize, targetSize, provider)
+                }
+            }
+        }
+
+    }
+
+    /** Computes a preferred cell footprint; the occupancy solver still decides placement. */
+    @VisibleForTesting
+    fun scaleWidgetForGrid(
+        entry: DbEntry,
+        source: Point,
+        target: Point,
+        provider: LauncherAppWidgetProviderInfo,
+    ) {
+        scaleWidgetFootprint(entry, source, target, provider.resizeMode,
+            provider.minSpanX, provider.minSpanY, provider.maxSpanX, provider.maxSpanY)
+    }
+
+    private fun scaleWidgetFootprint(
+        entry: DbEntry, source: Point, target: Point, resizeMode: Int,
+        providerMinX: Int, providerMinY: Int, providerMaxX: Int, providerMaxY: Int,
+    ) {
+        if (source.x <= 0 || source.y <= 0 || target.x <= 0 || target.y <= 0) return
+
+        val oldSpanX = entry.spanX
+        val oldSpanY = entry.spanY
+        val scaleX = target.x.toFloat() / source.x
+        val scaleY = target.y.toFloat() / source.y
+        if (resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0) {
+            val minimum = maxOf(1, entry.minSpanX, providerMinX)
+            val maximum = minOf(target.x, providerMaxX)
+            if (minimum <= maximum) {
+                entry.spanX = (oldSpanX * scaleX).roundToInt().coerceIn(minimum, maximum)
+                entry.minSpanX = minimum
+            }
+        }
+        if (resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0) {
+            val minimum = maxOf(1, entry.minSpanY, providerMinY)
+            val maximum = minOf(target.y, providerMaxY)
+            if (minimum <= maximum) {
+                entry.spanY = (oldSpanY * scaleY).roundToInt().coerceIn(minimum, maximum)
+                entry.minSpanY = minimum
+            }
+        }
+        // Preserve the relative center; normal placement resolves collisions and reserved rows.
+        entry.cellX =
+            ((entry.cellX + oldSpanX / 2f) * scaleX - entry.spanX / 2f)
+                .roundToInt().coerceIn(0, maxOf(0, target.x - entry.spanX))
+        entry.cellY =
+            ((entry.cellY + oldSpanY / 2f) * scaleY - entry.spanY / 2f)
+                .roundToInt().coerceIn(0, maxOf(0, target.y - entry.spanY))
     }
 
     private fun placeWorkspaceItems(
@@ -442,7 +532,9 @@ class GridSizeMigrationLogic {
                     entryCountDiff[entry]?.let { entryDiff ->
                         if (entryDiff < 0) {
                             add(entry.id)
-                            if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER) {
+                            if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER ||
+                                entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK
+                            ) {
                                 entry.mFolderItems.values.forEach { ids ->
                                     ids.forEach { value -> add(value) }
                                 }
@@ -528,6 +620,7 @@ class GridSizeMigrationLogic {
         val iterator = itemsToPlace.mRemainingItemsToPlace.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
+            entry.prepareWorkspaceSize(trgX, trgY)
             if (entry.minSpanX > trgX || entry.minSpanY > trgY) {
                 iterator.remove()
                 continue
@@ -581,13 +674,39 @@ class GridSizeMigrationLogic {
         var newStartPosX = startPosX
         for (y in startPosY until trg.y) {
             for (x in newStartPosX until trg.x) {
-                if (occupied.isRegionVacant(x, y, entry.minSpanX, entry.minSpanY)) {
-                    return (CellAndSpan(x, y, entry.minSpanX, entry.minSpanY))
+                findLargestVacantSpan(entry, x, y, trg, occupied)?.let { span ->
+                    return CellAndSpan(x, y, span.x, span.y)
                 }
             }
             newStartPosX = 0
         }
         return null
+    }
+
+    private fun findLargestVacantSpan(
+        entry: DbEntry,
+        cellX: Int,
+        cellY: Int,
+        trg: Point,
+        occupied: GridOccupancy,
+    ): Point? {
+        val maxSpanX = entry.spanX.coerceAtMost(trg.x - cellX)
+        val maxSpanY = entry.spanY.coerceAtMost(trg.y - cellY)
+        if (maxSpanX < entry.minSpanX || maxSpanY < entry.minSpanY) return null
+
+        var best: Point? = null
+        var bestArea = 0
+        for (spanX in maxSpanX downTo entry.minSpanX) {
+            for (spanY in maxSpanY downTo entry.minSpanY) {
+                val area = spanX * spanY
+                if (area <= bestArea) continue
+                if (occupied.isRegionVacant(cellX, cellY, spanX, spanY)) {
+                    best = Point(spanX, spanY)
+                    bestArea = area
+                }
+            }
+        }
+        return best
     }
 
     /**

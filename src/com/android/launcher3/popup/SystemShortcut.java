@@ -185,6 +185,22 @@ public abstract class SystemShortcut<T extends ActivityContext> extends ItemInfo
         }
     }
 
+    public static final Factory<ActivityContext> WORKSPACE_SIZE = (context, item, originalView) -> {
+        if (!(context instanceof com.android.launcher3.Launcher) || isHomeLocked(context)
+                || !com.android.launcher3.util.WorkspaceItemSize.isSupported(item)) return null;
+        int label = com.android.launcher3.util.WorkspaceItemSize.isMax(item)
+                ? R.string.workspace_item_normal_size : R.string.workspace_item_maximize;
+        return new SystemShortcut<ActivityContext>(R.drawable.ic_workspace_maximize, label,
+                context, item, originalView, false) {
+            @Override
+            public void onClick(View view) {
+                AbstractFloatingView.closeAllOpenViews(mTarget);
+                com.android.launcher3.util.WorkspaceItemSize.toggle(
+                        (com.android.launcher3.Launcher) mTarget, mOriginalView);
+            }
+        };
+    };
+
     public static final Factory<ActivityContext> APP_INFO = AppInfo::new;
 
     public static class AppInfo<T extends ActivityContext> extends SystemShortcut<T> {

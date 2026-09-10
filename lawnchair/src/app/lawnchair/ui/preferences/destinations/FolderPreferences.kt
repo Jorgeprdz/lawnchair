@@ -17,15 +17,24 @@
 package app.lawnchair.ui.preferences.destinations
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import app.lawnchair.oneui.OneUiGlassPreferences
+import app.lawnchair.oneui.OneUiLargeFolderShape
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.preferenceManager
 import app.lawnchair.preferences2.preferenceManager2
 import app.lawnchair.ui.preferences.LocalIsExpandedScreen
 import app.lawnchair.ui.preferences.components.NavigationActionPreference
 import app.lawnchair.ui.preferences.components.colorpreference.ColorPreference
+import app.lawnchair.ui.preferences.components.controls.ListPreference
+import app.lawnchair.ui.preferences.components.controls.ListPreferenceEntry
+import app.lawnchair.ui.preferences.components.controls.OneUiGlassIntensityPreference
 import app.lawnchair.ui.preferences.components.controls.SliderPreference
 import app.lawnchair.ui.preferences.components.controls.SwitchPreference
 import app.lawnchair.ui.preferences.components.layout.ExpandAndShrink
@@ -46,6 +55,15 @@ fun FolderPreferences(
         val context = LocalContext.current
         val prefs = preferenceManager()
         val prefs2 = preferenceManager2()
+        var folderMode by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getFolderMode(context))
+        }
+        var folderIntensity by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getFolderIntensity(context))
+        }
+        var largeFolderShape by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getLargeFolderShape(context))
+        }
         val folderIconShapeAdapter = prefs2.folderShape.getAdapter()
         val folderIconShapeSubtitle = iconShapeEntries(context)
             .firstOrNull { it.value == folderIconShapeAdapter.state.value }
@@ -60,6 +78,47 @@ fun FolderPreferences(
                     IconShapePreview(iconShape = folderIconShapeAdapter.state.value)
                 },
             )
+            ListPreference(
+                value = largeFolderShape,
+                onValueChange = { shape ->
+                    OneUiGlassPreferences.setLargeFolderShape(context, shape)
+                    largeFolderShape = shape
+                },
+                entries = listOf(
+                    ListPreferenceEntry(OneUiLargeFolderShape.ROUNDED_SQUARE) {
+                        stringResource(R.string.large_folder_shape_rounded_square)
+                    },
+                    ListPreferenceEntry(OneUiLargeFolderShape.CIRCLE) {
+                        stringResource(R.string.large_folder_shape_circle)
+                    },
+                ),
+                label = stringResource(R.string.large_folder_shape),
+            )
+            ListPreference(
+                value = folderMode,
+                onValueChange = { mode ->
+                    OneUiGlassPreferences.setFolderMode(context, mode)
+                    folderMode = mode
+                },
+                entries = listOf(
+                    ListPreferenceEntry(0) { stringResource(R.string.dock_background_off) },
+                    ListPreferenceEntry(1) { stringResource(R.string.dock_background_solid) },
+                    ListPreferenceEntry(2) { stringResource(R.string.dock_background_blur) },
+                    ListPreferenceEntry(3) { stringResource(R.string.dock_background_crystal) },
+                    ListPreferenceEntry(4) { stringResource(R.string.dock_background_frosty) },
+                ),
+                label = stringResource(R.string.folder_background_style),
+            )
+            ExpandAndShrink(visible = folderMode >= 2) {
+                OneUiGlassIntensityPreference(
+                    label = stringResource(R.string.glass_effect_intensity),
+                    value = folderIntensity,
+                    onValueChange = { value ->
+                        OneUiGlassPreferences.setFolderIntensity(context, value)
+                        folderIntensity = value
+                    },
+                )
+            }
             ColorPreference(preference = prefs2.folderColor)
             SliderPreference(
                 label = stringResource(id = R.string.folder_preview_bg_opacity_label),

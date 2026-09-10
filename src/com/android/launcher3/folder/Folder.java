@@ -103,7 +103,6 @@ import com.android.launcher3.dagger.LauncherComponentProvider;
 import com.android.launcher3.dragndrop.DragController.DragListener;
 import com.android.launcher3.dragndrop.DragOptions;
 import com.android.launcher3.graphics.ShapeDelegate;
-import com.android.launcher3.graphics.ThemeManager;
 import com.android.launcher3.logger.LauncherAtom.FromState;
 import com.android.launcher3.logger.LauncherAtom.ToState;
 import com.android.launcher3.logging.StatsLogManager;
@@ -974,8 +973,7 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
         boolean shouldUseSpringMotion = Flags.enableLauncherIconShapes()
                 && Flags.enableExpressiveFolderExpansion();
         if (shouldUseSpringMotion) {
-            ShapeDelegate shapeDelegate =
-                    ThemeManager.INSTANCE.get(mActivityContext.asContext()).getFolderShape();
+            ShapeDelegate shapeDelegate = mFolderIcon.mBackground.getShape();
             return new FolderAnimationSpringBuilderManager(
                     this, shapeDelegate, mLauncherDelegate
             );
@@ -1173,7 +1171,8 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
     public boolean acceptDrop(DragObject d) {
         // LC: App drawer folders are not backed by the launcher model, so dropping
         // into them would write through ModelWriter and crash (#7127).
-        return !isInAppDrawer() && willAcceptItemType(d.dragInfo.itemType);
+        return !isInAppDrawer() && willAcceptItemType(d.dragInfo.itemType)
+                && !com.android.launcher3.util.WorkspaceItemSize.isMax(d.dragInfo);
     }
 
     public void onDragEnter(DragObject d) {

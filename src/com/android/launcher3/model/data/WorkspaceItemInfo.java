@@ -99,7 +99,14 @@ public class WorkspaceItemInfo extends ItemInfoWithIcon {
      */
     @NonNull private String[] personKeys = Utilities.EMPTY_STRING_ARRAY;
 
+    /** Explicit per-item state; arbitrary 2x2 span data is not a Max Icon. */
+    public static final int FLAG_MAX_ICON = 1 << 16;
+
     public int options;
+
+    public boolean isMaxIcon() {
+        return itemType == Favorites.ITEM_TYPE_APPLICATION && (options & FLAG_MAX_ICON) != 0;
+    }
 
     @Nullable
     private ShortcutInfo mShortcutInfo = null;
@@ -113,6 +120,7 @@ public class WorkspaceItemInfo extends ItemInfoWithIcon {
         title = info.title;
         intent = new Intent(info.intent);
         status = info.status;
+        options = info.options;
         personKeys = info.personKeys.clone();
     }
 

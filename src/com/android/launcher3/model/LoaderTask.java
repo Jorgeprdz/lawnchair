@@ -436,6 +436,11 @@ public class LoaderTask implements Runnable {
         final WidgetInflater widgetInflater = new WidgetInflater(mContext, mIsSafeModeEnabled);
 
         ModelDbController dbController = mModel.getModelDbController();
+        if (com.android.launcher3.widget.WidgetGridMigrationGuard.deferIfIncompatible(
+                mContext, dbController.getDb(), mIDP)) {
+            // The IDP change schedules a fresh load; do not continue with incompatible geometry.
+            throw new CancellationException("Retaining grid to preserve widget footprints");
+        }
         if (Flags.gridMigrationRefactor()) {
             try {
                 dbController.attemptMigrateDb(restoreEventLogger, mModelDelegate);
