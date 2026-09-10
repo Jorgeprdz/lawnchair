@@ -3,7 +3,7 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -22,13 +22,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.lawnchair.oneui.OneUiGlassPreferences
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.preferenceManager
@@ -44,6 +51,7 @@ import app.lawnchair.ui.preferences.components.colorpreference.ColorPreference
 import app.lawnchair.ui.preferences.components.controls.ListPreference
 import app.lawnchair.ui.preferences.components.controls.ListPreferenceEntry
 import app.lawnchair.ui.preferences.components.controls.MainSwitchPreference
+import app.lawnchair.ui.preferences.components.controls.OneUiGlassIntensityPreference
 import app.lawnchair.ui.preferences.components.controls.SliderPreference
 import app.lawnchair.ui.preferences.components.controls.SwitchPreference
 import app.lawnchair.ui.preferences.components.controls.WarningPreference
@@ -60,6 +68,11 @@ import com.android.launcher3.R
 fun DockPreferences(modifier: Modifier = Modifier) {
     val prefs = preferenceManager()
     val prefs2 = preferenceManager2()
+    val context = LocalContext.current
+    var dockFrosty by remember { mutableStateOf(OneUiGlassPreferences.isDockFrosty(context)) }
+    var dockIntensity by remember {
+        mutableIntStateOf(OneUiGlassPreferences.getDockIntensity(context))
+    }
 
     PreferenceLayout(
         label = stringResource(id = R.string.dock_label),
@@ -68,23 +81,40 @@ fun DockPreferences(modifier: Modifier = Modifier) {
     ) {
         val hotseatBgAdapter = prefs.hotseatBG.getAdapter()
         val backgroundMode = prefs2.hotseatBackgroundMode.getAdapter()
-        val selectedMode = backgroundMode.state.value.takeIf { it in 0..3 }
+        val baseMode = backgroundMode.state.value.takeIf { it in 0..3 }
             ?: if (hotseatBgAdapter.state.value) 1 else 0
+        val selectedMode = if (baseMode == 3 && dockFrosty) 4 else baseMode
 
         MainSwitchPreference(adapter = prefs2.isHotseatEnabled.getAdapter(), label = stringResource(id = R.string.show_hotseat_title)) {
             DockPreferencesPreview()
             PreferenceGroup(heading = stringResource(id = R.string.style)) {
                 ListPreference(
                     value = selectedMode,
-                    onValueChange = backgroundMode::onChange,
+                    onValueChange = { mode ->
+                        val frosty = mode == 4
+                        OneUiGlassPreferences.setDockFrosty(context, frosty)
+                        dockFrosty = frosty
+                        backgroundMode.onChange(if (frosty) 3 else mode)
+                    },
                     entries = listOf(
                         ListPreferenceEntry(0) { stringResource(R.string.dock_background_off) },
                         ListPreferenceEntry(1) { stringResource(R.string.dock_background_solid) },
                         ListPreferenceEntry(2) { stringResource(R.string.dock_background_blur) },
                         ListPreferenceEntry(3) { stringResource(R.string.dock_background_crystal) },
+                        ListPreferenceEntry(4) { stringResource(R.string.dock_background_frosty) },
                     ),
                     label = stringResource(id = R.string.hotseat_background),
                 )
+                ExpandAndShrink(visible = selectedMode >= 2) {
+                    OneUiGlassIntensityPreference(
+                        label = stringResource(R.string.glass_effect_intensity),
+                        value = dockIntensity,
+                        onValueChangeFinished = { value ->
+                            OneUiGlassPreferences.setDockIntensity(context, value)
+                            dockIntensity = value
+                        },
+                    )
+                }
                 ExpandAndShrink(
                     visible = selectedMode != 0,
                 ) {
