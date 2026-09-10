@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 563725faa64a8b540c4bc5b90a992772969826f5
+HEAD (audited before checkpoint): 8e5a75c4f026e24f2376d9d8ddbfe48eb118828a
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -29,8 +29,10 @@ Current:
 - Native RoundedSquare corner radius is 16% of measured preview edge; drawing/clipping/reveal share shape.
 - 2x2 occupancy, persistence, 3x3 preview and normal-folder theme unchanged by visual correction.
 - CI34442888473/f275b49 GREEN: compile/style, all8 tests and process-death restore; 13 actual screenshots.
-- Follow-up e278912 fixes negative label padding; full3-variant CI34443803289 running.
-- Latest CI34443965188/563725f adds real normal/Max/preview app-launch tests; HOME-category harness6f60a5b.
+- e278912 fixes negative label padding; CI34443803289 all3 APK/style GREEN; label-bound test failed.
+- HOME-category harness6f60a5b passed full emulator CI34443608218.
+- Real normal/Max/preview launch test563725f, shared touch helper2887d36; CI34444494208 emulator running.
+- Latest CI34444924076/8e5a75c: wait for layout, capture02 before assertion, measure actual glyph bounds.
 
 Next:
 - Inspect current CI failures if any; preserve validation; repeat until coherent acceptance checks pass.
@@ -65,7 +67,7 @@ Relevant files:
 - lawnchair: widgetstack/WidgetStackEditor.kt; qsb/PixelSearchQsbFragment.kt; preferences2/PreferenceManager2.kt
 
 Validation:
-- All3 APK variants + AndroidTest/style GREEN: CI34439748126/c340706; later production square change needs final validation.
+- All3 APK variants + AndroidTest/style GREEN: CI34443803289/e278912, including square shape and label-padding fix.
 - CI34441287074: 7/8 tests PASS + process-death PASS; only Max fixture failed (fixed04d433a).
 - M6 real tap/vertical scroll/horizontal paging/resize/reorder/remove/model reload PASS there; hidden host regression PASS.
 - Missing Finder/Pixel fallback tests PASS; this does NOT validate genuine Samsung/Pixel providers.
@@ -79,11 +81,11 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 44 PNG files downloaded, covering13 views; canonical02/13 replaced with visually verified square; old versions retained.
-- Latest artifact Lawnchair-OneUI-Screenshots: run34442888473/10138782051 (all13); previous runs also downloaded.
+- 67 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- Downloaded artifacts:34443803289/10139228809,34443608218/10139079462,34442888473/10138782051 + earlier.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.
-- Square shape confirmed visually; label was partially covered. Label-padding fix e278912 needs refreshed screenshots.
+- Square shape confirmed visually; label-padding fix e278912 needs refreshed screenshot/glyph-bound confirmation.
 - Pixel/Finder screenshots ONLY if real providers present; stock emulator lacks them; never fabricate images.
 - Final report: compile/emulator/physical validation separately; screenshot count/names/artifact/run/path/omissions.
 
