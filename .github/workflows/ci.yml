@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - '*-dev'
+      - feature/oneui-enhancements
     paths-ignore:
       - '.idea/**'
       - '.gitattributes'
