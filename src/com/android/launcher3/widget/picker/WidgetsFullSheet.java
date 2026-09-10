@@ -795,6 +795,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     @Override
     public void saveHierarchyState(SparseArray<Parcelable> sparseArray) {
         Bundle bundle = new Bundle();
+        bundle.putInt("widget_stack_target", getWidgetStackTarget());
         // With widget picker open, when we open shade to switch theme, Launcher re-creates the
         // picker and calls save/restore hierarchy state. We save the state of recommendations
         // across those updates.
@@ -809,6 +810,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
     @Override
     public void restoreHierarchyState(SparseArray<Parcelable> sparseArray) {
         Bundle state = (Bundle) sparseArray.get(0);
+        setWidgetStackTarget(state.getInt("widget_stack_target", -1));
         mRecommendationsCurrentPage = state.getInt(
                 RECOMMENDATIONS_SAVED_STATE_KEY, /*defaultValue=*/0);
         mWidgetRecommendationsView.restoreState(state);

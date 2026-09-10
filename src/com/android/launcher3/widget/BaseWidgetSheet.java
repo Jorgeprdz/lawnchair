@@ -208,6 +208,10 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
         mWidgetStackTarget = stackId;
     }
 
+    public int getWidgetStackTarget() {
+        return mWidgetStackTarget;
+    }
+
     private void addWidget(@NonNull PendingAddItemInfo info) {
         // Using a boolean flag here to make sure the callback is only run once. This should never
         // happen because we close the sheet and it will be reconstructed the next time it is
@@ -298,6 +302,15 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
         if (!ItemLongClickListener.canStartDrag(Launcher.getLauncher(mActivityContext)))
             return false;
 
+        if (mWidgetStackTarget >= 0) {
+            WidgetCell cell = v instanceof WidgetCell widgetCell ? widgetCell
+                    : v.getParent() instanceof WidgetCell parentCell ? parentCell : null;
+            if (cell != null && cell.getTag() instanceof PendingAddItemInfo info) {
+                addWidget(info);
+                return true;
+            }
+            return false;
+        }
         boolean result;
         if (v instanceof WidgetCell) {
             result = mActivityContext.getAllAppsItemLongClickListener().onLongClick(v);
