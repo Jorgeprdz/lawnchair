@@ -21,8 +21,8 @@ public final class OneUiScreenshots {
         for (int attempt = 0; attempt < 100; attempt++) {
             try (var input = new ParcelFileDescriptor.AutoCloseInputStream(
                     InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(
-                            "test -f /storage/emulated/0/Download/lawnchair/" + filename + ".done && echo ready"))) {
-                if (input.read() == 'r') return;
+                            "ls /storage/emulated/0/Download/lawnchair/" + filename + ".done"))) {
+                if (input.read() == '/') return;
             }
             SystemClock.sleep(200);
         }
