@@ -1,6 +1,11 @@
 name: OneUI nightly upstream sync
 
 on:
+  push:
+    branches:
+      - 16-dev
+    paths:
+      - .github/workflows/oneui-nightly.yml
   schedule:
     # 08:17 UTC = 02:17 in Mexico City. A non-round minute reduces Actions queue congestion.
     - cron: '17 8 * * *'
