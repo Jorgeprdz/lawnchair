@@ -40,6 +40,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
     private val pager = StackPager(context)
     private lateinit var stack: WidgetStackInfo
     private lateinit var writer: ModelWriter
+    private var bindingGeneration = 0
 
     init {
         contentDescription = context.getText(com.android.launcher3.R.string.widget_stack_title)
@@ -69,6 +70,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
     fun bind(info: WidgetStackInfo, modelWriter: ModelWriter, views: List<View>) {
         // Rebuilding pages must not persist a transient page as the user's selection.
         pager.onSettled = null
+        val generation = ++bindingGeneration
         stack = info
         writer = modelWriter
         tag = info
@@ -88,7 +90,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         indicator.visibility = if (views.size > 1) VISIBLE else GONE
         val activePage = info.getContents().indexOf(info.getActiveWidget()).coerceAtLeast(0)
         pager.runOnPageScrollsInitialized {
-            if (pager.childCount > 0) {
+            if (generation == bindingGeneration && pager.childCount > 0) {
                 pager.currentPage = activePage
                 updatePageAccessibility()
                 pager.onSettled = ::saveActivePage

@@ -79,9 +79,14 @@ object WidgetStackEditor {
                                 Row(Modifier.fillMaxWidth().a11yDrag(index, members, reorder, reorder)) {
                                     ReorderableDragHandle(scope = reorderScope)
                                     val label = remember(member.id) {
-                                        view.findWidgetByAppWidgetId(member.appWidgetId)?.appWidgetInfo
-                                            ?.loadLabel(launcher.packageManager)
-                                            ?: member.providerName?.shortClassName.orEmpty()
+                                        val providerLabel = try {
+                                            view.findWidgetByAppWidgetId(member.appWidgetId)?.appWidgetInfo
+                                                ?.loadLabel(launcher.packageManager)
+                                        } catch (_: RuntimeException) {
+                                            // A removed provider must not prevent opening its removal control.
+                                            null
+                                        }
+                                        providerLabel ?: member.providerName?.shortClassName.orEmpty()
                                     }
                                     TextButton(
                                         modifier = Modifier.weight(1f),

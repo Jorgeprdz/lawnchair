@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 7b3f3988790bb1aae3cd249ab8740baf56fa2350
+HEAD (audited before checkpoint): a7acbae651364481a4d099ae1b8cc4126595c53d
 Global: 39% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -32,7 +32,7 @@ Current:
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
-- M6 active-page correction fbdbc36 uses notifyPageSwitchListener; runtime revalidation deferred.
+- M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
 - Review Max drag/animation geometry and remaining M6 source gaps, then M4/M2; runtime validation pending.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
