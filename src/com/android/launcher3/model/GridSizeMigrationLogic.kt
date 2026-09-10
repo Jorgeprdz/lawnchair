@@ -15,12 +15,15 @@
  */
 package com.android.launcher3.model
 
+import android.appwidget.AppWidgetProviderInfo
+import android.content.ComponentName
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Point
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import app.lawnchair.preferences2.PreferenceManager2
+import app.lawnchair.preferences2.firstCached
 import com.android.launcher3.BuildConfig
 import com.android.launcher3.BuildConfigs
 import com.android.launcher3.Flags
@@ -44,7 +47,9 @@ import com.android.launcher3.provider.LauncherDbUtils.shiftWorkspaceByXCells
 import com.android.launcher3.util.CellAndSpan
 import com.android.launcher3.util.GridOccupancy
 import com.android.launcher3.util.IntArray
-import app.lawnchair.preferences2.firstCached
+import com.android.launcher3.widget.LauncherAppWidgetProviderInfo
+import com.android.launcher3.widget.WidgetManagerHelper
+import kotlin.math.roundToInt
 
 class GridSizeMigrationLogic {
     /**
@@ -130,7 +135,14 @@ class GridSizeMigrationLogic {
                     idsInUse,
                 )
                 // Migrate workspace.
-                migrateWorkspace(srcReader, destReader, target, targetSize, idsInUse)
+                migrateWorkspace(
+                    srcReader,
+                    destReader,
+                    target,
+                    targetSize,
+                    idsInUse,
+                    Point(srcDeviceState.columns, srcDeviceState.rows),
+                )
 
                 dropTable(t.db, TMP_TABLE)
                 t.commit()
@@ -253,6 +265,7 @@ class GridSizeMigrationLogic {
         helper: DatabaseHelper,
         targetSize: Point,
         idsInUse: MutableList<Int>,
+        sourceSize: Point = targetSize,
     ) {
         val srcWorkspaceItems = srcReader.loadAllWorkspaceEntries()
 
@@ -287,6 +300,18 @@ class GridSizeMigrationLogic {
             )
         }
 
+        if (sourceSize != targetSize) {
+            val widgetManager = WidgetManagerHelper(destReader.mContext)
+            for (entry in workspaceToBeAdded) {
+                if (entry.itemType != LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET) continue
+                val component = entry.mProvider?.let { ComponentName.unflattenFromString(it) }
+                val provider = widgetManager.getLauncherAppWidgetInfo(entry.appWidgetId, component)
+                if (provider != null) {
+                    scaleWidgetForGrid(entry, sourceSize, targetSize, provider)
+                }
+            }
+        }
+
         val remainingDstWorkspaceItems = destReader.loadAllWorkspaceEntries()
         placeWorkspaceItems(
             workspaceToBeAdded,
@@ -298,6 +323,45 @@ class GridSizeMigrationLogic {
             destReader,
             idsInUse,
         )
+    }
+
+    /** Computes a preferred cell footprint; the occupancy solver still decides placement. */
+    @VisibleForTesting
+    fun scaleWidgetForGrid(
+        entry: DbEntry,
+        source: Point,
+        target: Point,
+        provider: LauncherAppWidgetProviderInfo,
+    ) {
+        if (source.x <= 0 || source.y <= 0 || target.x <= 0 || target.y <= 0) return
+
+        val oldSpanX = entry.spanX
+        val oldSpanY = entry.spanY
+        val scaleX = target.x.toFloat() / source.x
+        val scaleY = target.y.toFloat() / source.y
+        if (provider.resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0) {
+            val minimum = maxOf(1, entry.minSpanX, provider.minSpanX)
+            val maximum = minOf(target.x, provider.maxSpanX)
+            if (minimum <= maximum) {
+                entry.spanX = (oldSpanX * scaleX).roundToInt().coerceIn(minimum, maximum)
+                entry.minSpanX = minimum
+            }
+        }
+        if (provider.resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0) {
+            val minimum = maxOf(1, entry.minSpanY, provider.minSpanY)
+            val maximum = minOf(target.y, provider.maxSpanY)
+            if (minimum <= maximum) {
+                entry.spanY = (oldSpanY * scaleY).roundToInt().coerceIn(minimum, maximum)
+                entry.minSpanY = minimum
+            }
+        }
+        // Preserve the relative center; normal placement resolves collisions and reserved rows.
+        entry.cellX =
+            ((entry.cellX + oldSpanX / 2f) * scaleX - entry.spanX / 2f)
+                .roundToInt().coerceIn(0, maxOf(0, target.x - entry.spanX))
+        entry.cellY =
+            ((entry.cellY + oldSpanY / 2f) * scaleY - entry.spanY / 2f)
+                .roundToInt().coerceIn(0, maxOf(0, target.y - entry.spanY))
     }
 
     private fun placeWorkspaceItems(
