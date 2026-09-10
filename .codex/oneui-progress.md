@@ -33,8 +33,8 @@ Current:
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Final CI 34439748126 on c340706: style and GithubDebug/test APK passed; other APKs/emulator pending.
-- New tests d6163c6/8dd1282 (real vertical widget scroll, missing providers) need the next validation build.
+- Full CI 34439748126/c340706: style/GithubDebug/PlayDebug passed; Nightly/emulator pending.
+- Latest tests: fast CI 34440174457/44203d9 running in parallel; includes vertical scrolling and missing providers.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
