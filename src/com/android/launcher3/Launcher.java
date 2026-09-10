@@ -213,6 +213,7 @@ import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.model.data.PredictedContainerInfo;
 import com.android.launcher3.model.data.WorkspaceData;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.model.data.WidgetStackInfo;
 import com.android.launcher3.notification.NotificationListener;
 import com.android.launcher3.pm.PinRequestHelper;
 import com.android.launcher3.popup.ArrowPopup;
@@ -2063,6 +2064,11 @@ public class Launcher extends StatefulActivity<LauncherState>
             }
             if (deleteFromDb) {
                 getModelWriter().deleteItemFromDatabase(itemInfo, reason);
+            }
+        } else if (itemInfo instanceof WidgetStackInfo stack) {
+            mWorkspace.removeWorkspaceItem(v);
+            if (deleteFromDb) {
+                getModelWriter().deleteWidgetStack(stack, getAppWidgetHolder(), reason);
             }
         } else if (itemInfo instanceof CollectionInfo ci) {
             mWorkspace.removeWorkspaceItem(v);

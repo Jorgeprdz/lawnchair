@@ -43,6 +43,7 @@ import com.android.launcher3.model.data.CollectionInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.model.data.WidgetStackInfo;
 import com.android.launcher3.provider.LauncherDbUtils.SQLiteTransaction;
 import com.android.launcher3.util.ContentWriter;
 import com.android.launcher3.util.Executors;
@@ -368,6 +369,65 @@ public class ModelWriter {
         addItemsToDatabase(Collections.singletonList(item));
     }
 
+    /** Wraps an existing widget in a stack without a partially committed overlapping footprint. */
+    public void createWidgetStack(final LauncherAppWidgetInfo widget,
+            java.util.function.Consumer<WidgetStackInfo> onCreated, Runnable onFailure) {
+        if (widget.container != Favorites.CONTAINER_DESKTOP || widget.id == ItemInfo.NO_ID
+                || widget.itemType != Favorites.ITEM_TYPE_APPWIDGET) {
+            mUiExecutor.execute(onFailure);
+            return;
+        }
+        final WidgetStackInfo stack = new WidgetStackInfo();
+        stack.copyFrom(widget);
+        stack.itemType = Favorites.ITEM_TYPE_WIDGET_STACK;
+        stack.id = mModel.getModelDbController().generateNewItemId();
+        stack.setActiveWidgetId(widget.id);
+        stack.minSpanX = widget.minSpanX;
+        stack.minSpanY = widget.minSpanY;
+        final int widgetRowId = widget.id;
+        newModelTask(() -> {
+            try (SQLiteTransaction transaction = mModel.getModelDbController().newTransaction()) {
+                ContentWriter values = new ContentWriter(mContext);
+                stack.onAddToDatabase(values);
+                values.put(Favorites._ID, stack.id);
+                if (mModel.getModelDbController().insert(values.getValues(mContext)) < 0) {
+                    throw new IllegalStateException("Unable to insert widget stack");
+                }
+                ContentValues member = new ContentValues();
+                member.put(Favorites.CONTAINER, stack.id);
+                member.put(Favorites.CELLX, 0);
+                member.put(Favorites.CELLY, 0);
+                member.put(Favorites.RANK, 0);
+                // Refuse a stale request if the widget moved or was removed in the meantime.
+                String selection = Favorites._ID + "=? AND " + Favorites.CONTAINER + "=? AND "
+                        + Favorites.SCREEN + "=? AND " + Favorites.CELLX + "=? AND "
+                        + Favorites.CELLY + "=? AND " + Favorites.SPANX + "=? AND "
+                        + Favorites.SPANY + "=?";
+                String[] args = {String.valueOf(widgetRowId),
+                        String.valueOf(Favorites.CONTAINER_DESKTOP), String.valueOf(stack.screenId),
+                        String.valueOf(stack.cellX), String.valueOf(stack.cellY),
+                        String.valueOf(stack.spanX), String.valueOf(stack.spanY)};
+                if (mModel.getModelDbController().update(member, selection, args) != 1) {
+                    throw new IllegalStateException("Widget changed before stack creation");
+                }
+                transaction.commit();
+            } catch (RuntimeException e) {
+                Log.e("WidgetStack", "Stack creation failed", e);
+                mUiExecutor.execute(onFailure);
+                return;
+            }
+            synchronized (mBgDataModel) {
+                widget.container = stack.id;
+                widget.cellX = widget.cellY = widget.rank = 0;
+                stack.add(widget);
+                mBgDataModel.addItem(mContext, stack, mOwner);
+            }
+            notifyItemModified(widget);
+            notifyOtherCallbacks(c -> c.bindItemsAdded(Collections.singletonList(stack)));
+            mUiExecutor.execute(() -> onCreated.accept(stack));
+        }).executeOnModelThread();
+    }
+
     /**
      * Add provided items to the database. Also assigns an ID to each item.
      */
@@ -454,6 +514,31 @@ public class ModelWriter {
             itemsToDelete.add(info);
             mBgDataModel.removeItem(mContext, itemsToDelete, mOwner);
             verifier.verifyModel();
+        }));
+    }
+
+    /** Deletes the stack and members together; host IDs remain intact until undo is committed. */
+    public void deleteWidgetStack(final WidgetStackInfo stack, LauncherWidgetHolder holder,
+            @Nullable String reason) {
+        final List<LauncherAppWidgetInfo> members = new ArrayList<>(stack.getContents());
+        notifyDelete(Collections.singleton(stack));
+        enqueueDeleteRunnable(newModelTask(() -> {
+            try (SQLiteTransaction transaction = mModel.getModelDbController().newTransaction()) {
+                mModel.getModelDbController().delete(
+                        Favorites.CONTAINER + "=?", new String[]{String.valueOf(stack.id)});
+                mModel.getModelDbController().delete(itemIdMatch(stack.id), null);
+                transaction.commit();
+            }
+            List<ItemInfo> removed = new ArrayList<>(members);
+            removed.add(stack);
+            mBgDataModel.removeItem(mContext, removed, mOwner);
+            if (holder != null) {
+                for (LauncherAppWidgetInfo member : members) {
+                    if (!member.isCustomWidget() && member.isWidgetIdAllocated()) {
+                        holder.deleteAppWidgetId(member.appWidgetId);
+                    }
+                }
+            }
         }));
     }
 
