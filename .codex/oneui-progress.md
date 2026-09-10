@@ -1,17 +1,17 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): ac3a2031d3ad44e85a7cad19211fcbf18225904b
-Global: 49% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): 8dd1282e4a191681aa81c9685f1587851d91d16f
+Global: 60% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
-- M1 Large Folders: 35% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
-- M2 Pixel Search: 35% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
+- M1 Large Folders: 50% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
+- M2 Pixel Search: 50% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
-- M4 Dock Glass: 35% — four persisted modes, native geometry, optional region blur and crystal styling.
+- M4 Dock Glass: 50% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
-- M6 Widget Stacks: 45% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
-- M7 Max Icons / Max Folders: 30% — native Max Icon action/rendering; shared folder state/placement.
+- M6 Widget Stacks: 60% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
+- M7 Max Icons / Max Folders: 50% — native Max Icon action/rendering; shared folder state/placement.
 
 Completed:
 - No M1/M6 implementation survived original recovery; M6 reconstructed afterward.
@@ -27,14 +27,14 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- M2 real QSB hosting/lifecycle; M1 preview app install-state handling and touch cancellation reviewed.
+- All module implementations compile: 34439279055 three APKs passed; style failed then fixed 7d0c233.
 - Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Final CI 34439279055 running on 4f4751f: full three-APK matrix, style, then API35 integration/screenshots.
-- M5/M6 guard 58731d2 cancels incompatible grid changes before migration; source-grid reload needs testing.
+- Final CI 34439748126 on c340706: style and GithubDebug/test APK passed; other APKs/emulator pending.
+- New tests d6163c6/8dd1282 (real vertical widget scroll, missing providers) need the next validation build.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -68,7 +68,7 @@ Relevant files:
 - lawnchair: HomeScreenGridPreferences.kt; DockPreferences.kt; qsb/PixelSearchQsbFragment.kt
 
 Validation:
-- 5 grid scaling + 5 stack model + 3 migration cases in multivalentTests remain unexecuted.
+- Original 13 multivalent cases remain unexecuted; Android tests now include SQLite Max migration and workspace persistence.
 - Three APKs/style green: 1960ee0/34427352339, f84b4c7/34429849107, 2e6eba2/34429976188.
 - b0aad3d/34430802520, 1bc97b0/34431464980, 6dd63d6/34431706677: APKs/instrumentation/style compiled.
 - AVD path issue fixed: API35 boot/install/startup confirmed; 1 of 2 instrumentation tests passes.
