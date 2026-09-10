@@ -59,11 +59,15 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
     }
 
     fun bind(info: WidgetStackInfo, modelWriter: ModelWriter, views: List<View>) {
+        // Rebuilding pages must not persist a transient page as the user's selection.
+        pager.onSettled = null
         stack = info
         writer = modelWriter
         tag = info
         pager.removeAllViews()
         views.forEach { view ->
+            // The existing AppWidget host may return a view from the previous binding.
+            (view.parent as? ViewGroup)?.removeView(view)
             val page = FrameLayout(context)
             view.setOnLongClickListener { performLongClick() }
             page.addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))

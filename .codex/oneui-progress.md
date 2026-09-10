@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-df7868595d8e1623689ffdc1aea4080327db5541
+062a8702c2efb30dc319da30d0e65e968914311c
 
 Global:
 26% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,7 +36,7 @@ Completed:
 - M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
-- Monitor M6 CI; implement atomic creation/deletion, picker integration and native editor.
+- M6 page rebinding safely detaches reused host views; continue picker integration/native editor.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
@@ -50,6 +50,9 @@ Architecture decisions:
 - Only feature/oneui-enhancements may change; never merge into 16-dev.
 - Order: M3 -> M5 -> M6 -> M1 + M7 together -> M4 -> M2; finish current M6 unit first.
 - M7: per-app contextual maximize/restore, real 2x2 CellLayout occupancy, intentional persisted state.
+- M1/M7: ONE shared 1x1 <-> 2x2 placement/reorder/nearest-space/persistence/restore mechanism.
+- Max Icons: implement on current WorkspaceItemInfo/BubbleTextView; no further broad drop-in search.
+- AOSP span/model/binding paths guide occupancy; DefaultLauncher GPL files remain reference only.
 - M7 folders MUST share M1 canonical state/3x3 direct-launch preview; no duplicate flags/systems.
 - M7: native popup, nearest safe placement/refusal, same item identity, adaptive/themed icons/badges.
 - M7: workspace only, no Hotseat/global scaling/Nothing mode; preserve drag, labels, a11y, animations.
