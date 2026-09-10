@@ -10,7 +10,7 @@
 package com.android.launcher3.widget
 
 import android.appwidget.AppWidgetProviderInfo
-import android.view.View
+import android.appwidget.AppWidgetHostView
 import android.widget.Toast
 import com.android.launcher3.Launcher
 import com.android.launcher3.PendingAddItemInfo
@@ -45,7 +45,7 @@ object WidgetStackController {
     @JvmStatic
     fun findStack(launcher: Launcher, id: Int): WidgetStackView? =
         launcher.workspace.mapOverItems { item, view ->
-            item.id == id && view is WidgetStackView
+            item?.id == id && view is WidgetStackView
         } as? WidgetStackView
 
     private fun fits(stack: WidgetStackInfo, provider: LauncherAppWidgetProviderInfo): Boolean {
@@ -77,7 +77,7 @@ object WidgetStackController {
     /** A nonnegative widget container is a persistent stack ID, even if it was since removed. */
     @JvmStatic
     fun completeAdd(launcher: Launcher, container: Int, member: LauncherAppWidgetInfo,
-        provider: LauncherAppWidgetProviderInfo, view: View): Boolean {
+        provider: LauncherAppWidgetProviderInfo, view: AppWidgetHostView): Boolean {
         if (container < 0) return false
         val stackView = findStack(launcher, container)
         val stack = stackView?.tag as? WidgetStackInfo
