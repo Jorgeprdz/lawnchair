@@ -1613,9 +1613,21 @@ public class CellLayout extends ViewGroup {
     /** Resizes a stack using the same occupancy solution and commit path as widget resizing. */
     public boolean resizeWidgetStack(com.android.launcher3.widget.WidgetStackView stack,
             int spanX, int spanY) {
-        if (stack.getParent() != mShortcutsAndWidgets || spanX < 1 || spanY < 1
+        return resizeWorkspaceItem(stack, spanX, spanY, false);
+    }
+
+    /** Shared footprint change for individual workspace icons and folders, including relocation. */
+    public boolean resizeWorkspaceItem(View item, int spanX, int spanY) {
+        if (!(item.getTag() instanceof ItemInfo info)
+                || info.container != Favorites.CONTAINER_DESKTOP) return false;
+        return resizeWorkspaceItem(item, spanX, spanY, true);
+    }
+
+    private boolean resizeWorkspaceItem(View item, int spanX, int spanY,
+            boolean allowNearestPlacement) {
+        if (item.getParent() != mShortcutsAndWidgets || spanX < 1 || spanY < 1
                 || spanX > getCountX() || spanY > getCountY()) return false;
-        CellLayoutLayoutParams lp = (CellLayoutLayoutParams) stack.getLayoutParams();
+        CellLayoutLayoutParams lp = (CellLayoutLayoutParams) item.getLayoutParams();
         int cellX = Math.min(lp.getCellX(), getCountX() - spanX);
         int cellY = Math.min(lp.getCellY(), getCountY() - spanY);
         int[] center = new int[2];
@@ -1623,16 +1635,21 @@ public class CellLayout extends ViewGroup {
         int[] direction = {Integer.compare(spanX, lp.cellHSpan),
                 Integer.compare(spanY, lp.cellVSpan)};
         ItemConfiguration solution = findReorderSolution(center[0], center[1], spanX, spanY,
-                spanX, spanY, direction, stack, true);
+                spanX, spanY, direction, item, true);
+        if ((solution == null || !solution.isSolution) && allowNearestPlacement) {
+            // The standard solver also considers the nearest empty region. Do not shrink the
+            // requested footprint or reserve cells until a complete valid solution is available.
+            solution = calculateReorder(center[0], center[1], spanX, spanY, spanX, spanY, item);
+        }
         if (solution == null || !solution.isSolution || solution.spanX != spanX
                 || solution.spanY != spanY) return false;
         setUseTempCoords(true);
-        copySolutionToTempState(solution, stack);
+        copySolutionToTempState(solution, item);
         lp.setTmpCellX(solution.cellX);
         lp.setTmpCellY(solution.cellY);
         lp.cellHSpan = spanX;
         lp.cellVSpan = spanY;
-        animateItemsToSolution(solution, stack, true);
+        animateItemsToSolution(solution, item, true);
         commitTempPlacement(null);
         completeAndClearReorderPreviewAnimations();
         setItemPlacementDirty(false);
