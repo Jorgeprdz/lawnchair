@@ -437,14 +437,10 @@ public class GridSizeMigrationDBController {
             @NonNull final GridOccupancy occupied, final int screenId) {
         for (int y = next.y; y < trg.y; y++) {
             for (int x = next.x; x < trg.x; x++) {
-                boolean fits = occupied.isRegionVacant(x, y, entry.spanX, entry.spanY);
-                boolean minFits = occupied.isRegionVacant(x, y, entry.minSpanX,
-                        entry.minSpanY);
-                if (minFits) {
-                    entry.spanX = entry.minSpanX;
-                    entry.spanY = entry.minSpanY;
-                }
-                if (fits || minFits) {
+                Point span = findLargestVacantSpan(entry, x, y, trg, occupied);
+                if (span != null) {
+                    entry.spanX = span.x;
+                    entry.spanY = span.y;
                     entry.screenId = screenId;
                     entry.cellX = x;
                     entry.cellY = y;
@@ -456,6 +452,31 @@ public class GridSizeMigrationDBController {
             next.set(0, next.y);
         }
         return false;
+    }
+
+    private static Point findLargestVacantSpan(@NonNull final DbEntry entry, int cellX, int cellY,
+            @NonNull final Point trg, @NonNull final GridOccupancy occupied) {
+        int maxSpanX = Math.min(entry.spanX, trg.x - cellX);
+        int maxSpanY = Math.min(entry.spanY, trg.y - cellY);
+        if (maxSpanX < entry.minSpanX || maxSpanY < entry.minSpanY) {
+            return null;
+        }
+
+        Point best = null;
+        int bestArea = 0;
+        for (int spanX = maxSpanX; spanX >= entry.minSpanX; spanX--) {
+            for (int spanY = maxSpanY; spanY >= entry.minSpanY; spanY--) {
+                int area = spanX * spanY;
+                if (area <= bestArea) {
+                    continue;
+                }
+                if (occupied.isRegionVacant(cellX, cellY, spanX, spanY)) {
+                    best = new Point(spanX, spanY);
+                    bestArea = area;
+                }
+            }
+        }
+        return best;
     }
 
     private static void solveHotseatPlacement(

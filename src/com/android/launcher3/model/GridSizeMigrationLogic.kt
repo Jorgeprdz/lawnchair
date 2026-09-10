@@ -581,13 +581,39 @@ class GridSizeMigrationLogic {
         var newStartPosX = startPosX
         for (y in startPosY until trg.y) {
             for (x in newStartPosX until trg.x) {
-                if (occupied.isRegionVacant(x, y, entry.minSpanX, entry.minSpanY)) {
-                    return (CellAndSpan(x, y, entry.minSpanX, entry.minSpanY))
+                findLargestVacantSpan(entry, x, y, trg, occupied)?.let { span ->
+                    return CellAndSpan(x, y, span.x, span.y)
                 }
             }
             newStartPosX = 0
         }
         return null
+    }
+
+    private fun findLargestVacantSpan(
+        entry: DbEntry,
+        cellX: Int,
+        cellY: Int,
+        trg: Point,
+        occupied: GridOccupancy,
+    ): Point? {
+        val maxSpanX = entry.spanX.coerceAtMost(trg.x - cellX)
+        val maxSpanY = entry.spanY.coerceAtMost(trg.y - cellY)
+        if (maxSpanX < entry.minSpanX || maxSpanY < entry.minSpanY) return null
+
+        var best: Point? = null
+        var bestArea = 0
+        for (spanX in maxSpanX downTo entry.minSpanX) {
+            for (spanY in maxSpanY downTo entry.minSpanY) {
+                val area = spanX * spanY
+                if (area <= bestArea) continue
+                if (occupied.isRegionVacant(cellX, cellY, spanX, spanY)) {
+                    best = Point(spanX, spanY)
+                    bestArea = area
+                }
+            }
+        }
+        return best
     }
 
     /**
