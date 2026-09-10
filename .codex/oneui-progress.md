@@ -24,14 +24,12 @@ Completed:
 - M4 Off/Solid/Blur/Crystal; M2 real Pixel Search replaces Google option with native search fallback.
 
 Current:
-- USER: conserve quota; ONE CI at a time, fast Debug/test path until regressions pass; no scope expansion.
-- USER authorizes final APK download/install on phone; preserve existing Nightly data, never uninstall to bypass signature.
-- CI34450404326 GNC completion/lost/stale callback regression PASS; user says no further GNC work.
-- CI34449083380 compile/style GREEN; attempt1 ADB transport lost; attempt2 GNC null surface crash.
-- Remaining failures: Max inspected stale unfocused/unlaid-out activity; stack swipe used pre-animation bounds.
-- Harness now uses current Launcher tracker for Max and remeasures settled stack bounds before each swipe.
-- Rounded-square folder visually confirmed; label-spacing correction still needs complete Max scenario/recapture.
-- Light wallpaper setup PASS; canonical10 screenshots updated; canonical02/03/13 still older.
+- USER: conserve quota; ONE CI; do NOT repeat already passing tests; no further home-return bug work.
+- 707dfb0 fixes label overlap by clamping negative grid icon padding for large folders only.
+- CI34452779043: label/direct app launches/Max launch/folder open PASS; all13 light screenshots produced.
+- Only remaining scenario failure: ActivityScenario.recreate referenced STOPPED old activity after HOME.
+- Recreate the actual current Launcher; targeted oneui-max-restore-only excludes already passed cases.
+- Final APK download/install authorized; preserve existing Nightly data and install validated Debug separately.
 
 Next:
 - Inspect current CI failures if any; preserve validation; repeat until coherent acceptance checks pass.
@@ -85,7 +83,7 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 128 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- 152 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
 - Latest light screenshots: CI34445977242/artifact10139936029; main10 updated; canonical02/03/13 still older.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.

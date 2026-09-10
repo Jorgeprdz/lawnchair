@@ -84,57 +84,74 @@ public class MaxWorkspaceItemsTest {
                     assertNoOverlap(grid);
                 });
                 drain();
-                OneUiScreenshots.capture("01-home.png");
-                launchSettingsAndReturn(scenario, iconId.get(), false);
+                boolean restoreOnly = "recreation".equals(InstrumentationRegistry.getArguments()
+                        .getString("oneuiMaxPhase"));
+                if (restoreOnly) {
+                    onLauncher(scenario, launcher -> {
+                        assertTrue(WorkspaceItemSize.toggle(launcher, find(launcher, iconId.get())));
+                        assertTrue(WorkspaceItemSize.toggle(launcher, find(launcher, folderId.get())));
+                    });
+                    drain();
+                } else {
+                    OneUiScreenshots.capture("01-home.png");
+                    launchSettingsAndReturn(scenario, iconId.get(), false);
+                    onLauncher(scenario, launcher -> {
+                        assertTrue(find(launcher, folderId.get()).performClick());
+                        assertNotNull(Folder.getOpen(launcher));
+                    });
+                    onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
+                    InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                    SystemClock.sleep(500);
+                    onLauncher(scenario, launcher -> {
+                        assertTrue(WorkspaceItemSize.toggle(launcher, find(launcher, iconId.get())));
+                    });
+                    drain();
+                    OneUiScreenshots.capture("12-max-icon.png");
+                    launchSettingsAndReturn(scenario, iconId.get(), false);
+                    onLauncher(scenario, launcher -> {
+                        FolderIcon view = (FolderIcon) find(launcher, folderId.get());
+                        assertTrue(WorkspaceItemSize.toggle(launcher, view));
+                        assertEquals(9, view.getPreviewItemsOnPage(0).size());
+                        assertEquals(10, ((FolderInfo) view.getTag()).getContents().size());
+                        assertNoOverlap((CellLayout) view.getParent().getParent());
+                    });
+                    drain();
+                    awaitLauncher(scenario, launcher -> {
+                        FolderIcon view = (FolderIcon) find(launcher, folderId.get());
+                        return view.getLargePreviewSize() > 0 && !view.isLayoutRequested()
+                                && !view.getFolderName().isLayoutRequested();
+                    });
+                    OneUiScreenshots.capture("02-large-folder.png");
+                    onLauncher(scenario, launcher -> {
+                        FolderIcon view = (FolderIcon) find(launcher, folderId.get());
+                        var name = view.getFolderName();
+                        var textBounds = new android.graphics.Rect();
+                        String title = name.getText().toString();
+                        name.getPaint().getTextBounds(title, 0, title.length(), textBounds);
+                        int labelTop = name.getTop() + name.getBaseline() + textBounds.top;
+                        int previewBottom = view.getPaddingTop() + view.getLargePreviewSize();
+                        assertTrue("Large folder label top=" + labelTop + " must be below preview=" + previewBottom,
+                                labelTop >= previewBottom);
+                    });
+                    OneUiScreenshots.capture("13-max-folder.png");
+                    launchSettingsAndReturn(scenario, folderId.get(), true);
+                    onLauncher(scenario, launcher -> {
+                        find(launcher, folderId.get()).performClick();
+                        assertNotNull(Folder.getOpen(launcher));
+                        assertEquals(10, Folder.getOpen(launcher).getItemCount());
+                    });
+                    OneUiScreenshots.capture("03-large-folder-open.png");
+                    onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
+                    drain();
+                }
+                java.util.concurrent.atomic.AtomicReference<Launcher> previous =
+                        new java.util.concurrent.atomic.AtomicReference<>();
                 onLauncher(scenario, launcher -> {
-                    assertTrue(find(launcher, folderId.get()).performClick());
-                    assertNotNull(Folder.getOpen(launcher));
+                    previous.set(launcher);
+                    launcher.recreate();
                 });
-                onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
-                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-                SystemClock.sleep(500);
-                onLauncher(scenario, launcher -> {
-                    assertTrue(WorkspaceItemSize.toggle(launcher, find(launcher, iconId.get())));
-                });
-                drain();
-                OneUiScreenshots.capture("12-max-icon.png");
-                launchSettingsAndReturn(scenario, iconId.get(), false);
-                onLauncher(scenario, launcher -> {
-                    FolderIcon view = (FolderIcon) find(launcher, folderId.get());
-                    assertTrue(WorkspaceItemSize.toggle(launcher, view));
-                    assertEquals(9, view.getPreviewItemsOnPage(0).size());
-                    assertEquals(10, ((FolderInfo) view.getTag()).getContents().size());
-                    assertNoOverlap((CellLayout) view.getParent().getParent());
-                });
-                drain();
-                awaitLauncher(scenario, launcher -> {
-                    FolderIcon view = (FolderIcon) find(launcher, folderId.get());
-                    return view.getLargePreviewSize() > 0 && !view.isLayoutRequested()
-                            && !view.getFolderName().isLayoutRequested();
-                });
-                OneUiScreenshots.capture("02-large-folder.png");
-                onLauncher(scenario, launcher -> {
-                    FolderIcon view = (FolderIcon) find(launcher, folderId.get());
-                    var name = view.getFolderName();
-                    var textBounds = new android.graphics.Rect();
-                    String title = name.getText().toString();
-                    name.getPaint().getTextBounds(title, 0, title.length(), textBounds);
-                    int labelTop = name.getTop() + name.getBaseline() + textBounds.top;
-                    int previewBottom = view.getPaddingTop() + view.getLargePreviewSize();
-                    assertTrue("Large folder label top=" + labelTop + " must be below preview=" + previewBottom,
-                            labelTop >= previewBottom);
-                });
-                OneUiScreenshots.capture("13-max-folder.png");
-                launchSettingsAndReturn(scenario, folderId.get(), true);
-                onLauncher(scenario, launcher -> {
-                    find(launcher, folderId.get()).performClick();
-                    assertNotNull(Folder.getOpen(launcher));
-                    assertEquals(10, Folder.getOpen(launcher).getItemCount());
-                });
-                OneUiScreenshots.capture("03-large-folder-open.png");
-                onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
-                drain();
-                scenario.recreate();
+                awaitLauncher(scenario, launcher -> launcher != previous.get()
+                        && !launcher.isWorkspaceLoading() && launcher.hasWindowFocus());
                 ready(scenario);
                 onLauncher(scenario, launcher -> {
                     View icon = find(launcher, iconId.get());
