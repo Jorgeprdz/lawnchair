@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): f70e137bc404ef5c705b637632ab0d6b777cc5f5
+HEAD (audited before checkpoint): b7223668d2f64d805c6b4af460ba7da17567259d
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -14,7 +14,6 @@ Modules:
 - M7 Max Icons / Max Folders: 0% — registered; workspace-only real 1x1/2x2 items.
 
 Completed:
-- Recovery feature 5c25056, 9 ahead/0 behind base 155ccd1ee49e29e839ca603072777a9b7ef1e52c.
 - No M1/M6 implementation survived original recovery; M6 reconstructed afterward.
 - Finder launch/availability exceptions guarded 3a154b7; native gesture registration retained.
 - M5 constraints precede CellLayout occupancy d73d45d; proportional Kotlin migration a78a0c9.
@@ -32,7 +31,7 @@ Current:
 - Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
 
 Next:
-- Verify fast CI after moving binding test into launcher package (ActivityCodes access fix).
+- Monitor fast CI/emulator 34433342940 (9cc7574); binding test now in launcher package for ActivityCodes.
 - Verify explicit AVD paths; first corrected setup did not run because test compilation failed.
 - Run latest interaction tests after compile; finish provider failure, vertical scroll, picker/editor and migration acceptance.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
@@ -76,9 +75,10 @@ Validation:
 - Diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34430802520, artifact10134948008; no device test passed.
 - Explicit ANDROID_USER_HOME/ANDROID_AVD_HOME + AVD existence checks dc9c8cd; bounded ADB/setup waits.
 - dc9c8cd/34432524467 failed AndroidTest compilation: ActivityCodes constant package access; test moved.
-- Feature pushes: GithubDebug + instrumentation/style; duplicate feature PR jobs skipped.
+- Feature pushes: GithubDebug + instrumentation/style; duplicate feature PR jobs skipped (f70e137).
 - Manual oneui-fast=true gives quick validation; default manual run retains all 3 APK variants.
 - oneui-apk-run reuses successful APKs only after source/build checks (6 guard cases passed).
+- Gradle cache defaults read-only off default branch; feature cache writes enabled b722366 (caching already true).
 
 Final emulator/screenshots requirements (after all modules and successful CI):
 - Use remote emulator if available; install actual APK, launch without crash, set home when permitted.
