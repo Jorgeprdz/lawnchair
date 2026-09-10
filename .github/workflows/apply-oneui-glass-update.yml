@@ -1,0 +1,112 @@
+name: Apply OneUI frosty glass update
+
+on:
+  push:
+    branches:
+      - feature/oneui-enhancements
+    paths:
+      - .github/scripts/apply-oneui-glass-update.py
+      - .github/workflows/apply-oneui-glass-update.yml
+
+permissions:
+  contents: write
+
+env:
+  ONEUI_APPLICATION_ID: app.lawnchair.oneui
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Apply complete glass implementation
+        run: |
+          python3 .github/scripts/apply-oneui-glass-update.py
+          git diff --check
+
+      - name: Make validation APK install separately
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('build.gradle')
+          s = p.read_text()
+          old_id = "applicationId 'app.lawnchair'"
+          new_id = "applicationId 'app.lawnchair.oneui'"
+          if old_id not in s:
+              raise SystemExit('Expected Github flavor applicationId was not found')
+          s = s.replace(old_id, new_id, 1)
+          old_name = 'resValue("string", "derived_app_name", "Lawnchair (Debug)")'
+          new_name = 'resValue("string", "derived_app_name", "Lawnchair OneUI")'
+          if old_name not in s:
+              raise SystemExit('Expected debug app name was not found')
+          p.write_text(s.replace(old_name, new_name, 1))
+          PY
+
+      - name: Restore stable signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ONEUI_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONEUI_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/oneui-stable.jks"
+          cat > keystore.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
+          EOF
+
+      - name: Compile frosty glass build
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug
+
+      - name: Verify package and stable certificate
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          test -n "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
+          "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/cert.txt
+          grep -F 'B1:94:49:E7:82:C3:04:98:3E:6A:16:86:BA:E0:08:9F:25:C6:2D:33:E8:ED:1B:E1:09:31:F1:2E:B7:A8:2E:CA' /tmp/cert.txt
+
+      - name: Upload validated APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-Frosty-Glass-Debug
+          path: build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      - name: Commit implementation and remove one-shot tooling
+        run: |
+          set -euo pipefail
+          git checkout -- build.gradle
+          rm -f keystore.properties oneui-stable.jks
+          git rm .github/scripts/apply-oneui-glass-update.py .github/workflows/apply-oneui-glass-update.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/com/android/launcher3/graphics/DockGlassBackground.java \
+                  src/com/android/launcher3/graphics/OneUiGlassPreferences.java \
+                  src/com/android/launcher3/graphics/OneUiGlassSurface.java \
+                  src/com/android/launcher3/graphics/OneUiFolderBackgroundDrawable.java \
+                  src/com/android/launcher3/folder/PreviewBackground.java \
+                  lawnchair/src/app/lawnchair/theme/drawable/DrawableTokens.kt \
+                  lawnchair/src/app/lawnchair/ui/preferences/components/controls/OneUiGlassPreferencesUi.kt \
+                  lawnchair/src/app/lawnchair/ui/preferences/destinations/DockPreferences.kt \
+                  lawnchair/src/app/lawnchair/ui/preferences/destinations/FolderPreferences.kt
+          git commit -m 'feat: add frosty OneUI glass controls for dock and folders'
+          git push origin HEAD:feature/oneui-enhancements
