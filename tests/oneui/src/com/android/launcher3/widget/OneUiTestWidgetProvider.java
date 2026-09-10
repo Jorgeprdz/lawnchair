@@ -9,19 +9,39 @@
  */
 package com.android.launcher3.widget;
 
+import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
+import android.content.Intent;
 import android.widget.RemoteViews;
 
 /** A real Android provider installed only with the instrumentation APK. */
 public class OneUiTestWidgetProvider extends AppWidgetProvider {
+    private static final String TAP = "com.android.launcher3.oneui.test.WIDGET_TAP";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        if (TAP.equals(intent.getAction())) {
+            int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1);
+            if (id >= 0) render(context, AppWidgetManager.getInstance(context), id, true);
+        }
+    }
+
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        for (int id : ids) {
-            RemoteViews views = new RemoteViews("android", android.R.layout.simple_list_item_1);
-            views.setTextViewText(android.R.id.text1, "OneUI test widget " + id);
-            manager.updateAppWidget(id, views);
-        }
+        for (int id : ids) render(context, manager, id, false);
+    }
+
+    private static void render(Context context, AppWidgetManager manager, int id, boolean clicked) {
+        RemoteViews views = new RemoteViews("android", android.R.layout.simple_list_item_1);
+        views.setTextViewText(android.R.id.text1,
+                (clicked ? "Clicked widget " : "OneUI test widget ") + id);
+        Intent tap = new Intent(context, OneUiTestWidgetProvider.class).setAction(TAP)
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(android.R.id.text1, PendingIntent.getBroadcast(context, id,
+                tap, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        manager.updateAppWidget(id, views);
     }
 }

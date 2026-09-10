@@ -16,6 +16,9 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.graphics.Rect;
+import android.view.MotionEvent;
+import android.widget.TextView;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 
@@ -121,6 +124,38 @@ public class WidgetStackBindingTest {
                             provider, launcher.getAppWidgetHolder().createView(id, provider)));
                 });
                 await(scenario, launcher -> info(launcher, stackId.get()).getContents().size() == 2);
+                Rect tapBounds = new Rect();
+                await(scenario, launcher -> {
+                    TextView text = activeText(launcher, stackId.get());
+                    return text != null && text.getText().toString().startsWith("OneUI test widget")
+                            && text.getGlobalVisibleRect(tapBounds);
+                });
+                sendGesture(tapBounds.centerX(), tapBounds.centerY(),
+                        tapBounds.centerX(), tapBounds.centerY(), false);
+                await(scenario, launcher -> {
+                    TextView text = activeText(launcher, stackId.get());
+                    return text != null && text.getText().toString().startsWith("Clicked widget");
+                });
+                Rect stackBounds = new Rect();
+                AtomicInteger firstRow = new AtomicInteger();
+                AtomicInteger secondRow = new AtomicInteger();
+                AtomicInteger workspacePage = new AtomicInteger();
+                scenario.onActivity(launcher -> {
+                    WidgetStackView view = WidgetStackController.findStack(launcher, stackId.get());
+                    assertTrue(view.getGlobalVisibleRect(stackBounds));
+                    WidgetStackInfo stack = (WidgetStackInfo) view.getTag();
+                    firstRow.set(stack.getContents().get(0).id);
+                    secondRow.set(stack.getContents().get(1).id);
+                    workspacePage.set(launcher.getWorkspace().getCurrentPage());
+                });
+                float left = stackBounds.left + stackBounds.width() * 0.2f;
+                float right = stackBounds.left + stackBounds.width() * 0.8f;
+                sendGesture(left, stackBounds.centerY(), right, stackBounds.centerY(), true);
+                await(scenario, launcher -> info(launcher, stackId.get()).getActiveWidgetId() == firstRow.get());
+                sendGesture(right, stackBounds.centerY(), left, stackBounds.centerY(), true);
+                await(scenario, launcher -> info(launcher, stackId.get()).getActiveWidgetId() == secondRow.get());
+                scenario.onActivity(launcher -> assertEquals(workspacePage.get(),
+                        launcher.getWorkspace().getCurrentPage()));
                 AtomicInteger active = new AtomicInteger();
                 AtomicReference<WidgetStackView> oldView = new AtomicReference<>();
                 scenario.onActivity(launcher -> {
@@ -187,6 +222,36 @@ public class WidgetStackBindingTest {
                     for (int id : allocatedIds) launcher.getAppWidgetHolder().deleteAppWidgetId(id);
                 });
             }
+        }
+    }
+
+    private static TextView activeText(Launcher launcher, int id) {
+        WidgetStackView view = WidgetStackController.findStack(launcher, id);
+        WidgetStackInfo stack = (WidgetStackInfo) view.getTag();
+        LauncherAppWidgetHostView host = view.findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
+        return host == null ? null : host.findViewById(android.R.id.text1);
+    }
+
+    private static void sendGesture(float fromX, float fromY, float toX, float toY, boolean swipe) {
+        long down = SystemClock.uptimeMillis();
+        sendMotion(down, MotionEvent.ACTION_DOWN, fromX, fromY);
+        if (swipe) {
+            for (int step = 1; step <= 15; step++) {
+                SystemClock.sleep(16);
+                float progress = step / 15f;
+                sendMotion(down, MotionEvent.ACTION_MOVE,
+                        fromX + (toX - fromX) * progress, fromY + (toY - fromY) * progress);
+            }
+        }
+        sendMotion(down, MotionEvent.ACTION_UP, toX, toY);
+    }
+
+    private static void sendMotion(long down, int action, float x, float y) {
+        MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+        try {
+            InstrumentationRegistry.getInstrumentation().sendPointerSync(event);
+        } finally {
+            event.recycle();
         }
     }
 
