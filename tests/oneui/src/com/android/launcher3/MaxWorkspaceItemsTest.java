@@ -84,6 +84,42 @@ public class MaxWorkspaceItemsTest {
                     assertNoOverlap(grid);
                 });
                 drain();
+                if ("device-feedback".equals(InstrumentationRegistry.getArguments()
+                        .getString("oneuiMaxPhase"))) {
+                    onLauncher(scenario, launcher -> {
+                        assertTrue("Quickstep must expose the Max action", launcher.getSupportedShortcuts(
+                                LauncherSettings.Favorites.CONTAINER_DESKTOP).anyMatch(factory ->
+                                factory == com.android.launcher3.popup.SystemShortcut.WORKSPACE_SIZE));
+                        FolderIcon folder = (FolderIcon) find(launcher, folderId.get());
+                        assertTrue(WorkspaceItemSize.toggle(launcher, folder));
+                    });
+                    drain();
+                    awaitLauncher(scenario, launcher -> !find(launcher, folderId.get()).isLayoutRequested());
+                    onLauncher(scenario, launcher -> {
+                        FolderIcon folder = (FolderIcon) find(launcher, folderId.get());
+                        FolderInfo info = (FolderInfo) folder.getTag();
+                        CellLayout grid = (CellLayout) folder.getParent().getParent();
+                        android.graphics.Rect preview = new android.graphics.Rect();
+                        folder.getWorkspaceVisualDragBounds(preview);
+                        preview.offset(folder.getLeft(), folder.getTop());
+                        for (int dx = 0; dx < 2; dx++) {
+                            for (int dy = 0; dy < 2; dy++) {
+                                int[] cell = {info.cellX + dx, info.cellY + dy};
+                                assertSame(folder, grid.getChildAt(cell[0], cell[1]));
+                                assertFalse("All four folder cells must be occupied",
+                                        grid.getOccupied().isRegionVacant(cell[0], cell[1], 1, 1));
+                                float x = preview.left + preview.width() * (dx == 0 ? .25f : .75f);
+                                float y = preview.top + preview.height() * (dy == 0 ? .25f : .75f);
+                                float distance = grid.getDistanceFromWorkspaceCellVisualCenter(x, y, cell);
+                                assertTrue("App drop must work in every preview quadrant",
+                                        launcher.getWorkspace().willAddToExistingUserFolder(
+                                                new WorkspaceItemInfo(app), grid, cell, distance));
+                            }
+                        }
+                        assertNoOverlap(grid);
+                    });
+                    return;
+                }
                 boolean restoreOnly = "recreation".equals(InstrumentationRegistry.getArguments()
                         .getString("oneuiMaxPhase"));
                 if (restoreOnly) {

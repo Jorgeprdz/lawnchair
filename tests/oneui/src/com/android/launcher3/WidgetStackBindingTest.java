@@ -151,6 +151,32 @@ public class WidgetStackBindingTest {
                     // Native insertion/reorder animations can move a visible widget after binding.
                     return stableBounds.get() >= 5;
                 });
+                if ("device-feedback".equals(InstrumentationRegistry.getArguments()
+                        .getString("oneuiMaxPhase"))) {
+                    long down = SystemClock.uptimeMillis();
+                    sendMotion(down, MotionEvent.ACTION_DOWN, tapBounds.centerX(), tapBounds.centerY());
+                    SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + 500);
+                    sendMotion(down, MotionEvent.ACTION_UP, tapBounds.centerX(), tapBounds.centerY());
+                    await(scenario, launcher -> AbstractFloatingView.getTopOpenView(launcher) != null);
+                    scenario.onActivity(launcher -> {
+                        assertFalse("Holding a stack must open its editor without a stuck drag",
+                                launcher.getDragController().isDragging());
+                        assertEquals(android.view.View.VISIBLE,
+                                WidgetStackController.findStack(launcher, stackId.get()).getVisibility());
+                        AbstractFloatingView.closeAllOpenViews(launcher);
+                    });
+                    await(scenario, launcher -> AbstractFloatingView.getTopOpenView(launcher) == null);
+                    scenario.onActivity(launcher -> {
+                        WidgetStackView view = WidgetStackController.findStack(launcher, stackId.get());
+                        assertTrue(launcher.getAccessibilityDelegate().performAccessibilityAction(
+                                view, R.id.action_move, null));
+                        assertTrue("Moving from stack controls must start a real drag",
+                                launcher.getDragController().isDragging());
+                        launcher.getDragController().cancelDrag();
+                    });
+                    await(scenario, launcher -> !launcher.getDragController().isDragging());
+                    return;
+                }
                 sendGesture(tapBounds.centerX(), tapBounds.centerY(),
                         tapBounds.centerX(), tapBounds.centerY(), false);
                 await(scenario, launcher -> {

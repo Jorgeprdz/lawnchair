@@ -37,6 +37,10 @@ on:
         description: Run only the remaining Max item recreation regression
         type: boolean
         default: false
+      oneui-device-feedback-only:
+        description: Run only device-reported folder, Max action and stack long-press regressions
+        type: boolean
+        default: false
       oneui-apk-run:
         description: Reuse a successful APK run for emulator-only changes (source identity is checked)
         type: string
@@ -118,6 +122,7 @@ jobs:
       - name: Run Android host regression tests
         env:
           ONEUI_MAX_RESTORE_ONLY: ${{ inputs.oneui-max-restore-only }}
+          ONEUI_DEVICE_FEEDBACK_ONLY: ${{ inputs.oneui-device-feedback-only }}
         run: bash .github/scripts/oneui-emulator-smoke.sh
       - name: Preserve emulator diagnostics
         if: always()
