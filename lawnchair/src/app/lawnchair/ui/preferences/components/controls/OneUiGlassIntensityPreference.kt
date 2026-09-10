@@ -13,9 +13,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,18 +24,17 @@ import androidx.compose.ui.unit.dp
 import app.lawnchair.ui.preferences.components.layout.PreferenceTemplate
 import kotlin.math.roundToInt
 
-/** Lightweight raw-value slider used by the isolated One UI glass preference store. */
+/** 0-100 One UI glass slider. Changes are applied live in 5-point steps. */
 @Composable
 fun OneUiGlassIntensityPreference(
     label: String,
     value: Int,
-    onValueChangeFinished: (Int) -> Unit,
+    onValueChange: (Int) -> Unit,
 ) {
-    var sliderValue by androidx.compose.runtime.remember { mutableFloatStateOf(value.toFloat()) }
+    var sliderValue by remember { mutableFloatStateOf(value.toFloat()) }
 
-    DisposableEffect(value) {
+    LaunchedEffect(value) {
         sliderValue = value.toFloat()
-        onDispose { }
     }
 
     PreferenceTemplate(
@@ -54,9 +54,12 @@ fun OneUiGlassIntensityPreference(
         description = {
             Slider(
                 value = sliderValue,
-                onValueChange = { sliderValue = it },
-                onValueChangeFinished = {
-                    onValueChangeFinished((sliderValue / 5f).roundToInt() * 5)
+                onValueChange = { raw ->
+                    val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(0, 100)
+                    if (snapped.toFloat() != sliderValue) {
+                        sliderValue = snapped.toFloat()
+                        onValueChange(snapped)
+                    }
                 },
                 valueRange = 0f..100f,
                 steps = 19,
