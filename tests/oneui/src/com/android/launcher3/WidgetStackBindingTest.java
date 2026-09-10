@@ -18,6 +18,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.view.MotionEvent;
+import android.view.InputDevice;
 import android.widget.TextView;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -254,7 +255,11 @@ public class WidgetStackBindingTest {
     private static void sendMotion(long down, int action, float x, float y) {
         MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
         try {
-            InstrumentationRegistry.getInstrumentation().sendPointerSync(event);
+            // Launcher touches also reach the system wallpaper window, owned by another UID.
+            // UiAutomation supports that normal cross-window dispatch without changing the app.
+            event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+            assertTrue("Android must accept the touch event", InstrumentationRegistry
+                    .getInstrumentation().getUiAutomation().injectInputEvent(event, true));
         } finally {
             event.recycle();
         }

@@ -16,6 +16,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
 import android.appwidget.AppWidgetProviderInfo;
+import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.view.View;
@@ -117,16 +118,20 @@ public class WidgetStackHostTest {
 
     private static LauncherAppWidgetInfo member(int id) {
         LauncherAppWidgetInfo member = new LauncherAppWidgetInfo(id,
-                new ComponentName("test.widgets", "test.widgets.Provider"));
+                new ComponentName(InstrumentationRegistry.getInstrumentation()
+                        .getContext().getPackageName(), OneUiTestWidgetProvider.class.getName()));
         member.id = id;
         return member;
     }
 
     private static LauncherAppWidgetHostView host(Launcher launcher, LauncherAppWidgetInfo member) {
         LauncherAppWidgetHostView host = new LauncherAppWidgetHostView(launcher);
-        AppWidgetProviderInfo provider = new AppWidgetProviderInfo();
-        provider.provider = member.providerName;
-        host.setAppWidget(member.appWidgetId, provider);
+        AppWidgetProviderInfo provider = AppWidgetManager.getInstance(launcher)
+                .getInstalledProviders().stream()
+                .filter(info -> member.providerName.equals(info.provider)).findFirst().orElse(null);
+        assertNotNull("Use installed provider metadata, including Android's receiver label", provider);
+        host.setAppWidget(member.appWidgetId,
+                LauncherAppWidgetProviderInfo.fromProviderInfo(launcher, provider));
         host.setTag(member);
         return host;
     }

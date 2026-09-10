@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): b7223668d2f64d805c6b4af460ba7da17567259d
+HEAD (audited before checkpoint): d9db8720455624510dff187917880e52342a6006
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -31,8 +31,8 @@ Current:
 - Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
 
 Next:
-- Monitor fast CI/emulator 34433342940 (9cc7574); binding test now in launcher package for ActivityCodes.
-- Verify explicit AVD paths; first corrected setup did not run because test compilation failed.
+- Validate corrected instrumentation: UiAutomation for wallpaper touch dispatch; installed provider metadata.
+- Emulator now boots/installs/launches; run34433342940 reached two real stack members before test failures.
 - Run latest interaction tests after compile; finish provider failure, vertical scroll, picker/editor and migration acceptance.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
@@ -71,10 +71,10 @@ Validation:
 - 5 grid scaling + 5 stack model + 3 migration cases in multivalentTests remain unexecuted.
 - Three APKs/style green: 1960ee0/34427352339, f84b4c7/34429849107, 2e6eba2/34429976188.
 - b0aad3d/34430802520, 1bc97b0/34431464980, 6dd63d6/34431706677: APKs/instrumentation/style compiled.
-- First emulator failed before APK install: Unknown AVD lawnchair-oneui; cancelled stalled run for logs.
-- Diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34430802520, artifact10134948008; no device test passed.
+- AVD path issue fixed: API35 boot/install/startup confirmed; no complete instrumentation test passed yet.
+- Latest diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34433342940, artifact10135557141.
 - Explicit ANDROID_USER_HOME/ANDROID_AVD_HOME + AVD existence checks dc9c8cd; bounded ADB/setup waits.
-- dc9c8cd/34432524467 failed AndroidTest compilation: ActivityCodes constant package access; test moved.
+- 9cc7574/34433342940 APK/instrumentation/style green; emulator ran 2 tests, both failed in test harness.
 - Feature pushes: GithubDebug + instrumentation/style; duplicate feature PR jobs skipped (f70e137).
 - Manual oneui-fast=true gives quick validation; default manual run retains all 3 APK variants.
 - oneui-apk-run reuses successful APKs only after source/build checks (6 guard cases passed).
