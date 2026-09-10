@@ -67,6 +67,13 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         }
     }
 
+    override fun performLongClick(): Boolean {
+        // The pager reserves horizontal gestures during a widget touch. Release that reservation
+        // before opening workspace controls, so DragLayer can handle the editor and moving.
+        pager.releaseTouchOwnership()
+        return super.performLongClick()
+    }
+
     fun bind(info: WidgetStackInfo, modelWriter: ModelWriter, views: List<View>) {
         // Rebuilding pages must not persist a transient page as the user's selection.
         pager.onSettled = null
@@ -226,6 +233,11 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
                     parent?.requestDisallowInterceptTouchEvent(false)
                 }
             }
+        }
+
+        fun releaseTouchOwnership() {
+            touchInProgress = false
+            parent?.requestDisallowInterceptTouchEvent(false)
         }
 
         override fun determineScrollingStart(event: MotionEvent) {

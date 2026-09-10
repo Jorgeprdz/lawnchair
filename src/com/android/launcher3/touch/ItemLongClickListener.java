@@ -76,6 +76,10 @@ public class ItemLongClickListener {
         if (!(v.getTag() instanceof ItemInfo)) return false;
 
         launcher.setWaitingForResult(null);
+        if (v instanceof com.android.launcher3.widget.WidgetStackView stackView) {
+            app.lawnchair.widgetstack.WidgetStackEditor.show(launcher, stackView);
+            return true;
+        }
         beginDrag(v, launcher, (ItemInfo) v.getTag(), new DragOptions());
         return true;
     }
