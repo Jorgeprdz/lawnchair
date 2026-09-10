@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 7bb4ad76d5ff7bff27716bee582b164dbd097713
+HEAD (audited before checkpoint): 52ddec651a2ba354cd9e9f8ed920c940bc0a3234
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -24,15 +24,13 @@ Completed:
 - M4 Off/Solid/Blur/Crystal; M2 real Pixel Search replaces Google option with native search fallback.
 
 Current:
-- Final validation phase: source implemented; fix real failures, run remote CI/emulator, capture actual UI.
-- USER visual correction f275b49: Large/Max Folder must be a ROUNDED SQUARE, never circular.
-- Native RoundedSquare corner radius is 16% of measured preview edge; drawing/clipping/reveal share shape.
-- 2x2 occupancy, persistence, 3x3 preview and normal-folder theme unchanged by visual correction.
-- CI34446579147: 7/8 PASS; Max second tap waiting for readiness timed out. Diagnose exact state next.
-- 418396f initializes preview rule before spring animation; shares square shape and all9 preview members.
-- CI34445531657 all3 APK GREEN; spring crash absent; Max touch/Crystal capture failed.
-- Capture requests now durable shell files (logcat pressure dropped07); wait settled workspace before app taps.
-- CI34445977242: light wallpaper setup PASS;10 real light-background captures downloaded; Max tap still failed.
+- USER: conserve quota; ONE CI at a time, fast Debug/test path until regressions pass; no scope expansion.
+- USER authorizes final APK download/install on phone; preserve existing Nightly data, never uninstall to bypass signature.
+- 52ddec6 fixes nullable SurfaceControl found by new GNC test; CI34450404326 running.
+- CI34449083380 compile/style GREEN; attempt1 ADB transport lost; attempt2 GNC null surface crash.
+- Earlier CI34446579147: 7/8 PASS; Max second launch readiness timeout. Exact diagnostic added f145252.
+- Rounded-square folder visually confirmed; label-spacing correction still needs complete Max scenario/recapture.
+- Light wallpaper setup PASS; canonical10 screenshots updated; canonical02/03/13 still older.
 
 Next:
 - Inspect current CI failures if any; preserve validation; repeat until coherent acceptance checks pass.
@@ -44,7 +42,7 @@ Next:
 Bugfixes:
 - 0ddd824: GNC surface layout/valid bounds before handoff; no translation springs on real workspace icon.
 - Restore visibility on surface loss/finish/3s callback timeout; isolate stale finish callbacks per contract.
-- 7bb4ad7 invalidates old finish before new surface layout. CI34448502562 all3/emulator;34448364496 fast.
+- 7bb4ad7 invalidates old finish before new layout;52ddec6 waits for nullable surface creation.
 - Samsung physical gesture reproduction still pending; do not claim fixed solely from code.
 
 Architecture decisions:
@@ -86,7 +84,7 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 114 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- 120 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
 - Latest light screenshots: CI34445977242/artifact10139936029; main10 updated; canonical02/03/13 still older.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.
