@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="large_folder_shape">Large folder shape</string>
+    <string name="large_folder_shape_rounded_square">Rounded square</string>
+    <string name="large_folder_shape_circle">Circle</string>
+</resources>
