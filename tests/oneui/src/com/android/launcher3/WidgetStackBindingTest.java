@@ -7,7 +7,7 @@
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
  */
-package com.android.launcher3.widget;
+package com.android.launcher3;
 
 import static org.junit.Assert.*;
 
@@ -26,7 +26,12 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.android.launcher3.AbstractFloatingView;
+import com.android.launcher3.widget.OneUiTestWidgetProvider;
+import com.android.launcher3.widget.WidgetStackController;
+import com.android.launcher3.widget.WidgetStackView;
+import com.android.launcher3.widget.LauncherAppWidgetProviderInfo;
+import com.android.launcher3.widget.LauncherAppWidgetHostView;
+import com.android.launcher3.widget.WidgetAddFlowHandler;
 import com.android.launcher3.CellLayout;
 import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherSettings.Favorites;
