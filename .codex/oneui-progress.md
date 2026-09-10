@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 Last verified HEAD:
-TBD
+88df5140c318d69df1980e3bea569d2fa009515b
 
 Global:
 10%
@@ -22,7 +22,7 @@ Completed:
 - Implemented One UI Finder gesture option using explicit component com.sec.android.app.launcher/.search.SearchActivity with safe fallback.
 
 Current:
-- Commit M3 and continue to widget grid snapping discovery.
+- Discover widget placement/resize paths for M5.
 
 Next:
 - Discover widget placement/resize paths for M5.
@@ -40,7 +40,7 @@ Files currently relevant:
 - lawnchair/res/values/strings.xml
 
 Validation:
-- M3 code prepared; remote CI pending.
+- M3 code committed in 88df5140c318d69df1980e3bea569d2fa009515b; remote CI pending.
 
 Known blockers:
 - None
