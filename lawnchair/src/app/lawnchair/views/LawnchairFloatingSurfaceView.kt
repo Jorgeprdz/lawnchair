@@ -22,9 +22,6 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.core.graphics.createBitmap
-import androidx.dynamicanimation.animation.DynamicAnimation
-import androidx.dynamicanimation.animation.SpringAnimation
-import androidx.dynamicanimation.animation.SpringForce
 import app.lawnchair.LawnchairLauncher
 import app.lawnchair.launcher
 import com.android.app.animation.Interpolators
@@ -67,6 +64,10 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
     private var mIcon: View? = null
     private var mIconBitmap: Bitmap? = null
     private var mContract: GestureNavContract? = null
+    private var mContentAnimator: AnimatorSet? = null
+    private var mHasValidPosition = false
+    // A dead/aborted OEM callback must never leave the workspace icon suppressed indefinitely.
+    private val mFinishTimeout = Runnable { if (mIsOpen) close(false) }
 
     init {
         mSurfaceView.setLayerType(LAYER_TYPE_HARDWARE, null)
@@ -80,6 +81,9 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
     }
 
     override fun handleClose(animate: Boolean) {
+        removeCallbacks(mFinishTimeout)
+        mContentAnimator?.cancel()
+        mContentAnimator = null
         setCurrentIconVisible(true)
         mLauncher.viewCache.recycleView(R.layout.floating_surface_view, this)
         mContract = null
@@ -232,6 +236,9 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         getViewTreeObserver().removeOnGlobalLayoutListener(this)
+        removeCallbacks(mFinishTimeout)
+        mContentAnimator?.cancel()
+        mContentAnimator = null
         setCurrentIconVisible(true)
     }
 
@@ -250,107 +257,81 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
     override fun setInsets(insets: Rect?) {}
 
     private fun updateIconLocation() {
-        if (mContract == null) {
+        mHasValidPosition = false
+        if (mContract == null || !mIsOpen) return
+        val icon = getIcon()
+        if (icon == null || !icon.isAttachedToWindow || !icon.isLaidOut || icon.isLayoutRequested) {
+            setCurrentIconVisible(true)
+            return
+        }
+        mTmpPosition.setEmpty()
+        mIconBounds.setEmpty()
+        getLocationBoundsForView(mLauncher, icon, false, mTmpPosition, mIconBounds)
+        val layer = mLauncher.dragLayer
+        if (mIconBounds.isEmpty || mTmpPosition.isEmpty ||
+            !mTmpPosition.left.isFinite() || !mTmpPosition.top.isFinite() ||
+            !mTmpPosition.right.isFinite() || !mTmpPosition.bottom.isFinite() ||
+            !RectF.intersects(mTmpPosition, RectF(0f, 0f, layer.width.toFloat(), layer.height.toFloat()))
+        ) {
+            setCurrentIconVisible(true)
             return
         }
 
-        synchronized(this) {
-            val icon = getIcon()
-
-            val iconChanged = mIcon !== icon
-            if (iconChanged) {
-                setCurrentIconVisible(true)
-                mIcon = icon
-                setCurrentIconVisible(false)
-            }
-
-            if (icon != null) {
-                getLocationBoundsForView(mLauncher, icon, false, mTmpPosition, mIconBounds)
-                if (mTmpPosition != mIconPosition) {
-                    mIconPosition.set(mTmpPosition)
-                    updateSurfaceViewLayout()
-                }
-            }
-
-            sendIconInfo()
-
-            if (mIcon != null && iconChanged && !mIconBounds.isEmpty) {
-                if (mIconBitmap == null || mIconBitmap!!.getWidth() != mIconBounds.width() || mIconBitmap!!.getHeight() != mIconBounds.height()) {
-                    if (mIconBitmap != null) mIconBitmap!!.recycle()
-                    mIconBitmap = createBitmap(
-                        mIconBounds.width(),
-                        mIconBounds.height(),
-                        Bitmap.Config.ARGB_8888,
-                    )
-                }
-                postInvalidateIconDrawing()
-            }
-        }
-    }
-
-    private fun postInvalidateIconDrawing() {
-        synchronized(this) {
-            post {
-                if (mIcon == null) return@post
-                drawIconOnBitmap()
-                drawOnSurface()
-                bouncyIcon()
-            }
-        }
-    }
-
-    private fun updateSurfaceViewLayout() {
-        post {
-            val lp = mSurfaceView.layoutParams as LayoutParams
-            lp.width = mIconPosition.width().roundToInt()
-            lp.height = mIconPosition.height().roundToInt()
-            lp.leftMargin = mIconPosition.left.roundToInt()
-            lp.topMargin = mIconPosition.top.roundToInt()
-        }
-    }
-
-    private fun drawIconOnBitmap() {
-        if (mIcon != null && !mIconBounds.isEmpty) {
+        val changed = mIcon !== icon || mIconPosition != mTmpPosition || mIconBitmap == null
+        if (mIcon !== icon) {
             setCurrentIconVisible(true)
-            try {
-                val c = Canvas(mIconBitmap!!)
-                c.translate(-mIconBounds.left.toFloat(), -mIconBounds.top.toFloat())
-                mIcon!!.draw(c)
-            } catch (t: Throwable) {
-                Log.e(this.javaClass.name, "drawIconOnBitmap: ", t)
-            }
-            setCurrentIconVisible(false)
+            mIcon = icon
         }
+        mIconPosition.set(mTmpPosition)
+        val lp = mSurfaceView.layoutParams as LayoutParams
+        val width = mIconPosition.width().roundToInt()
+        val height = mIconPosition.height().roundToInt()
+        val left = mIconPosition.left.roundToInt()
+        val top = mIconPosition.top.roundToInt()
+        if (width <= 0 || height <= 0) return
+        if (lp.width != width || lp.height != height || lp.leftMargin != left || lp.topMargin != top) {
+            lp.width = width
+            lp.height = height
+            lp.leftMargin = left
+            lp.topMargin = top
+            // Apply the layout; mutating LayoutParams in a posted task did not request layout.
+            mSurfaceView.layoutParams = lp
+        }
+        if (changed) {
+            if (mIconBitmap?.width != mIconBounds.width() || mIconBitmap?.height != mIconBounds.height()) {
+                mIconBitmap?.recycle()
+                mIconBitmap = createBitmap(mIconBounds.width(), mIconBounds.height(), Bitmap.Config.ARGB_8888)
+            }
+            setCurrentIconVisible(true)
+            val canvas = Canvas(mIconBitmap!!)
+            canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+            canvas.translate(-mIconBounds.left.toFloat(), -mIconBounds.top.toFloat())
+            icon.draw(canvas)
+        }
+        mHasValidPosition = true
+        publishIconSurface()
     }
 
-    private fun bouncyIcon() {
-        mIcon ?: return
-
-        val (startX, startY) = mIconPosition.left to mIconPosition.top - ((height * 0.2f) / 3)
-
-        listOf(
-            SpringAnimation(mIcon, DynamicAnimation.TRANSLATION_X, 1f).apply {
-                spring = SpringForce(1f).setStiffness(SpringForce.STIFFNESS_LOW)
-                    .setDampingRatio(SpringForce.DAMPING_RATIO_HIGH_BOUNCY)
-                setStartVelocity((mIconPosition.left - startX) * 2)
-            },
-            SpringAnimation(mIcon, DynamicAnimation.TRANSLATION_Y, 1f).apply {
-                spring = SpringForce(1f).setStiffness(SpringForce.STIFFNESS_LOW)
-                    .setDampingRatio(SpringForce.DAMPING_RATIO_HIGH_BOUNCY)
-                setStartVelocity((mIconPosition.top - startY) * 3)
-            },
-        ).forEach { it.start() }
-    }
-
-    private fun sendIconInfo() {
-        if (mContract != null && Utilities.ATLEAST_Q) {
-            mContract!!.sendEndPosition(mIconPosition, mLauncher, mSurfaceView.surfaceControl)
+    private fun publishIconSurface() {
+        val contract = mContract ?: return
+        if (!mIsOpen || !mHasValidPosition || mIconBitmap == null || mIconPosition.isEmpty ||
+            mIcon?.isAttachedToWindow != true || mSurfaceView.isLayoutRequested ||
+            mSurfaceView.width != mIconPosition.width().roundToInt() ||
+            mSurfaceView.height != mIconPosition.height().roundToInt() ||
+            mSurfaceView.left != mIconPosition.left.roundToInt() ||
+            mSurfaceView.top != mIconPosition.top.roundToInt() ||
+            !Utilities.ATLEAST_Q || !mSurfaceView.surfaceControl.isValid
+        ) return
+        // Keep the real icon in its CellLayout transform. Only the remote surface is animated.
+        if (drawOnSurface() && contract.sendEndPosition(mIconPosition, mLauncher, mSurfaceView.surfaceControl)) {
+            setCurrentIconVisible(false)
+        } else {
+            close(false)
         }
     }
 
     override fun surfaceCreated(surfaceHolder: SurfaceHolder) {
-        drawOnSurface()
-        sendIconInfo()
+        updateIconLocation()
     }
 
     override fun surfaceChanged(
@@ -362,26 +343,29 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
         updateIconLocation()
     }
 
-    override fun surfaceDestroyed(surfaceHolder: SurfaceHolder) {}
-
-    override fun surfaceRedrawNeeded(surfaceHolder: SurfaceHolder) {
-        drawOnSurface()
+    override fun surfaceDestroyed(surfaceHolder: SurfaceHolder) {
+        setCurrentIconVisible(true)
     }
 
-    private fun drawOnSurface() {
-        val surfaceHolder = mSurfaceView.holder
-        if (!surfaceHolder.surface.isValid || mIconBitmap == null) return
+    override fun surfaceRedrawNeeded(surfaceHolder: SurfaceHolder) {
+        publishIconSurface()
+    }
 
-        synchronized(this) {
-            val c = surfaceHolder.lockHardwareCanvas()
-            if (c != null) {
-                try {
-                    c.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                    c.drawBitmap(mIconBitmap!!, 0f, 0f, null)
-                } finally {
-                    surfaceHolder.unlockCanvasAndPost(c)
-                }
+    private fun drawOnSurface(): Boolean {
+        val surfaceHolder = mSurfaceView.holder
+        if (!surfaceHolder.surface.isValid || mIconBitmap == null) return false
+        return try {
+            val canvas = surfaceHolder.lockHardwareCanvas() ?: return false
+            try {
+                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                canvas.drawBitmap(mIconBitmap!!, null, Rect(0, 0, canvas.width, canvas.height), null)
+            } finally {
+                surfaceHolder.unlockCanvasAndPost(canvas)
             }
+            true
+        } catch (exception: RuntimeException) {
+            Log.w("LawnchairGnc", "Icon surface was lost during home return", exception)
+            false
         }
     }
 
@@ -402,6 +386,9 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
                     launcher,
                     launcher.dragLayer,
                 )
+            view.removeViewImmediate()
+            view.mIconPosition.setEmpty()
+            view.mIconBounds.setEmpty()
             view.mContract = contract
             view.mIsOpen = true
 
@@ -418,8 +405,9 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
                 },
             )
 
-            view.removeViewImmediate()
+            view.mContentAnimator = anim
             launcher.dragLayer.addView(view)
+            view.postDelayed(view.mFinishTimeout, 3000)
             anim.start()
             view.getIcon()?.let {
                 launcher.showFullScreenOverlay(endView = it) {}
