@@ -69,6 +69,9 @@ public class DockBackgroundTest {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             AtomicBoolean ready = new AtomicBoolean();
             scenario.onActivity(launcher -> ready.set(ItemLongClickListener.canStartDrag(launcher)
+                    && launcher.hasWindowFocus()
+                    && launcher.getWorkspace().isShown() && launcher.getWorkspace().getAlpha() >= 0.99f
+                    && launcher.getHotseat().isShown() && launcher.getHotseat().getAlpha() >= 0.99f
                     && launcher.getHotseat().getWidth() > 0 && launcher.getHotseat().getHeight() > 0));
             if (ready.get()) return;
             SystemClock.sleep(100);
