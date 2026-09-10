@@ -58,6 +58,13 @@ public class FolderInfo extends CollectionInfo {
 
     public static final int FLAG_MANUAL_FOLDER_NAME = 0x00000008;
 
+    /** Canonical state for Large Folder mechanics and the Max Folder contextual action. */
+    public static final int FLAG_LARGE_FOLDER = 1 << 16;
+
+    public boolean isLargeFolder() {
+        return hasOption(FLAG_LARGE_FOLDER);
+    }
+
     /**
      * Different states of folder label.
      */
@@ -230,6 +237,7 @@ public class FolderInfo extends CollectionInfo {
     public void copyFrom(@NonNull ItemInfo info) {
         super.copyFrom(info);
         if (info instanceof FolderInfo fi) {
+            options = fi.options;
             contents.addAll(fi.getContents());
         }
     }

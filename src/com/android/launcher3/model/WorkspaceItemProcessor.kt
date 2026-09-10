@@ -431,8 +431,12 @@ class WorkspaceItemProcessor(
             c.applyCommonProperties(info)
             info.intent = intent
             info.rank = c.rank
-            info.spanX = 1
-            info.spanY = 1
+            info.options = c.options
+            val isMaxIcon = info.isMaxIcon() && c.container == Favorites.CONTAINER_DESKTOP &&
+                c.spanX == 2 && c.spanY == 2
+            info.spanX = if (isMaxIcon) 2 else 1
+            info.spanY = info.spanX
+            if (!isMaxIcon) info.options = info.options and WorkspaceItemInfo.FLAG_MAX_ICON.inv()
             info.runtimeStatusFlags = info.runtimeStatusFlags or disabledState
             if (isSafeMode && !appInfoWrapper.isSystem()) {
                 info.runtimeStatusFlags =
@@ -540,6 +544,11 @@ class WorkspaceItemProcessor(
         collection.spanY = 1
         if (collection is FolderInfo) {
             collection.options = c.options
+            val isLarge = collection.isLargeFolder() && c.container == Favorites.CONTAINER_DESKTOP &&
+                c.spanX == 2 && c.spanY == 2
+            collection.spanX = if (isLarge) 2 else 1
+            collection.spanY = collection.spanX
+            if (!isLarge) collection.setOption(FolderInfo.FLAG_LARGE_FOLDER, false, null)
         } else {
             // An app pair may be inside another folder, so it needs to preserve rank information.
             collection.rank = c.rank

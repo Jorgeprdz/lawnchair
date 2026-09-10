@@ -331,15 +331,23 @@ public class ModelWriter {
         item.spanX = spanX;
         item.spanY = spanY;
         notifyItemModified(item);
-        new UpdateItemRunnable(item, () -> new ContentWriter(mContext)
+        new UpdateItemRunnable(item, () -> {
+            ContentWriter writer = new ContentWriter(mContext)
                 .put(Favorites.CONTAINER, item.container)
                 .put(Favorites.CELLX, item.cellX)
                 .put(Favorites.CELLY, item.cellY)
                 .put(Favorites.RANK, item.rank)
                 .put(Favorites.SPANX, item.spanX)
                 .put(Favorites.SPANY, item.spanY)
-                .put(Favorites.SCREEN, item.screenId))
-                .executeOnModelThread();
+                .put(Favorites.SCREEN, item.screenId);
+            // Keep explicit size state and geometry in the same row update.
+            if (item instanceof WorkspaceItemInfo icon) {
+                writer.put(Favorites.OPTIONS, icon.options);
+            } else if (item instanceof com.android.launcher3.model.data.FolderInfo folder) {
+                writer.put(Favorites.OPTIONS, folder.options);
+            }
+            return writer;
+        }).executeOnModelThread();
     }
 
     /**
