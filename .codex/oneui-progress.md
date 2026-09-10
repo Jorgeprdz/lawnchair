@@ -1,16 +1,16 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): b6f75b1c81f6f9d94b12fdf6f562eb5668b737e9
-Global: 60% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): dff9b4c5f81dfef0cfebcf3574dea37f7d0f4742
+Global: 62% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
 - M1 Large Folders: 50% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
 - M2 Pixel Search: 50% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
-- M4 Dock Glass: 50% — four persisted modes, native geometry, optional region blur and crystal styling.
+- M4 Dock Glass: 60% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
-- M6 Widget Stacks: 60% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
+- M6 Widget Stacks: 65% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
 - M7 Max Icons / Max Folders: 50% — native Max Icon action/rendering; shared folder state/placement.
 
 Completed:
@@ -34,8 +34,9 @@ Next:
 - Final validation phase: implementations compiled; run emulator, fix failures and collect actual screenshots.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
 - Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator failed: test thread/schema/context/null-tag errors; screenshot ack fixed.
-- CI 34440973789/f0e7ee2 compile/style green; emulator testing fixture fixes (UI thread/schema/null tags/process UID).
-- Latest CI 34441287074/b6f75b1 running: includes Kotlin tests and detects real vertical scroll shorter than a full row.
+- CI34440973789: compile/style GREEN; dock modes + 2 SQLite migrations + hidden host + stack force-stop restore PASS.
+- CI34441287074/b6f75b1 emulator running with Kotlin tests/partial-scroll detection.
+- Latest CI34441778019/dff9b4c: model-thread icon fixture + wait for visible content before dock screenshots.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -97,6 +98,6 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 2 valid 1080x1920 PNGs downloaded: 08-widget-grid.png and 34440512144-08-widget-grid.png.
-- Screenshot artifacts: run34439748126/10137783512 and run34440512144/10137967110; remaining captures pending.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 7 PNG files downloaded (4 dock modes + 3 widget-grid versions). Dock Off caught a transition; recapture pending.
+- Screenshot artifacts: run34440973789/10138147418 + earlier34439748126/10137783512 and34440512144/10137967110.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
