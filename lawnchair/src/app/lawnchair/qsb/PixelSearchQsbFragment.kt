@@ -25,7 +25,10 @@ class PixelSearchQsbFragment : QsbContainerView.QsbFragment() {
         super.onInit(savedInstanceState)
     }
 
-    override fun isQsbEnabled(): Boolean = PreferenceManager2.getInstance(context).hotseatMode.firstCached() == PixelSearchHotseat
+    override fun isQsbEnabled(): Boolean {
+        val prefs = PreferenceManager2.getInstance(context)
+        return prefs.isHotseatEnabled.firstCached() && prefs.hotseatMode.firstCached() == PixelSearchHotseat
+    }
 
     override fun onWidgetCreated(host: com.android.launcher3.qsb.QsbWidgetHostView) {
         host.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->

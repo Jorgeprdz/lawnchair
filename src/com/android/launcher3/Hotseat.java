@@ -148,7 +148,7 @@ public class Hotseat extends FrameLayout implements Insettable {
             com.patrykmichalik.opto.core.PreferenceExtensionsKt.setBlocking(preferenceManager2.getHotseatMode(), hotseatMode);
         }
         if (hotseatMode != app.lawnchair.hotseat.PixelSearchHotseat.INSTANCE
-                && context instanceof Launcher) {
+                && mActivity instanceof Launcher) {
             app.lawnchair.qsb.PixelSearchQsbFragment.release(context);
         }
         int layoutId = hotseatMode.getLayoutResourceId();
