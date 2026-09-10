@@ -2322,10 +2322,11 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (foundCell && (cell instanceof AppWidgetHostView) &&
                         (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY)) {
                     resizeOnDrop = true;
-                    snapWidgetSpanToGrid(item, resultSpan, dropTargetLayout);
+                    AppWidgetHostView awhv = (AppWidgetHostView) cell;
+                    snapWidgetSpanToGrid(item, resultSpan, dropTargetLayout,
+                            awhv.getAppWidgetInfo());
                     item.spanX = resultSpan[0];
                     item.spanY = resultSpan[1];
-                    AppWidgetHostView awhv = (AppWidgetHostView) cell;
                     WidgetSizes.updateWidgetSizeRanges(awhv, mLauncher, resultSpan[0],
                             resultSpan[1]);
                 }
@@ -2687,7 +2688,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 d.dragInfo instanceof PendingAddWidgetInfo);
     }
 
-    private void snapWidgetSpanToGrid(ItemInfo item, int[] span, CellLayout targetLayout) {
+    private void snapWidgetSpanToGrid(ItemInfo item, int[] span, CellLayout targetLayout,
+            @Nullable AppWidgetProviderInfo appWidgetProviderInfo) {
         if (!(item instanceof LauncherAppWidgetInfo || item instanceof PendingAddWidgetInfo)
                 || span == null || span.length < 2 || targetLayout == null) {
             return;
@@ -2701,18 +2703,31 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         if (item instanceof PendingAddWidgetInfo) {
             LauncherAppWidgetProviderInfo providerInfo = ((PendingAddWidgetInfo) item).info;
             if (providerInfo != null) {
-                minSpanX = Math.max(minSpanX, providerInfo.minSpanX);
-                minSpanY = Math.max(minSpanY, providerInfo.minSpanY);
-                maxSpanX = Math.min(maxSpanX, providerInfo.maxSpanX);
-                maxSpanY = Math.min(maxSpanY, providerInfo.maxSpanY);
-                if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
-                    minSpanX = maxSpanX = Math.max(1, Math.min(providerInfo.spanX,
-                            targetLayout.getCountX()));
-                }
-                if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
-                    minSpanY = maxSpanY = Math.max(1, Math.min(providerInfo.spanY,
-                            targetLayout.getCountY()));
-                }
+                appWidgetProviderInfo = providerInfo;
+            }
+        }
+
+        if (appWidgetProviderInfo instanceof LauncherAppWidgetProviderInfo) {
+            LauncherAppWidgetProviderInfo providerInfo =
+                    (LauncherAppWidgetProviderInfo) appWidgetProviderInfo;
+            minSpanX = Math.max(minSpanX, providerInfo.minSpanX);
+            minSpanY = Math.max(minSpanY, providerInfo.minSpanY);
+            maxSpanX = Math.min(maxSpanX, providerInfo.maxSpanX);
+            maxSpanY = Math.min(maxSpanY, providerInfo.maxSpanY);
+            if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
+                minSpanX = maxSpanX = Math.max(1, Math.min(providerInfo.spanX,
+                        targetLayout.getCountX()));
+            }
+            if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
+                minSpanY = maxSpanY = Math.max(1, Math.min(providerInfo.spanY,
+                        targetLayout.getCountY()));
+            }
+        } else if (appWidgetProviderInfo != null) {
+            if ((appWidgetProviderInfo.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
+                minSpanX = maxSpanX = Math.max(1, Math.min(item.spanX, targetLayout.getCountX()));
+            }
+            if ((appWidgetProviderInfo.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
+                minSpanY = maxSpanY = Math.max(1, Math.min(item.spanY, targetLayout.getCountY()));
             }
         }
 
@@ -3135,7 +3150,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY) {
                     updateWidgetSize = true;
                 }
-                snapWidgetSpanToGrid(item, resultSpan, cellLayout);
+                snapWidgetSpanToGrid(item, resultSpan, cellLayout, null);
                 item.spanX = resultSpan[0];
                 item.spanY = resultSpan[1];
             }
