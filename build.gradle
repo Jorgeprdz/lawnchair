@@ -291,6 +291,7 @@ android {
     sourceSets {
         androidTest {
             java.srcDirs = ['tests/oneui/src']
+            kotlin.directories.add('tests/oneui/src')
             res.srcDirs = ['tests/oneui/res']
             manifest.srcFile 'tests/oneui/AndroidManifest.xml'
         }

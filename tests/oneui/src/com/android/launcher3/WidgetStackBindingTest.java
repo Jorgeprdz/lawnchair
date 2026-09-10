@@ -145,13 +145,19 @@ public class WidgetStackBindingTest {
                 });
                 Rect listBounds = new Rect();
                 AtomicInteger selectedBeforeScroll = new AtomicInteger();
+                AtomicInteger firstVisibleBeforeScroll = new AtomicInteger();
+                AtomicInteger topBeforeScroll = new AtomicInteger();
                 await(scenario, launcher -> {
                     WidgetStackInfo stack = info(launcher, stackId.get());
                     selectedBeforeScroll.set(stack.getActiveWidgetId());
                     var host = WidgetStackController.findStack(launcher, stack.id)
                             .findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
                     android.widget.ListView list = host.findViewById(android.R.id.list);
-                    return list != null && list.getCount() == 20 && list.getGlobalVisibleRect(listBounds);
+                    if (list == null || list.getCount() != 20 || list.getChildCount() == 0
+                            || !list.getGlobalVisibleRect(listBounds)) return false;
+                    firstVisibleBeforeScroll.set(list.getFirstVisiblePosition());
+                    topBeforeScroll.set(list.getChildAt(0).getTop());
+                    return true;
                 });
                 sendGesture(listBounds.centerX(), listBounds.top + listBounds.height() * 0.8f,
                         listBounds.centerX(), listBounds.top + listBounds.height() * 0.2f, true);
@@ -161,7 +167,11 @@ public class WidgetStackBindingTest {
                     var host = WidgetStackController.findStack(launcher, stack.id)
                             .findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
                     android.widget.ListView list = host.findViewById(android.R.id.list);
-                    return list.getFirstVisiblePosition() > 0;
+                    // A short widget viewport may scroll less than one complete row.
+                    return list.getFirstVisiblePosition() > firstVisibleBeforeScroll.get()
+                            || list.getFirstVisiblePosition() == firstVisibleBeforeScroll.get()
+                            && list.getChildCount() > 0
+                            && list.getChildAt(0).getTop() < topBeforeScroll.get();
                 });
                 Rect stackBounds = new Rect();
                 AtomicInteger firstRow = new AtomicInteger();
