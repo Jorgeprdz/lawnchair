@@ -30,6 +30,7 @@ sealed class GestureHandlerOption(
     data object OpenAppDrawer : Simple(GestureHandlerConfig.OpenAppDrawer)
     data object OpenAppSearch : Simple(GestureHandlerConfig.OpenAppSearch)
     data object OpenSearch : Simple(GestureHandlerConfig.OpenSearch)
+    data object OpenOneUiFinder : Simple(GestureHandlerConfig.OpenOneUiFinder)
     data object OpenAssistant : Simple(GestureHandlerConfig.OpenAssistant)
 
     data object OpenApp : GestureHandlerOption(
