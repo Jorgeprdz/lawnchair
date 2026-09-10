@@ -118,6 +118,20 @@ object WidgetStackController {
     }
 
     @JvmStatic
+    fun refreshUpdated(launcher: Launcher, view: WidgetStackView, updates: Set<ItemInfo>) {
+        val stack = view.tag as WidgetStackInfo
+        val pages = stack.getContents().map { member ->
+            if (updates.contains(stack) || updates.contains(member)) {
+                launcher.itemInflater.inflateWidgetStackMember(member)
+            } else {
+                view.findWidgetByAppWidgetId(member.appWidgetId)
+                    ?: launcher.itemInflater.inflateWidgetStackMember(member)
+            }
+        }
+        view.bind(stack, launcher.modelWriter, pages)
+    }
+
+    @JvmStatic
     fun remove(launcher: Launcher, view: WidgetStackView, member: LauncherAppWidgetInfo) {
         val stack = view.tag as WidgetStackInfo
         if (member !in stack.getContents()) return

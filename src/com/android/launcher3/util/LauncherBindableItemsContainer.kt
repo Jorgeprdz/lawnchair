@@ -56,6 +56,11 @@ fun interface LauncherBindableItemsContainer {
                 }
                 v is AppPairIcon && info is AppPairInfo ->
                     v.maybeRedrawForWorkspaceUpdate(updates::contains)
+                v is com.android.launcher3.widget.WidgetStackView &&
+                    info is com.android.launcher3.model.data.WidgetStackInfo &&
+                    context is com.android.launcher3.Launcher &&
+                    (updates.contains(info) || info.getContents().any(updates::contains)) ->
+                    com.android.launcher3.widget.WidgetStackController.refreshUpdated(context, v, updates)
                 v is PendingAppWidgetHostView && updates.contains(info) -> {
                     v.applyState()
                     v.postProviderAvailabilityCheck()

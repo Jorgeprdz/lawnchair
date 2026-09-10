@@ -82,12 +82,12 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         }
         indicator.setMarkersCount(views.size)
         indicator.visibility = if (views.size > 1) VISIBLE else GONE
-        pager.onSettled = ::saveActivePage
         val activePage = info.getContents().indexOf(info.getActiveWidget()).coerceAtLeast(0)
         pager.runOnPageScrollsInitialized {
             if (pager.childCount > 0) {
                 pager.currentPage = activePage
                 updatePageAccessibility()
+                pager.onSettled = ::saveActivePage
             }
         }
     }
