@@ -33,7 +33,7 @@ Current:
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Final regression/capture tests committed: max items, dock modes, stack activity/process recreation; start final CI next.
+- Final CI 34439279055 running on 4f4751f: full three-APK matrix, style, then API35 integration/screenshots.
 - M5/M6 guard 58731d2 cancels incompatible grid changes before migration; source-grid reload needs testing.
 
 Architecture decisions:
@@ -96,5 +96,5 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download/lawnchair created; five recent emulator artifacts checked: no PNGs existed. Remote access works.
+- /storage/emulated/0/Download/lawnchair created; prior five emulator artifacts have no PNG. Download new PNGs when ready.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
