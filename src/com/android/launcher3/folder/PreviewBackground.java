@@ -68,6 +68,10 @@ import app.lawnchair.util.LawnchairUtilsKt;
  */
 public class PreviewBackground extends DelegatedCellDrawing {
 
+    // ShapeDelegate uses half the square edge as its radius: 0.32 gives 16% corners.
+    // Bounds still come from the actual measured 2x2 FolderIcon preview.
+    private static final ShapeDelegate LARGE_FOLDER_SHAPE = new ShapeDelegate.RoundedSquare(0.32f);
+
     private static final boolean DRAW_SHADOW = false;
     private static final boolean DRAW_STROKE = false;
 
@@ -295,7 +299,10 @@ public class PreviewBackground extends DelegatedCellDrawing {
         drawShadow(canvas);
     }
 
-    private ShapeDelegate getShape() {
+    ShapeDelegate getShape() {
+        if (mInvalidateDelegate instanceof FolderIcon icon && icon.isLargeFolder()) {
+            return LARGE_FOLDER_SHAPE;
+        }
         return ThemeManager.INSTANCE.get(mContext).getFolderShape();
     }
 

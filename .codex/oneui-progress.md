@@ -38,7 +38,8 @@ Next:
 - CI34441287074: 7/8 tests PASS + process-death PASS; only Max icon fixture wrong-thread failure (fixed04d433a).
 - Stack real taps/vertical scroll/paging/resize/reorder/remove/reload PASS; absent Finder/Pixel fallback PASS.
 - CI34441778019: Max toggle/occupancy/10-member folder/recreation PASS; 7/8 tests; widget tap intermittent.
-- Latest CI34442569058/4acde68: await stable widget touch bounds before injection; no validation suppressed.
+- CI34442569058/4acde68 testing stable tap bounds; newer rounded-square visual fix needs validation/screenshots.
+- Replace canonical02-large-folder.png/13-max-folder.png with verified rounded-square emulator captures.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -52,6 +53,8 @@ Architecture decisions:
 - One remaining member stays a valid stack pending safe atomic standalone conversion.
 - Loader reapplies parent spans to members; provider disappearance retains removable pending page.
 - M1/M7 share ONE 1x1<->2x2 occupancy/reorder/nearest-place/persist/restore mechanism.
+- USER visual correction: Large/Max Folder uses rounded SQUARE, corner radius16% of measured preview edge.
+- Drawing/clipping/reveal share native RoundedSquare delegate; normal folder theme and 3x3 geometry unchanged.
 - Max Folders use M1 canonical state and 3x3/up-to-9 direct-launch preview; no duplicate flags.
 - Max Icons use WorkspaceItemInfo/BubbleTextView; retain identity, theme/badges/drag/a11y.
 - M7 workspace only; no global scaling/Hotseat/Nothing mode; no further broad drop-in search.
