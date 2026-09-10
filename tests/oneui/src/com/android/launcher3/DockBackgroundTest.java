@@ -24,7 +24,7 @@ public class DockBackgroundTest {
         var context = instrumentation.getTargetContext();
         var preference = PreferenceManager2.getInstance(context).getHotseatBackgroundMode();
         int original = PreferenceCacheExtensionsKt.firstCached(preference);
-        Intent launch = new Intent(Intent.ACTION_MAIN)
+        Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setComponent(new ComponentName(context.getPackageName(), "app.lawnchair.LawnchairLauncher"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         String[] screenshots = {"04-dock-off.png", "05-dock-solid.png", "06-dock-blur.png", "07-dock-crystal.png"};

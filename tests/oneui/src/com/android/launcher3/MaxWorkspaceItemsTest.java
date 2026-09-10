@@ -33,7 +33,7 @@ public class MaxWorkspaceItemsTest {
     @Test
     public void maxItemsPreserveContentsGeometryAndIdentityAcrossRecreation() throws Exception {
         String target = InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
-        Intent launch = new Intent(Intent.ACTION_MAIN)
+        Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setComponent(new ComponentName(target, "app.lawnchair.LawnchairLauncher"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         AtomicInteger iconId = new AtomicInteger(-1);

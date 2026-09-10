@@ -69,7 +69,7 @@ public class WidgetStackBindingTest {
                         "appwidget grantbind --package " + target + " --user 0"))) {
             while (output.read() != -1) { /* Drain the command before binding. */ }
         }
-        Intent intent = new Intent(Intent.ACTION_MAIN)
+        Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setComponent(new ComponentName(target, "app.lawnchair.LawnchairLauncher"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         AtomicInteger stackId = new AtomicInteger(-1);

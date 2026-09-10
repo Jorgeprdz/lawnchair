@@ -36,7 +36,7 @@ public class WidgetStackProcessTest {
                         "appwidget grantbind --package " + context.getPackageName() + " --user 0"))) {
             while (input.read() != -1) { }
         }
-        Intent launch = new Intent(Intent.ACTION_MAIN)
+        Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setComponent(new ComponentName(context.getPackageName(), "app.lawnchair.LawnchairLauncher"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try (ActivityScenario<Launcher> scenario = ActivityScenario.launch(launch)) {

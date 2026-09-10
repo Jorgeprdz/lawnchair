@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OptionalProviderTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
-    private fun launchIntent() = Intent(Intent.ACTION_MAIN)
+    private fun launchIntent() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         .setComponent(ComponentName(context.packageName, LawnchairLauncher::class.java.name))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 

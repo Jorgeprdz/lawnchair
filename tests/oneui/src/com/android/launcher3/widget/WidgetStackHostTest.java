@@ -45,7 +45,7 @@ public class WidgetStackHostTest {
     public void launcherStartsAndRecreatedHiddenHostKeepsItsPageAndGeometry() {
         String packageName = InstrumentationRegistry.getInstrumentation()
                 .getTargetContext().getPackageName();
-        Intent intent = new Intent(Intent.ACTION_MAIN)
+        Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setComponent(new ComponentName(packageName, "app.lawnchair.LawnchairLauncher"))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try (ActivityScenario<Launcher> scenario = ActivityScenario.launch(intent)) {
