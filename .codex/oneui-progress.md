@@ -94,5 +94,7 @@ Screenshots:
 - Final report: compile/emulator/physical validation separately; screenshot count/names/artifact/run/path/omissions.
 
 Blockers:
-- None for ongoing remote work. Genuine Pixel/Samsung packages and hardware blur/device validation still needed.
+- ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
+- Phone has app.lawnchair.nightly; Finder resolves; actual Pixel provider rk.android.app.pixelsearch/.SearchWidget.
+- No phone installation/settings changes yet; final installation authorized. CI emulator remains separate.
 - CTX unavailable; report no available metric, never invent percentage; no manual /compact.
