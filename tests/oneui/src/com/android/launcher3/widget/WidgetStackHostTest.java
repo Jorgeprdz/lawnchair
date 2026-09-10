@@ -10,6 +10,8 @@
 package com.android.launcher3.widget;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 
@@ -17,6 +19,9 @@ import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.view.View;
+import android.view.MotionEvent;
+import android.os.SystemClock;
+import android.widget.FrameLayout;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -57,6 +62,8 @@ public class WidgetStackHostTest {
                 secondHost.getTranslateDelegate().setTranslation(
                         MultiTranslateDelegate.INDEX_WIDGET_CENTERING, 25f, 20f);
                 WidgetStackView view = new WidgetStackView(launcher);
+                InterceptionParent parent = new InterceptionParent(launcher);
+                parent.addView(view);
                 view.bind(stack, launcher.getModelWriter(), Arrays.asList(firstHost, secondHost));
                 int spec = View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY);
                 view.measure(spec, spec);
@@ -75,7 +82,36 @@ public class WidgetStackHostTest {
                 assertEquals(1f, replacement.getScaleX(), 0f);
                 assertEquals(0f, replacement.getTranslationX(), 0f);
                 assertEquals(Arrays.asList(first, second), stack.getContents());
+                long downTime = SystemClock.uptimeMillis();
+                MotionEvent down = MotionEvent.obtain(downTime, downTime,
+                        MotionEvent.ACTION_DOWN, 100f, 100f, 0);
+                MotionEvent cancel = MotionEvent.obtain(downTime, downTime + 10,
+                        MotionEvent.ACTION_CANCEL, 100f, 100f, 0);
+                try {
+                    view.dispatchTouchEvent(down);
+                    firstHost.requestDisallowInterceptTouchEvent(false);
+                    assertTrue("A child must not return this gesture to Workspace", parent.blocked);
+                    view.dispatchTouchEvent(cancel);
+                    assertFalse("Cancellation must release Workspace interception", parent.blocked);
+                } finally {
+                    down.recycle();
+                    cancel.recycle();
+                }
             });
+        }
+    }
+
+    private static class InterceptionParent extends FrameLayout {
+        boolean blocked;
+
+        InterceptionParent(Launcher launcher) {
+            super(launcher);
+        }
+
+        @Override
+        public void requestDisallowInterceptTouchEvent(boolean disallow) {
+            blocked = disallow;
+            super.requestDisallowInterceptTouchEvent(disallow);
         }
     }
 
