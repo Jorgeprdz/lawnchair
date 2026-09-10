@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): d474519a7de590d088fea8f3b247b4f684ecd580
+HEAD (audited before checkpoint): 1bc97b059bc09da545a1ef2ef9714581f1f21508
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -29,12 +29,13 @@ Completed:
 
 Current:
 - Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
-- M6 geometry/removal CI green; gesture ownership fe95ffa; Android host test c233c0d; remote emulator enabled.
+- M6 gesture ownership fe95ffa, accessibility 407dda4, first-provider constraints 8370fc5 committed.
+- Android host/gesture regressions and real-provider binding/reorder/remove/model-reload suite committed (1bc97b0).
 
 Next:
 - M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
 - M6: verify all-member sizing, gesture arbitration, deletion/undo, reorder and ID cleanup.
-- M6: run new Android host regression suite; extend real-provider/editor/paging acceptance coverage.
+- M6: monitor emulator runs 34430802520/34431464980, fix real failures, extend paging/editor/resize coverage.
 - Then implement M1+M7 together, M4, M2; preserve valid M3/M5 work.
 
 Architecture decisions:
@@ -76,7 +77,8 @@ Validation:
 - 8828a43/34428638218 and 297149a/34428862164: all 3 APKs/style passed; final-status queued.
 - f84b4c7/34429849107 and 2e6eba2/34429976188: all 3 APKs/style/final-status passed.
 - CI compiles GithubDebug AndroidTest APK; optional dispatch oneui-emulator runs API35 and archives logcat.
-- Preliminary host tests are not real-provider acceptance; artifact Lawnchair-OneUI-Emulator-Smoke.
+- b0aad3d/34430802520: all APKs + instrumentation compiled; host-only emulator running.
+- 1bc97b0/34431464980: real-provider test build/emulator pending; artifact Lawnchair-OneUI-Emulator-Smoke.
 
 Final emulator/screenshots requirements (after all modules and successful CI):
 - Use remote emulator if available; install actual APK, launch without crash, set home when permitted.
