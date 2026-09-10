@@ -25,6 +25,11 @@ on:
       - 'LICENSE'
       - 'NOTICE'
   workflow_dispatch:
+    inputs:
+      oneui-emulator:
+        description: Run preliminary OneUI Android instrumentation on a remote emulator
+        type: boolean
+        default: false
   workflow_call:
 
 env:
@@ -59,11 +64,42 @@ jobs:
           fi
       - name: Build APK
         run: ./gradlew ${{ matrix.build-variant }}
+      - name: Build OneUI instrumentation APK
+        if: matrix.build-variant == 'assembleLawnWithQuickstepGithubDebug'
+        run: ./gradlew assembleLawnWithQuickstepGithubDebugAndroidTest
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.build-variant }}
           path: build/outputs/apk/**/*.apk
+
+  oneui-emulator:
+    if: github.event_name == 'workflow_dispatch' && inputs.oneui-emulator && github.ref == 'refs/heads/feature/oneui-enhancements'
+    needs: [build-debug-apk, check-style]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+      - uses: actions/download-artifact@v8
+        with:
+          name: assembleLawnWithQuickstepGithubDebug
+          path: oneui-apks
+      - name: Run Android host regression tests
+        run: bash .github/scripts/oneui-emulator-smoke.sh
+      - name: Preserve emulator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-Emulator-Smoke
+          path: oneui-emulator-results/
+          if-no-files-found: error
 
   check-style:
     runs-on: ubuntu-latest
