@@ -211,6 +211,13 @@ class PreferenceManager2 @Inject constructor(
         defaultValue = ColorOption.fromString(context.getString(R.string.config_default_accent_color)),
     )
 
+    // -1 preserves the legacy background switch until a mode is explicitly selected.
+    val hotseatBackgroundMode = preference(
+        key = intPreferencesKey("hotseat_background_mode"),
+        defaultValue = -1,
+        onSet = { reloadHelper.recreate() },
+    )
+
     val hotseatBackgroundColor = preference(
         key = stringPreferencesKey(name = "hotseat_bg_color"),
         parse = ColorOption::fromString,

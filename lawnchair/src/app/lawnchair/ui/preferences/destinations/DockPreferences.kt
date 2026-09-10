@@ -41,6 +41,8 @@ import app.lawnchair.ui.preferences.components.WallpaperPreview
 import app.lawnchair.ui.preferences.components.WithWallpaper
 import app.lawnchair.ui.preferences.components.clipToBottomPercentage
 import app.lawnchair.ui.preferences.components.colorpreference.ColorPreference
+import app.lawnchair.ui.preferences.components.controls.ListPreference
+import app.lawnchair.ui.preferences.components.controls.ListPreferenceEntry
 import app.lawnchair.ui.preferences.components.controls.MainSwitchPreference
 import app.lawnchair.ui.preferences.components.controls.SliderPreference
 import app.lawnchair.ui.preferences.components.controls.SwitchPreference
@@ -65,16 +67,26 @@ fun DockPreferences(modifier: Modifier = Modifier) {
         modifier = modifier,
     ) {
         val hotseatBgAdapter = prefs.hotseatBG.getAdapter()
+        val backgroundMode = prefs2.hotseatBackgroundMode.getAdapter()
+        val selectedMode = backgroundMode.state.value.takeIf { it in 0..3 }
+            ?: if (hotseatBgAdapter.state.value) 1 else 0
 
         MainSwitchPreference(adapter = prefs2.isHotseatEnabled.getAdapter(), label = stringResource(id = R.string.show_hotseat_title)) {
             DockPreferencesPreview()
             PreferenceGroup(heading = stringResource(id = R.string.style)) {
-                SwitchPreference(
-                    adapter = hotseatBgAdapter,
+                ListPreference(
+                    value = selectedMode,
+                    onValueChange = backgroundMode::onChange,
+                    entries = listOf(
+                        ListPreferenceEntry(0) { stringResource(R.string.dock_background_off) },
+                        ListPreferenceEntry(1) { stringResource(R.string.dock_background_solid) },
+                        ListPreferenceEntry(2) { stringResource(R.string.dock_background_blur) },
+                        ListPreferenceEntry(3) { stringResource(R.string.dock_background_crystal) },
+                    ),
                     label = stringResource(id = R.string.hotseat_background),
                 )
                 ExpandAndShrink(
-                    visible = hotseatBgAdapter.state.value,
+                    visible = selectedMode != 0,
                 ) {
                     HotseatBackgroundSettings(prefs, prefs2)
                 }
@@ -229,6 +241,7 @@ fun ColumnScope.DockPreferencesPreview(modifier: Modifier = Modifier) {
             prefs2.strokeColorStyle.getAdapter(),
             prefs2.enableLabelInDock.getAdapter(),
             prefs.hotseatBG.getAdapter(),
+            prefs2.hotseatBackgroundMode.getAdapter(),
             prefs.hotseatBGHorizontalInsetLeft.getAdapter(),
             prefs.hotseatBGVerticalInsetTop.getAdapter(),
             prefs.hotseatBGHorizontalInsetRight.getAdapter(),
