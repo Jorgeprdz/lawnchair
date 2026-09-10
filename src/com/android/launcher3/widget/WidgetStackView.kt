@@ -29,7 +29,6 @@ import com.android.launcher3.dragndrop.DraggableView
 import com.android.launcher3.model.ModelWriter
 import com.android.launcher3.model.data.WidgetStackInfo
 import com.android.launcher3.pageindicators.PageIndicatorDots
-import com.android.launcher3.touch.ItemLongClickListener
 import com.android.launcher3.util.MultiTranslateDelegate
 import kotlin.math.abs
 
@@ -55,7 +54,12 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
             (16 * resources.displayMetrics.density).toInt(),
             Gravity.BOTTOM,
         ))
-        setOnLongClickListener(ItemLongClickListener.INSTANCE_WORKSPACE)
+        setOnLongClickListener {
+            app.lawnchair.widgetstack.WidgetStackEditor.show(
+                com.android.launcher3.Launcher.getLauncher(context), this,
+            )
+            true
+        }
     }
 
     fun bind(info: WidgetStackInfo, modelWriter: ModelWriter, views: List<View>) {

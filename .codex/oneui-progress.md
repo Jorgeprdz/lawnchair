@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-d6c793c61c14b1398b9c33aada28f621748e83db
+50bfffb530e1a9ba50e9ad4c6e0999988900aab5
 
 Global:
 26% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,13 +36,13 @@ Completed:
 - M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
-- M6 native picker target/binding/config-result routing added; editor and creation entry next.
+- M6 sheet editor: drag/a11y reorder, active selection, remove, native picker add, move; creation entry next.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
-- M6: connect creation entry/editor; picker target uses existing PendingRequestArgs container.
+- M6: connect creation entry; picker target uses existing PendingRequestArgs container.
 - M6: editor/remove/reorder/add, resize, restore/provider updates and integration tests pending.
 
 Architecture decisions:

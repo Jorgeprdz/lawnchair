@@ -1071,4 +1071,9 @@
     <string name="please_wait">Please wait…</string>
     <string name="widget_stack_unavailable">Widget unavailable</string>
     <string name="widget_stack_incompatible">This widget cannot fit in this stack.</string>
+    <string name="widget_stack_title">Widget stack</string>
+    <string name="widget_stack_active">Active widget</string>
+    <string name="widget_stack_add">Add widget</string>
+    <string name="widget_stack_remove">Remove</string>
+    <string name="widget_stack_move">Move stack</string>
 </resources>
