@@ -151,7 +151,9 @@ class ItemInflater<T>(
                 unavailableStackMember(member)
             }
         }
-        return WidgetStackView(context).apply { bind(stack, context.modelWriter, views) }
+        val stackView = WidgetStackView(context)
+        stackView.bind(stack, context.modelWriter, views)
+        return stackView
     }
 
     private fun unavailableStackMember(member: LauncherAppWidgetInfo): View =
