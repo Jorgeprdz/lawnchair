@@ -38,6 +38,14 @@ public class MaxWorkspaceItemsTest {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         AtomicInteger iconId = new AtomicInteger(-1);
         AtomicInteger folderId = new AtomicInteger(-1);
+        var prefs = app.lawnchair.preferences2.PreferenceManager2.getInstance(
+                InstrumentationRegistry.getInstrumentation().getTargetContext());
+        boolean feedback = "device-feedback".equals(InstrumentationRegistry.getArguments()
+                .getString("oneuiMaxPhase"));
+        boolean previousOverlap = app.lawnchair.preferences2.PreferenceCacheExtensionsKt.firstCached(
+                prefs.getAllowWidgetOverlap());
+        if (feedback) com.patrykmichalik.opto.core.PreferenceExtensionsKt.setBlocking(
+                prefs.getAllowWidgetOverlap(), true);
         try (ActivityScenario<Launcher> scenario = ActivityScenario.launch(launch)) {
             try {
                 ready(scenario);
@@ -108,6 +116,25 @@ public class MaxWorkspaceItemsTest {
                                 assertSame(folder, grid.getChildAt(cell[0], cell[1]));
                                 assertFalse("All four folder cells must be occupied",
                                         grid.getOccupied().isRegionVacant(cell[0], cell[1], 1, 1));
+                                assertTrue("Widget overlap must not expose a Max folder cell",
+                                        grid.isOccupied(cell[0], cell[1]));
+                                assertFalse(grid.isRegionVacant(cell[0], cell[1], 1, 1));
+                                int[] center = new int[2];
+                                grid.cellToCenterPoint(cell[0], cell[1], center);
+                                var solution = grid.calculateReorder(center[0], center[1],
+                                        1, 1, 1, 1, null);
+                                if (solution != null && solution.isSolution) {
+                                    var folderPlacement = solution.map.get(folder);
+                                    assertNotNull(folderPlacement);
+                                    assertFalse("Reorder must never overlap the Max folder",
+                                            android.graphics.Rect.intersects(new android.graphics.Rect(
+                                                    solution.cellX, solution.cellY,
+                                                    solution.cellX + 1, solution.cellY + 1),
+                                                    new android.graphics.Rect(folderPlacement.cellX,
+                                                            folderPlacement.cellY,
+                                                            folderPlacement.cellX + folderPlacement.spanX,
+                                                            folderPlacement.cellY + folderPlacement.spanY)));
+                                }
                                 float x = preview.left + preview.width() * (dx == 0 ? .25f : .75f);
                                 float y = preview.top + preview.height() * (dy == 0 ? .25f : .75f);
                                 float distance = grid.getDistanceFromWorkspaceCellVisualCenter(x, y, cell);
@@ -219,6 +246,9 @@ public class MaxWorkspaceItemsTest {
                 });
                 drain();
             }
+        } finally {
+            if (feedback) com.patrykmichalik.opto.core.PreferenceExtensionsKt.setBlocking(
+                    prefs.getAllowWidgetOverlap(), previousOverlap);
         }
     }
 
