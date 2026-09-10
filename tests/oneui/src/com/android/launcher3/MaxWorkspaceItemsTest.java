@@ -51,7 +51,7 @@ public class MaxWorkspaceItemsTest {
                             .getTitleAndIcon(result, apps.get(0), DEFAULT_LOOKUP_FLAG);
                     return result;
                 }).get(30, TimeUnit.SECONDS);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     int screen = launcher.getWorkspace().getScreenIdForPageIndex(0);
                     CellLayout grid = launcher.getWorkspace().getScreenWithId(screen);
                     WorkspaceItemInfo icon = new WorkspaceItemInfo(app);
@@ -86,20 +86,20 @@ public class MaxWorkspaceItemsTest {
                 drain();
                 OneUiScreenshots.capture("01-home.png");
                 launchSettingsAndReturn(scenario, iconId.get(), false);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     assertTrue(find(launcher, folderId.get()).performClick());
                     assertNotNull(Folder.getOpen(launcher));
                 });
-                scenario.onActivity(AbstractFloatingView::closeAllOpenViews);
+                onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 SystemClock.sleep(500);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     assertTrue(WorkspaceItemSize.toggle(launcher, find(launcher, iconId.get())));
                 });
                 drain();
                 OneUiScreenshots.capture("12-max-icon.png");
                 launchSettingsAndReturn(scenario, iconId.get(), false);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     FolderIcon view = (FolderIcon) find(launcher, folderId.get());
                     assertTrue(WorkspaceItemSize.toggle(launcher, view));
                     assertEquals(9, view.getPreviewItemsOnPage(0).size());
@@ -107,13 +107,13 @@ public class MaxWorkspaceItemsTest {
                     assertNoOverlap((CellLayout) view.getParent().getParent());
                 });
                 drain();
-                WidgetStackBindingTest.await(scenario, launcher -> {
+                awaitLauncher(scenario, launcher -> {
                     FolderIcon view = (FolderIcon) find(launcher, folderId.get());
                     return view.getLargePreviewSize() > 0 && !view.isLayoutRequested()
                             && !view.getFolderName().isLayoutRequested();
                 });
                 OneUiScreenshots.capture("02-large-folder.png");
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     FolderIcon view = (FolderIcon) find(launcher, folderId.get());
                     var name = view.getFolderName();
                     var textBounds = new android.graphics.Rect();
@@ -126,17 +126,17 @@ public class MaxWorkspaceItemsTest {
                 });
                 OneUiScreenshots.capture("13-max-folder.png");
                 launchSettingsAndReturn(scenario, folderId.get(), true);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     find(launcher, folderId.get()).performClick();
                     assertNotNull(Folder.getOpen(launcher));
                     assertEquals(10, Folder.getOpen(launcher).getItemCount());
                 });
                 OneUiScreenshots.capture("03-large-folder-open.png");
-                scenario.onActivity(AbstractFloatingView::closeAllOpenViews);
+                onLauncher(scenario, AbstractFloatingView::closeAllOpenViews);
                 drain();
                 scenario.recreate();
                 ready(scenario);
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     View icon = find(launcher, iconId.get());
                     View folder = find(launcher, folderId.get());
                     assertNotNull(icon);
@@ -157,7 +157,7 @@ public class MaxWorkspaceItemsTest {
                 });
                 drain();
             } finally {
-                scenario.onActivity(launcher -> {
+                onLauncher(scenario, launcher -> {
                     AbstractFloatingView.closeAllOpenViews(launcher);
                     for (int id : new int[]{iconId.get(), folderId.get()}) {
                         View view = find(launcher, id);
@@ -175,7 +175,7 @@ public class MaxWorkspaceItemsTest {
         var instrumentation = InstrumentationRegistry.getInstrumentation();
         String[] readiness = new String[1];
         try {
-            WidgetStackBindingTest.await(scenario, launcher -> {
+            awaitLauncher(scenario, launcher -> {
                 View target = find(launcher, id);
                 readiness[0] = "focus=" + launcher.hasWindowFocus()
                         + " switchingFinished=" + launcher.getWorkspace().isFinishedSwitchingState()
@@ -190,7 +190,7 @@ public class MaxWorkspaceItemsTest {
             throw new AssertionError("Home icon not ready: " + readiness[0], error);
         }
         float[] point = new float[2];
-        scenario.onActivity(launcher -> {
+        onLauncher(scenario, launcher -> {
             View view = find(launcher, id);
             assertNotNull(view);
             int[] location = new int[2];
@@ -226,6 +226,28 @@ public class MaxWorkspaceItemsTest {
         fail("Expected foreground application: " + expected);
     }
 
+    // HOME can replace the activity monitored by ActivityScenario; inspect the actual launcher.
+    private static void onLauncher(ActivityScenario<Launcher> scenario,
+            java.util.function.Consumer<Launcher> action) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Launcher launcher = Launcher.ACTIVITY_TRACKER.getCreatedContext();
+            assertNotNull("The current launcher must exist", launcher);
+            action.accept(launcher);
+        });
+    }
+
+    private static void awaitLauncher(ActivityScenario<Launcher> scenario,
+            java.util.function.Predicate<Launcher> condition) throws Exception {
+        for (int attempt = 0; attempt < 150; attempt++) {
+            drain();
+            AtomicBoolean matched = new AtomicBoolean();
+            onLauncher(scenario, launcher -> matched.set(condition.test(launcher)));
+            if (matched.get()) return;
+            SystemClock.sleep(100);
+        }
+        fail("Timed out waiting for the current launcher");
+    }
+
     private static View find(Launcher launcher, int id) {
         return launcher.getWorkspace().mapOverItems((item, view) -> item != null && id >= 0 && item.id == id);
     }
@@ -256,7 +278,7 @@ public class MaxWorkspaceItemsTest {
         for (int attempt = 0; attempt < 150; attempt++) {
             drain();
             AtomicBoolean ready = new AtomicBoolean();
-            scenario.onActivity(launcher -> ready.set(ItemLongClickListener.canStartDrag(launcher)));
+            onLauncher(scenario, launcher -> ready.set(ItemLongClickListener.canStartDrag(launcher)));
             if (ready.get()) return;
             SystemClock.sleep(100);
         }

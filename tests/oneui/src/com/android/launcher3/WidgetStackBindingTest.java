@@ -208,11 +208,15 @@ public class WidgetStackBindingTest {
                     });
                     logPagingState(launcher, stackId.get());
                 });
+                awaitStableStackBounds(scenario, stackId.get(), stackBounds);
                 float left = stackBounds.left + stackBounds.width() * 0.2f;
                 float right = stackBounds.left + stackBounds.width() * 0.8f;
                 sendGesture(left, stackBounds.centerY(), right, stackBounds.centerY(), true);
                 awaitPage(scenario, stackId.get(), firstRow.get());
                 OneUiScreenshots.capture("09-widget-stack-page1.png");
+                awaitStableStackBounds(scenario, stackId.get(), stackBounds);
+                left = stackBounds.left + stackBounds.width() * 0.2f;
+                right = stackBounds.left + stackBounds.width() * 0.8f;
                 sendGesture(right, stackBounds.centerY(), left, stackBounds.centerY(), true);
                 awaitPage(scenario, stackId.get(), secondRow.get());
                 OneUiScreenshots.capture("10-widget-stack-page2.png");
@@ -318,6 +322,26 @@ public class WidgetStackBindingTest {
         WidgetStackInfo stack = (WidgetStackInfo) view.getTag();
         LauncherAppWidgetHostView host = view.findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
         return host == null ? null : host.findViewById(android.R.id.text1);
+    }
+
+    private static void awaitStableStackBounds(ActivityScenario<Launcher> scenario, int id, Rect bounds)
+            throws Exception {
+        AtomicInteger stable = new AtomicInteger();
+        await(scenario, launcher -> {
+            WidgetStackView stack = WidgetStackController.findStack(launcher, id);
+            if (stack == null) return false;
+            PagedView<?> pager = (PagedView<?>) stack.getChildAt(0);
+            Rect current = new Rect();
+            if (!launcher.hasWindowFocus() || pager.isPageInTransition()
+                    || !stack.getGlobalVisibleRect(current)) {
+                stable.set(0);
+                return false;
+            }
+            if (current.equals(bounds)) stable.incrementAndGet();
+            else stable.set(0);
+            bounds.set(current);
+            return stable.get() >= 5;
+        });
     }
 
     static void sendGesture(float fromX, float fromY, float toX, float toY, boolean swipe) {
