@@ -2112,6 +2112,10 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     }
 
     boolean willCreateUserFolder(ItemInfo info, View dropOverView, boolean considerTimeout) {
+        // Max items retain their workspace footprint until explicitly restored to normal size.
+        if (com.android.launcher3.util.WorkspaceItemSize.isMax(info)
+                || dropOverView != null && dropOverView.getTag() instanceof ItemInfo targetInfo
+                    && com.android.launcher3.util.WorkspaceItemSize.isMax(targetInfo)) return false;
         if (dropOverView != null) {
             CellLayoutLayoutParams lp = (CellLayoutLayoutParams) dropOverView.getLayoutParams();
             if (lp.useTmpCoords && (lp.getTmpCellX() != lp.getCellX()
@@ -2705,7 +2709,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private int[] performReorderForItem(ItemInfo item, CellLayout layout, int pixelX, int pixelY,
             int minSpanX, int minSpanY, int spanX, int spanY, View child,
             int[] targetCell, int[] resultSpan, int mode) {
-        if (item instanceof com.android.launcher3.model.data.WidgetStackInfo) {
+        if (item instanceof com.android.launcher3.model.data.WidgetStackInfo
+                || com.android.launcher3.util.WorkspaceItemSize.isMax(item)) {
             // Moving a stack preserves its all-member-compatible footprint. Explicit resizing
             // goes through the stack editor and validates every provider first.
             return layout.performReorder(pixelX, pixelY, item.spanX, item.spanY,
@@ -2918,7 +2923,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private boolean shouldUseHotseatAsDropLayout(DragObject dragObject) {
         if (mLauncher.getHotseat() == null
                 || mLauncher.getHotseat().getShortcutsAndWidgets() == null
-                || isDragWidget(dragObject)) {
+                || isDragWidget(dragObject)
+                || com.android.launcher3.util.WorkspaceItemSize.isMax(dragObject.dragInfo)) {
             return false;
         }
         View hotseatIcons = mLauncher.getHotseat().getPagedView();

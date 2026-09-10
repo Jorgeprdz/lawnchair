@@ -295,7 +295,8 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     }
 
     private boolean willAcceptItem(ItemInfo item) {
-        return (willAcceptItemType(item.itemType) && item != mInfo && !mFolder.isOpen());
+        return (willAcceptItemType(item.itemType) && item != mInfo && !mFolder.isOpen()
+                && !com.android.launcher3.util.WorkspaceItemSize.isMax(item));
     }
 
     public boolean acceptDrop(ItemInfo dragInfo) {

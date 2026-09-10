@@ -1173,7 +1173,8 @@ public class Folder extends AbstractFloatingView implements ClipPathView, DragSo
     public boolean acceptDrop(DragObject d) {
         // LC: App drawer folders are not backed by the launcher model, so dropping
         // into them would write through ModelWriter and crash (#7127).
-        return !isInAppDrawer() && willAcceptItemType(d.dragInfo.itemType);
+        return !isInAppDrawer() && willAcceptItemType(d.dragInfo.itemType)
+                && !com.android.launcher3.util.WorkspaceItemSize.isMax(d.dragInfo);
     }
 
     public void onDragEnter(DragObject d) {
