@@ -680,13 +680,15 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
             mFolderName.setPadding(mFolderName.getPaddingLeft(), 0, mFolderName.getPaddingRight(), 0);
             Paint.FontMetrics metrics = mFolderName.getPaint().getFontMetrics();
             int labelHeight = (int) Math.ceil(metrics.bottom - metrics.top);
+            // Dense grids may use negative icon padding; a square preview must not cover its title.
+            int labelGap = Math.max(0, profile.iconDrawablePaddingPx);
             int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
             int height = MeasureSpec.getSize(heightMeasureSpec);
             mLargePreviewSize = Math.max(1, Math.min(width,
-                    height - labelHeight - profile.iconDrawablePaddingPx));
+                    height - labelHeight - labelGap));
             setPadding(getPaddingLeft(), Math.max(0, (height - mLargePreviewSize
-                    - labelHeight - profile.iconDrawablePaddingPx) / 2), getPaddingRight(), 0);
-            nameParams.topMargin = mLargePreviewSize + profile.iconDrawablePaddingPx;
+                    - labelHeight - labelGap) / 2), getPaddingRight(), 0);
+            nameParams.topMargin = mLargePreviewSize + labelGap;
         } else {
             mLargePreviewSize = 0;
             nameParams.topMargin = isInAppDrawer()
