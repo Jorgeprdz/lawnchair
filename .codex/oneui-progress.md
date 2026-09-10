@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 8dd1282e4a191681aa81c9685f1587851d91d16f
+HEAD (audited before checkpoint): f0e7ee20d4fa0945129543cb972ae665bc3ce8ec
 Global: 60% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -31,10 +31,11 @@ Current:
 - Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
-- USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
+- Final validation phase: implementations compiled; run emulator, fix failures and collect actual screenshots.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
 - Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator failed: test thread/schema/context/null-tag errors; screenshot ack fixed.
-- Latest fast CI 34440512144/cfde191 running: fixes UiAutomation screenshot ack; superseded 34440174457 cancelled.
+- Latest CI 34440973789/f0e7ee2 running; fixes test main-thread writes, SQLite schema defaults, null tags and process fixture UID.
+- CI 34440512144: compile/style passed, emulator running; collect its valid partial screenshots too.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
