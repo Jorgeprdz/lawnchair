@@ -202,6 +202,7 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
      * should not be used when the widget sheet is displayed elsewhere.
      */
     private int mWidgetStackTarget = -1;
+    private boolean mStackAddRequested;
 
     /** Scope the existing picker's Add action to one persistent stack. */
     public void setWidgetStackTarget(int stackId) {
@@ -213,6 +214,10 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
     }
 
     private void addWidget(@NonNull PendingAddItemInfo info) {
+        if (mWidgetStackTarget >= 0) {
+            if (mStackAddRequested) return;
+            mStackAddRequested = true;
+        }
         // Using a boolean flag here to make sure the callback is only run once. This should never
         // happen because we close the sheet and it will be reconstructed the next time it is
         // needed.

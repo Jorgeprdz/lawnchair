@@ -766,7 +766,7 @@ public class AppWidgetResizeFrame extends AbstractFloatingView implements View.O
         return false;
     }
 
-    private boolean isTouchOnReconfigureButton(MotionEvent ev) {
+    private boolean isTouchOnActionButton(MotionEvent ev) {
         int xFrame = (int) ev.getX() - getLeft();
         int yFrame = (int) ev.getY() - getTop();
         if (mCreateStackButton.getVisibility() == VISIBLE) {
@@ -802,13 +802,12 @@ public class AppWidgetResizeFrame extends AbstractFloatingView implements View.O
 
     @Override
     public boolean onControllerInterceptTouchEvent(MotionEvent ev) {
+        // Action buttons take precedence over the border's resize hit region.
+        if (isTouchOnActionButton(ev)) {
+            return false;
+        }
         if (ev.getAction() == MotionEvent.ACTION_DOWN && handleTouchDown(ev)) {
             return true;
-        }
-        // Keep the resize frame open but let a click on the reconfigure button fall through to the
-        // button's OnClickListener.
-        if (isTouchOnReconfigureButton(ev)) {
-            return false;
         }
         close(false);
         return false;
