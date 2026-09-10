@@ -1,14 +1,14 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): a7acbae651364481a4d099ae1b8cc4126595c53d
-Global: 39% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): 773176c276f58def59ba741a56a9c9e9c2b239d2
+Global: 44% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
 - M1 Large Folders: 35% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
 - M2 Pixel Search: 0% — not started; real provider discovery/hosting required.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
-- M4 Dock Glass: 0% — Off/Solid/Blur/Crystal not started.
+- M4 Dock Glass: 35% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
 - M6 Widget Stacks: 45% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
 - M7 Max Icons / Max Folders: 30% — native Max Icon action/rendering; shared folder state/placement.
@@ -27,13 +27,13 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- M1/M7 source implemented: shared CellLayout resize, canonical flags, loader, Max Icon, folder preview/menu.
+- M1/M7 size/model/preview/menu committed; M4 modes/rendering 773176c source-reviewed, XML parsed.
 - Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Review Max drag/animation geometry and remaining M6 source gaps, then M4/M2; runtime validation pending.
+- Integrate M2 real provider/host lifecycle; close M1/M7 and M5/M6 gaps before final validation.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:
@@ -51,7 +51,7 @@ Architecture decisions:
 - Max Folders use M1 canonical state and 3x3/up-to-9 direct-launch preview; no duplicate flags.
 - Max Icons use WorkspaceItemInfo/BubbleTextView; retain identity, theme/badges/drag/a11y.
 - M7 workspace only; no global scaling/Hotseat/Nothing mode; no further broad drop-in search.
-- M7 uses M5 migration; stack resizing remains M6. Nothing is UX inspiration only.
+- M4 uses AOSP BackgroundBlurDrawable when accessible/enabled, otherwise translucent fallback; no wallpaper capture.
 - DefaultLauncher model/view files are GPLv3 despite Apache metadata: reference only, NOT copied.
 - Check licenses per file; Lawnchair LICENSE.txt Apache-2.0. PR7029 is preview-only reference.
 
@@ -63,7 +63,7 @@ Relevant files:
 - src/com/android/launcher3/model/data/WidgetStackInfo.kt; model/PackageUpdatedTask.java
 - src/com/android/launcher3/widget/{WidgetStackView.kt,WidgetStackController.kt,WidgetGridPreflight.kt}
 - src/com/android/launcher3/widget/{BaseWidgetSheet.java,PendingAppWidgetHostView.java,picker/WidgetsFullSheet.java}
-- src/com/android/launcher3/util/{WorkspaceItemSize.java,ItemInflater.kt,LauncherBindableItemsContainer.kt}
+- util/{WorkspaceItemSize.java,ItemInflater.kt}; graphics/DockGlassBackground.java; Hotseat.java
 - lawnchair/src/app/lawnchair/widgetstack/WidgetStackEditor.kt; tests/oneui/; .github/scripts/oneui-emulator-smoke.sh
 - lawnchair/src/app/lawnchair/ui/preferences/destinations/HomeScreenGridPreferences.kt
 
