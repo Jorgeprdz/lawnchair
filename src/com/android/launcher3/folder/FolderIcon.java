@@ -767,10 +767,13 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
             if (Math.hypot(event.getX() - mPreviewDownX, event.getY() - mPreviewDownY) > slop) {
                 mPreviewTapItem = null;
             }
-        } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+        } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL
+                || event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
             mPreviewTapItem = null;
         } else if (event.getActionMasked() == MotionEvent.ACTION_UP && mPreviewTapItem != null
-                && !mLongPressHelper.hasPerformedLongPress()) {
+                && !mLongPressHelper.hasPerformedLongPress()
+                && mInfo.getContents().contains(mPreviewTapItem)
+                && previewItemAt(event.getX(), event.getY()) == mPreviewTapItem) {
             WorkspaceItemInfo item = mPreviewTapItem;
             mPreviewTapItem = null;
             MotionEvent cancel = MotionEvent.obtain(event);

@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): e6a956c01fb9bd80e27cdcc91c24e185ba598eb7
+HEAD (audited before checkpoint): 58731d24025fe6890294e629a80b34f691caefcc
 Global: 49% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -27,14 +27,14 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- M2 e6a956c: real QSB hosting; mode migration, provider fallback, lifecycle/size/ID cleanup reviewed.
+- M2 real QSB hosting/lifecycle; M1 preview app install-state handling and touch cancellation reviewed.
 - Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Close M1/M7 geometry and M5/M6 impossible restore-grid gaps; final build/emulator still deferred.
-- M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
+- Add final integration regressions; audit restore/provider edge cases, then final build/emulator.
+- M5/M6 guard 58731d2 cancels incompatible grid changes before migration; source-grid reload needs testing.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.

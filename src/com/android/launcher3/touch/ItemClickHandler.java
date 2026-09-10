@@ -233,7 +233,11 @@ public class ItemClickHandler {
 
     private static void onClickPendingAppItem(View v, Launcher launcher, String packageName,
             boolean downloadStarted) {
-        ItemInfo item = (ItemInfo) v.getTag();
+        onClickPendingAppItem(v, launcher, packageName, downloadStarted, (ItemInfo) v.getTag());
+    }
+
+    private static void onClickPendingAppItem(View v, Launcher launcher, String packageName,
+            boolean downloadStarted, ItemInfo item) {
         CompletableFuture<SessionInfo> siFuture = CompletableFuture.supplyAsync(() ->
                 InstallSessionHelper.INSTANCE.get(launcher)
                         .getActiveSessionInfo(item.user, packageName),
@@ -361,7 +365,7 @@ public class ItemClickHandler {
         }
 
         // Check for abandoned promise
-        if ((v instanceof BubbleTextView) && shortcut.hasPromiseIconUi()
+        if (shortcut.hasPromiseIconUi()
                 && (!Flags.enableSupportForArchiving() || !shortcut.isArchived())) {
             String packageName = shortcut.getTargetPackage();
             if (!TextUtils.isEmpty(packageName)) {
@@ -370,7 +374,8 @@ public class ItemClickHandler {
                         launcher,
                         packageName,
                         (shortcut.runtimeStatusFlags
-                                & ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE) != 0);
+                                & ItemInfoWithIcon.FLAG_INSTALL_SESSION_ACTIVE) != 0,
+                        shortcut);
                 return;
             }
         }
