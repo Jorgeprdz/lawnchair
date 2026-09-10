@@ -1,18 +1,18 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 77b7a63a24048a2ecdcd535e924c44af8c2d030d
+HEAD (audited before checkpoint): 457fa4fe69cc0d3ec1ad6e94d28ede12a0cc1abd
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
-Global: 66% — revised after physical-device feedback; seven equally weighted modules.
+Global: 69% — revised after physical-device feedback; seven equally weighted modules.
 
 Modules:
-- M1 Large Folders: 60% — enlarge/direct launch work; occupancy overlap and adding apps FAIL on device.
+- M1 Large Folders: 65% — drop quadrants fixed/tested; overlap-pref guard awaiting targeted regression.
 - M2 Pixel Search: 40% — real provider exists on phone but dock hosting FAILS; investigate binding.
 - M3 One UI Finder: 95% — user confirms configurable gesture works on Samsung; do not repeat passing tests.
 - M4 Dock Glass: 45% — options work but Blur/Crystal effects not visible on device.
 - M5 Widget Grid Snap: 85% — user confirms working; retain existing validation, no redundant tests.
-- M6 Widget Stacks: 70% — add/swipe work; long press for options/move freezes on device.
-- M7 Max Icons / Max Folders: 65% — user cannot find enlarge-icon action; folder shares M1 defects.
+- M6 Widget Stacks: 80% — long-press editor and move/cancel regression PASS after routing/interception fix; phone retest pending.
+- M7 Max Icons / Max Folders: 75% — missing Quickstep action restored/tested; phone retest pending; shares M1 occupancy guard.
 
 Completed:
 - M3 explicit Samsung component; native configurable gesture and guarded platform failures.
@@ -28,14 +28,14 @@ Current:
 - c521b12 adds missing WORKSPACE_SIZE to Quickstep override; df54890 routes stack holds to editor/releases interception.
 - e319889 uses actual large-folder preview drop rectangle; dd3d72c protects Max/stacks from allow_widget_overlap bypass.
 - Device has allow_widget_overlap=true; prior native reorder returned success without checking any occupied item.
-- Focused CI34495067024 running at147c0a4; later overlap fix/test dc91ba4 NOT included; build them next.
-- 77b7a63 adds read-only Samsung blur/provider diagnostics for the next AndroidTest APK.
+- CI34495067024/147c0a4 GREEN: compilation/style and exactly2 focused tests (folder drops/Max factory, stack hold/move).
+- CI34496179837/457fa4f running: overlap guard/test and read-only Samsung diagnostic APK; only Max regression selected.
 - User currently has hotseat_mode=disabled and search-provider=pixel_search; clarify which control was tested.
 - Window dump reports mBlurEnabled=false; actual app API/OEM capabilities need targeted verification.
 - Conserve quota: only changed/failing cases; M3/M5 approved; home-return bug closed to further work.
 
 Next:
-- Inspect focused CI result; fix real failures; run one updated Debug/targeted regression CI for overlap guard.
+- Inspect CI34496179837; fix real failures; do not repeat passed M6 regression unless changed.
 - Run new read-only dock capability diagnostic on Samsung; determine supported M4 rendering path.
 - Resolve real M2 hosting once user clarifies disabled mode versus search-provider selection.
 - Update Debug in place after validation; preserve all user data/default HOME; never uninstall Nightly.
@@ -99,4 +99,4 @@ Blockers:
 - ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
 - Phone HOME now app.lawnchair.debug (chosen by user); Finder resolves; Pixel provider .SearchWidget exists.
 - Phone Nightly signer747c3645 differs from CI Nightly signer07f6de48; direct update impossible, NEVER uninstall.
-- Debug installed and user-tested; Nightly preserved. Existing overlaps must not be deleted during repair.
+- Debug installed and user-tested; Nightly preserved. Read-only DB audit: current large folder2x2 and stack4x1 have no overlapping rows; never delete items to repair.
