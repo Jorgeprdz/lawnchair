@@ -2,15 +2,15 @@
 
 Branch: feature/oneui-enhancements
 HEAD (audited before checkpoint): dff9b4c5f81dfef0cfebcf3574dea37f7d0f4742
-Global: 62% — equal-weight estimate across seven modules; not acceptance completion.
+Global: 65% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
 - M1 Large Folders: 50% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
-- M2 Pixel Search: 50% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
+- M2 Pixel Search: 60% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
 - M4 Dock Glass: 60% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
-- M6 Widget Stacks: 65% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
+- M6 Widget Stacks: 75% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
 - M7 Max Icons / Max Folders: 50% — native Max Icon action/rendering; shared folder state/placement.
 
 Completed:
@@ -35,7 +35,8 @@ Next:
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
 - Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator failed: test thread/schema/context/null-tag errors; screenshot ack fixed.
 - CI34440973789: compile/style GREEN; dock modes + 2 SQLite migrations + hidden host + stack force-stop restore PASS.
-- CI34441287074/b6f75b1 emulator running with Kotlin tests/partial-scroll detection.
+- CI34441287074: 7/8 tests PASS + process-death PASS; only Max icon fixture wrong-thread failure (fixed04d433a).
+- Stack real taps/vertical scroll/paging/resize/reorder/remove/reload PASS; absent Finder/Pixel fallback PASS.
 - Latest CI34441778019/dff9b4c: model-thread icon fixture + wait for visible content before dock screenshots.
 
 Architecture decisions:
@@ -98,6 +99,6 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 7 PNG files downloaded (4 dock modes + 3 widget-grid versions). Dock Off caught a transition; recapture pending.
-- Screenshot artifacts: run34440973789/10138147418 + earlier34439748126/10137783512 and34440512144/10137967110.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 15 PNG files downloaded/CRC-verified; includes stack pages1/2 and editor. Dock Off transition recapture pending.
+- Latest screenshot artifact: run34441287074/10138255813; earlier runs34440973789,34440512144,34439748126 also downloaded.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
