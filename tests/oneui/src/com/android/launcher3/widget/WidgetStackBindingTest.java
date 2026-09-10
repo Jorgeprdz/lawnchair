@@ -72,7 +72,7 @@ public class WidgetStackBindingTest {
                     screen.set(launcher.getWorkspace().getScreenIdForPageIndex(0));
                     CellLayout grid = launcher.getWorkspace().getScreenWithId(screen.get());
                     int[] cell = new int[2];
-                    assertTrue("The test needs a free 2x2 region", grid.findCellForSpan(cell, 2, 2));
+                    assertTrue("The test needs room for placement and resize", grid.findCellForSpan(cell, 3, 2));
                     baselineCount.set(grid.getShortcutsAndWidgets().getChildCount());
                     LauncherAppWidgetProviderInfo provider = provider(launcher, component);
                     int id = bind(launcher, provider, allocatedIds);
@@ -117,12 +117,22 @@ public class WidgetStackBindingTest {
                         assertEquals(stack.spanX, member.spanX);
                         assertNotNull(view.findWidgetByAppWidgetId(member.appWidgetId));
                     }
+                    assertTrue("Both providers support a shared 3x2 footprint",
+                            WidgetStackController.INSTANCE.resize(launcher, view, 3, 2));
+                    assertEquals(3, stack.spanX);
+                    assertEquals(2, stack.spanY);
+                    for (LauncherAppWidgetInfo member : stack.getContents()) {
+                        assertEquals(stack.spanX, member.spanX);
+                        assertEquals(stack.spanY, member.spanY);
+                    }
                     active.set(stack.getActiveWidgetId());
                     stack.moveWidget(1, 0);
                     WidgetStackController.INSTANCE.persistOrder(launcher, stack);
                     WidgetStackController.refresh(launcher, view);
                 });
                 drainModel();
+                scenario.recreate();
+                await(scenario, ItemLongClickListener::canStartDrag);
                 scenario.onActivity(launcher -> launcher.getModel().forceReload());
                 await(scenario, launcher -> {
                     WidgetStackView view = WidgetStackController.findStack(launcher, stackId.get());
@@ -132,6 +142,13 @@ public class WidgetStackBindingTest {
                     WidgetStackView view = WidgetStackController.findStack(launcher, stackId.get());
                     WidgetStackInfo stack = (WidgetStackInfo) view.getTag();
                     assertEquals(2, stack.getContents().size());
+                    assertEquals(3, stack.spanX);
+                    assertEquals(2, stack.spanY);
+                    for (LauncherAppWidgetInfo member : stack.getContents()) {
+                        assertEquals(3, member.spanX);
+                        assertEquals(2, member.spanY);
+                        assertNotNull(view.findWidgetByAppWidgetId(member.appWidgetId));
+                    }
                     assertEquals(active.get(), stack.getActiveWidgetId());
                     assertEquals(active.get(), stack.getContents().get(0).id);
                     WidgetStackController.remove(launcher, view, stack.getContents().get(0));
