@@ -30,6 +30,14 @@ on:
         description: Run preliminary OneUI Android instrumentation on a remote emulator
         type: boolean
         default: false
+      oneui-fast:
+        description: Validate GithubDebug and instrumentation only (full matrix remains the default)
+        type: boolean
+        default: false
+      oneui-apk-run:
+        description: Reuse a successful APK run for emulator-only changes (source identity is checked)
+        type: string
+        default: ''
   workflow_call:
 
 env:
@@ -37,9 +45,10 @@ env:
 
 jobs:
   build-debug-apk:
+    if: ${{ !inputs.oneui-apk-run && !(github.event_name == 'pull_request' && github.head_ref == 'feature/oneui-enhancements') }}
     strategy:
       matrix:
-        build-variant: [ assembleLawnWithQuickstepNightlyRelease, assembleLawnWithQuickstepGithubDebug, assembleLawnWithQuickstepPlayDebug ]
+        build-variant: ${{ fromJSON((inputs.oneui-fast || (github.event_name == 'push' && github.ref == 'refs/heads/feature/oneui-enhancements')) && '["assembleLawnWithQuickstepGithubDebug"]' || '["assembleLawnWithQuickstepNightlyRelease","assembleLawnWithQuickstepGithubDebug","assembleLawnWithQuickstepPlayDebug"]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -74,10 +83,13 @@ jobs:
           path: build/outputs/apk/**/*.apk
 
   oneui-emulator:
-    if: github.event_name == 'workflow_dispatch' && inputs.oneui-emulator && github.ref == 'refs/heads/feature/oneui-enhancements'
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.oneui-emulator && github.ref == 'refs/heads/feature/oneui-enhancements' && (inputs.oneui-apk-run != '' || (needs.build-debug-apk.result == 'success' && needs.check-style.result == 'success'))
     needs: [build-debug-apk, check-style]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -87,10 +99,18 @@ jobs:
         with:
           distribution: zulu
           java-version: 21
+      - name: Verify reused APK source and successful build
+        if: inputs.oneui-apk-run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONEUI_APK_RUN: ${{ inputs.oneui-apk-run }}
+        run: python3 .github/scripts/verify-oneui-apk.py
       - uses: actions/download-artifact@v8
         with:
           name: assembleLawnWithQuickstepGithubDebug
           path: oneui-apks
+          run-id: ${{ inputs.oneui-apk-run || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Run Android host regression tests
         run: bash .github/scripts/oneui-emulator-smoke.sh
       - name: Preserve emulator diagnostics
@@ -102,6 +122,7 @@ jobs:
           if-no-files-found: error
 
   check-style:
+    if: ${{ !inputs.oneui-apk-run && !(github.event_name == 'pull_request' && github.head_ref == 'feature/oneui-enhancements') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -165,7 +186,7 @@ jobs:
       - build-debug-apk
       - check-style
     runs-on: ubuntu-slim
-    if: always()
+    if: ${{ always() && !inputs.oneui-apk-run && !(github.event_name == 'pull_request' && github.head_ref == 'feature/oneui-enhancements') }}
     outputs:
       publish_nightly: ${{ steps.publishing-status.outputs.publish_nightly }}
     steps:
