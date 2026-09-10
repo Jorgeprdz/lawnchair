@@ -30,20 +30,18 @@ import app.lawnchair.oneui.OneUiGlassPreferences;
 /**
  * Shared bounded glass surface for One UI-inspired dock and folder backgrounds.
  *
- * <p>Blur is deliberately frosted rather than acrylic: a broad background diffusion, a neutral
- * milky veil and a restrained edge bloom reproduce the soft One UI appearance while preserving
- * wallpaper colour. Crystal stays clearer, sharper and more reflective. Both effects are driven by
- * independent 0-100 intensity values.</p>
+ * <p>Blur is broad and soft, Crystal stays clearer and sharper, and Frosty keeps the original
+ * stronger milky One UI treatment. Blur and Crystal retain independent intensity controls;
+ * Frosty intentionally follows the Blur intensity control.</p>
  */
 public final class DockGlassBackground {
     public static final int STYLE_BLUR = 2;
     public static final int STYLE_CRYSTAL = 3;
-    /** Legacy prototype alias. Frosty is now the normal Blur rendering. */
     public static final int STYLE_FROSTY = 4;
 
     private DockGlassBackground() { }
 
-    /** Existing dock entry point; intensity is resolved live from preferences. */
+    /** Existing dock entry point; Frosty can be selected independently through preferences. */
     public static Drawable create(View host, boolean crystal, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, crystal ? STYLE_CRYSTAL : STYLE_BLUR,
                 color, cornerRadius, true);
@@ -54,13 +52,8 @@ public final class DockGlassBackground {
         return new DynamicGlassDrawable(host, STYLE_BLUR, color, cornerRadius, false);
     }
 
-    private static int normalizeStyle(int style) {
-        return style == STYLE_FROSTY ? STYLE_BLUR : style;
-    }
-
-    private static Drawable buildSurface(View host, int requestedStyle, int color,
+    private static Drawable buildSurface(View host, int style, int color,
             float cornerRadius, int intensityPercent) {
-        final int style = normalizeStyle(requestedStyle);
         final int intensity = clamp(intensityPercent, 0, 100);
         if (style < STYLE_BLUR || intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
@@ -71,10 +64,14 @@ public final class DockGlassBackground {
         final boolean dark = (host.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
 
-        // One UI Blur is intentionally broad and soft. Crystal keeps more wallpaper structure.
-        final int blurDp = style == STYLE_CRYSTAL
-                ? Math.round(8f + 20f * strength)
-                : Math.round(18f + 46f * strength);
+        final int blurDp;
+        if (style == STYLE_CRYSTAL) {
+            blurDp = Math.round(8f + 20f * strength);
+        } else if (style == STYLE_FROSTY) {
+            blurDp = Math.round(18f + 42f * strength);
+        } else {
+            blurDp = Math.round(18f + 46f * strength);
+        }
         Drawable blur = createPlatformBlur(host, Math.max(1, Math.round(blurDp * density)),
                 cornerRadius);
 
@@ -86,9 +83,12 @@ public final class DockGlassBackground {
             tintRgb = color;
             tintScale = 0.08f + 0.14f * strength;
             fallbackFloor = Math.round(24f + 26f * strength);
+        } else if (style == STYLE_FROSTY) {
+            tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE,
+                    dark ? 0.16f : 0.30f);
+            tintScale = 0.42f + 0.28f * strength;
+            fallbackFloor = Math.round(104f + 54f * strength);
         } else {
-            // Pull the chosen tint slightly toward neutral white/black. This is the frosted
-            // Samsung look: colours remain visible underneath but do not turn into acrylic paint.
             tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, dark ? 0.10f : 0.22f);
             tintScale = 0.20f + 0.20f * strength;
             fallbackFloor = Math.round(64f + 58f * strength);
@@ -105,7 +105,6 @@ public final class DockGlassBackground {
                 : new LayerDrawable(new Drawable[] {blur, tint});
 
         if (style == STYLE_CRYSTAL) {
-            // Thin directional highlight: clearer and more glass-like than Blur.
             GradientDrawable sheen = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                     new int[] {
                             alphaColor(Color.WHITE, Math.round(14f + 28f * strength)),
@@ -119,15 +118,33 @@ public final class DockGlassBackground {
             return new LayerDrawable(new Drawable[] {base, sheen});
         }
 
-        // Neutral haze supplies the characteristic frosted/milky diffusion even when an OEM
-        // reduces cross-window blur. It is intentionally subtle in dark mode to avoid grey panels.
+        if (style == STYLE_FROSTY) {
+            int top = alphaColor(Color.WHITE, Math.round(24f + 30f * strength));
+            int middle = alphaColor(Color.WHITE, Math.round(7f + 12f * strength));
+            int bottom = alphaColor(Color.BLACK, Math.round(8f + 14f * strength));
+            GradientDrawable haze = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[] {top, middle, bottom});
+            haze.setCornerRadius(cornerRadius);
+            haze.setStroke(Math.max(1, Math.round(density)),
+                    alphaColor(Color.WHITE, Math.round(34f + 34f * strength)));
+
+            GradientDrawable bloom = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[] {
+                            alphaColor(Color.WHITE, Math.round(24f + 30f * strength)),
+                            Color.TRANSPARENT,
+                            alphaColor(dark ? Color.BLACK : Color.WHITE,
+                                    Math.round(7f + 12f * strength)),
+                    });
+            bloom.setCornerRadius(cornerRadius);
+            return new LayerDrawable(new Drawable[] {base, haze, bloom});
+        }
+
         int hazeRgb = dark ? Color.rgb(38, 39, 42) : Color.WHITE;
         int hazeAlpha = dark
                 ? Math.round(10f + 24f * strength)
                 : Math.round(18f + 42f * strength);
         GradientDrawable haze = rounded(cornerRadius, alphaColor(hazeRgb, hazeAlpha));
 
-        // Very soft top-to-bottom bloom. No hard shine: Blur should read as frost, not Crystal.
         GradientDrawable bloom = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[] {
                         alphaColor(Color.WHITE, Math.round(12f + 22f * strength)),
@@ -219,9 +236,14 @@ public final class DockGlassBackground {
         }
 
         private int resolveStyle() {
-            return normalizeStyle(mDockControlled
-                    ? mBaseStyle
-                    : OneUiGlassPreferences.getFolderMode(mHost.getContext()));
+            if (!mDockControlled) {
+                return OneUiGlassPreferences.getFolderMode(mHost.getContext());
+            }
+            if (mBaseStyle == STYLE_CRYSTAL
+                    && OneUiGlassPreferences.isDockFrosty(mHost.getContext())) {
+                return STYLE_FROSTY;
+            }
+            return mBaseStyle;
         }
 
         private int resolveIntensity(int style) {
