@@ -546,6 +546,9 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     }
 
     public ClippedFolderIconLayoutRule getLayoutRule() {
+        // A rebound icon can be opened before its first draw after returning from another app.
+        // Animations need the same initialized dimensions and column count as the preview.
+        mPreviewItemManager.recomputePreviewDrawingParams();
         return mPreviewLayoutRule;
     }
 
