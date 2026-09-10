@@ -2070,8 +2070,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             }
 
             int[] resultSpan = new int[2];
-            mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
-                    (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
+            mTargetCell = performReorderForItem(d.dragInfo, dropTargetLayout,
+                    (int) mDragViewVisualCenter[0], (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                     null, mTargetCell, resultSpan, CellLayout.MODE_ACCEPT_DROP);
             boolean foundCell = mTargetCell[0] >= 0 && mTargetCell[1] >= 0;
 
@@ -2311,8 +2311,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 if (returnToOriginalCellToPreventShuffling) {
                     mTargetCell[0] = mTargetCell[1] = -1;
                 } else {
-                    mTargetCell = dropTargetLayout.performReorder((int) mDragViewVisualCenter[0],
-                            (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
+                    mTargetCell = performReorderForItem(d.dragInfo, dropTargetLayout,
+                            (int) mDragViewVisualCenter[0], (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                             cell, mTargetCell, resultSpan, CellLayout.MODE_ON_DROP);
                 }
 
@@ -2323,8 +2323,6 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                         (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY)) {
                     resizeOnDrop = true;
                     AppWidgetHostView awhv = (AppWidgetHostView) cell;
-                    snapWidgetSpanToGrid(item, resultSpan, dropTargetLayout,
-                            awhv.getAppWidgetInfo());
                     item.spanX = resultSpan[0];
                     item.spanY = resultSpan[1];
                     WidgetSizes.updateWidgetSizeRanges(awhv, mLauncher, resultSpan[0],
@@ -2688,51 +2686,51 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 d.dragInfo instanceof PendingAddWidgetInfo);
     }
 
-    private void snapWidgetSpanToGrid(ItemInfo item, int[] span, CellLayout targetLayout,
-            @Nullable AppWidgetProviderInfo appWidgetProviderInfo) {
-        if (!(item instanceof LauncherAppWidgetInfo || item instanceof PendingAddWidgetInfo)
-                || span == null || span.length < 2 || targetLayout == null) {
-            return;
-        }
-
-        int minSpanX = item.minSpanX > 0 ? item.minSpanX : 1;
-        int minSpanY = item.minSpanY > 0 ? item.minSpanY : 1;
-        int maxSpanX = targetLayout.getCountX();
-        int maxSpanY = targetLayout.getCountY();
-
+    /** Applies provider constraints before CellLayout reserves or reorders any cells. */
+    private int[] performReorderForItem(ItemInfo item, CellLayout layout, int pixelX, int pixelY,
+            int minSpanX, int minSpanY, int spanX, int spanY, View child,
+            int[] targetCell, int[] resultSpan, int mode) {
+        AppWidgetProviderInfo provider = null;
         if (item instanceof PendingAddWidgetInfo) {
-            LauncherAppWidgetProviderInfo providerInfo = ((PendingAddWidgetInfo) item).info;
-            if (providerInfo != null) {
-                appWidgetProviderInfo = providerInfo;
-            }
+            provider = ((PendingAddWidgetInfo) item).info;
+        } else if (child instanceof AppWidgetHostView) {
+            provider = ((AppWidgetHostView) child).getAppWidgetInfo();
         }
 
-        if (appWidgetProviderInfo instanceof LauncherAppWidgetProviderInfo) {
-            LauncherAppWidgetProviderInfo providerInfo =
-                    (LauncherAppWidgetProviderInfo) appWidgetProviderInfo;
-            minSpanX = Math.max(minSpanX, providerInfo.minSpanX);
-            minSpanY = Math.max(minSpanY, providerInfo.minSpanY);
-            maxSpanX = Math.min(maxSpanX, providerInfo.maxSpanX);
-            maxSpanY = Math.min(maxSpanY, providerInfo.maxSpanY);
-            if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
-                minSpanX = maxSpanX = Math.max(1, Math.min(providerInfo.spanX,
-                        targetLayout.getCountX()));
+        if (provider != null
+                && !PreferenceCacheExtensionsKt.firstCached(mPreferenceManager2.getForceWidgetResize())) {
+            int maxSpanX = layout.getCountX();
+            int maxSpanY = layout.getCountY();
+            if (provider instanceof LauncherAppWidgetProviderInfo) {
+                LauncherAppWidgetProviderInfo info = (LauncherAppWidgetProviderInfo) provider;
+                minSpanX = Math.max(minSpanX, info.minSpanX);
+                minSpanY = Math.max(minSpanY, info.minSpanY);
+                maxSpanX = Math.min(maxSpanX, info.maxSpanX);
+                maxSpanY = Math.min(maxSpanY, info.maxSpanY);
             }
-            if ((providerInfo.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
-                minSpanY = maxSpanY = Math.max(1, Math.min(providerInfo.spanY,
-                        targetLayout.getCountY()));
+            // Moving a widget must preserve the current size of a non-resizable axis.
+            if ((provider.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
+                minSpanX = spanX;
+                maxSpanX = Math.min(maxSpanX, spanX);
             }
-        } else if (appWidgetProviderInfo != null) {
-            if ((appWidgetProviderInfo.resizeMode & AppWidgetProviderInfo.RESIZE_HORIZONTAL) == 0) {
-                minSpanX = maxSpanX = Math.max(1, Math.min(item.spanX, targetLayout.getCountX()));
+            if ((provider.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
+                minSpanY = spanY;
+                maxSpanY = Math.min(maxSpanY, spanY);
             }
-            if ((appWidgetProviderInfo.resizeMode & AppWidgetProviderInfo.RESIZE_VERTICAL) == 0) {
-                minSpanY = maxSpanY = Math.max(1, Math.min(item.spanY, targetLayout.getCountY()));
+            minSpanX = Math.max(1, minSpanX);
+            minSpanY = Math.max(1, minSpanY);
+            if (minSpanX > maxSpanX || minSpanY > maxSpanY) {
+                targetCell[0] = targetCell[1] = -1;
+                if (resultSpan != null) {
+                    resultSpan[0] = resultSpan[1] = -1;
+                }
+                return targetCell;
             }
+            spanX = Math.max(minSpanX, Math.min(spanX, maxSpanX));
+            spanY = Math.max(minSpanY, Math.min(spanY, maxSpanY));
         }
-
-        span[0] = Math.max(minSpanX, Math.min(span[0], maxSpanX));
-        span[1] = Math.max(minSpanY, Math.min(span[1], maxSpanY));
+        return layout.performReorder(pixelX, pixelY, minSpanX, minSpanY, spanX, spanY,
+                child, targetCell, resultSpan, mode);
     }
 
     public void onDragOver(DragObject d) {
@@ -2808,7 +2806,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         final View child = (mDragInfo == null) ? null : mDragInfo.cell;
         if (!nearestDropOccupied) {
             int[] span = new int[2];
-            mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            performReorderForItem(item, mDragTargetLayout, (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, item.spanX, item.spanY,
                     child, mTargetCell, span, CellLayout.MODE_SHOW_REORDER_HINT);
             mDragTargetLayout.visualizeDropLocation(mTargetCell[0], mTargetCell[1], span[0],
@@ -2823,7 +2821,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             mReorderAlarm.cancelAlarm();
             mLastReorderX = reorderX;
             mLastReorderY = reorderY;
-            mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            performReorderForItem(item, mDragTargetLayout, (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, item.spanX, item.spanY,
                     child, mTargetCell, new int[2], CellLayout.MODE_SHOW_REORDER_HINT);
             // Otherwise, if we aren't adding to or creating a folder and there's no pending
@@ -3059,7 +3057,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, mDragTargetLayout,
                     mTargetCell);
 
-            mTargetCell = mDragTargetLayout.performReorder((int) mDragViewVisualCenter[0],
+            mTargetCell = performReorderForItem(dragObject.dragInfo, mDragTargetLayout,
+                    (int) mDragViewVisualCenter[0],
                     (int) mDragViewVisualCenter[1], minSpanX, minSpanY, spanX, spanY,
                     child, mTargetCell, resultSpan, CellLayout.MODE_DRAG_OVER);
 
@@ -3143,14 +3142,20 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                     minSpanY = item.minSpanY;
                 }
                 int[] resultSpan = new int[2];
-                mTargetCell = cellLayout.performReorder((int) mDragViewVisualCenter[0],
+                mTargetCell = performReorderForItem(item, cellLayout, (int) mDragViewVisualCenter[0],
                         (int) mDragViewVisualCenter[1], minSpanX, minSpanY, info.spanX, info.spanY,
                         null, mTargetCell, resultSpan, CellLayout.MODE_ON_DROP_EXTERNAL);
+
+                if (mTargetCell[0] < 0 || mTargetCell[1] < 0) {
+                    cellLayout.revertTempState();
+                    d.deferDragViewCleanupPostAnimation = false;
+                    onNoCellFound(cellLayout, item, d.logInstanceId);
+                    return;
+                }
 
                 if (resultSpan[0] != item.spanX || resultSpan[1] != item.spanY) {
                     updateWidgetSize = true;
                 }
-                snapWidgetSpanToGrid(item, resultSpan, cellLayout, null);
                 item.spanX = resultSpan[0];
                 item.spanY = resultSpan[1];
             }
