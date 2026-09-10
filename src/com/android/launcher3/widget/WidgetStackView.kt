@@ -76,16 +76,8 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         views.forEach { view ->
             // The existing AppWidget host may return a view from the previous binding.
             (view.parent as? ViewGroup)?.removeView(view)
-            if (view is NavigableAppWidgetHostView) {
-                // Pages measure hosts within the stack's actual widget bounds. Clear transforms
-                // left by a previous standalone CellLayout binding before reusing the host.
-                view.setScaleToFit(1f)
-                view.translateDelegate.setTranslation(
-                    MultiTranslateDelegate.INDEX_WIDGET_CENTERING, 0f, 0f,
-                )
-            }
+            preparePageHost(view)
             val page = FrameLayout(context)
-            view.setOnLongClickListener { performLongClick() }
             page.addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             pager.addView(page, ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -102,6 +94,17 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
                 pager.onSettled = ::saveActivePage
             }
         }
+    }
+
+    /** Reused hosts must not retain transforms from a standalone workspace binding. */
+    private fun preparePageHost(view: View) {
+        if (view is NavigableAppWidgetHostView) {
+            view.setScaleToFit(1f)
+            view.translateDelegate.setTranslation(
+                MultiTranslateDelegate.INDEX_WIDGET_CENTERING, 0f, 0f,
+            )
+        }
+        view.setOnLongClickListener { performLongClick() }
     }
 
     private fun saveActivePage() {
@@ -130,7 +133,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
             if (replacement === previous) return
             (replacement.parent as? ViewGroup)?.removeView(replacement)
             page.removeView(previous)
-            replacement.setOnLongClickListener { performLongClick() }
+            preparePageHost(replacement)
             page.addView(replacement, LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
             ))
@@ -160,7 +163,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
                     page.removeView(child)
                     (attached.parent as? ViewGroup)?.removeView(attached)
                     attached.tag = child.tag
-                    attached.setOnLongClickListener { performLongClick() }
+                    preparePageHost(attached)
                     page.addView(attached, LayoutParams(
                         LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
                     ))

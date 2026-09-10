@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 71977e59cf9b5c236206af83fc04421fb5a53312
+HEAD (audited before checkpoint): a7949e252b57669736aaf322e596f8539a24b109
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -29,7 +29,7 @@ Completed:
 
 Current:
 - Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
-- M6 drag preserves full footprint; native accessible Move, profile sizing and small-screen editor updated.
+- M6 uses widget measurement bounds; clear reused host transforms on bind, reinflation and async attach.
 
 Next:
 - M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
@@ -73,7 +73,7 @@ Validation:
 - 5 grid scaling + 5 stack model + 3 stack migration regression cases added; not executed.
 - All 3 APKs/style passed: d73d45d/34423066055, a78a0c9/34423420226, 59c25cf/34423937406.
 - All 3 APKs/style passed: df78685/34424966519, d6c793c/34426161207, 1960ee0/34427352339.
-- 1960ee0 validates creation, picker/editor and atomic add; later resize/provider/migration CI pending.
+- 8828a43/34428638218 and 297149a/34428862164: all 3 APKs/style passed; final-status queued.
 - Resize access fixed 488c0c7; provider Java import fixed 8828a43; grid style fixed 54d356a.
 - Keep useful push CI; cancel duplicate/obsolete runs. NightlyRelease/GithubDebug/PlayDebug matrix.
 
