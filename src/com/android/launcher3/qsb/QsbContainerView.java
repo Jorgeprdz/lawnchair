@@ -461,6 +461,26 @@ public class QsbContainerView extends FrameLayout {
         }
     }
 
+    /** The QSB host has its own restored ID map, separate from workspace widget rows. */
+    public static void restoreWidgetIds(Context context, int[] oldIds, int[] newIds) {
+        if (oldIds == null || newIds == null || oldIds.length != newIds.length) return;
+        var prefs = LauncherPrefs.getPrefs(context);
+        var editor = prefs.edit();
+        for (String key : new String[]{"qsb_widget_id", "pixel_search_widget_id"}) {
+            for (String suffix : new String[]{"", "_pending", "_configured"}) {
+                int old = prefs.getInt(key + suffix, -1);
+                if (old < 0) continue;
+                for (int index = 0; index < oldIds.length; index++) {
+                    if (old == oldIds[index] && newIds[index] >= 0) {
+                        editor.putInt(key + suffix, newIds[index]);
+                        break;
+                    }
+                }
+            }
+        }
+        editor.apply();
+    }
+
     public static class QsbWidgetHost extends AppWidgetHost {
 
         private final WidgetViewFactory mViewFactory;
