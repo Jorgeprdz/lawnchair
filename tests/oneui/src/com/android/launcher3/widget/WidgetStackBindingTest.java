@@ -11,6 +11,7 @@ package com.android.launcher3.widget;
 
 import static org.junit.Assert.*;
 
+import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProviderInfo;
 import android.content.ComponentName;
@@ -30,11 +31,14 @@ import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.model.data.WidgetStackInfo;
 import com.android.launcher3.touch.ItemLongClickListener;
 import com.android.launcher3.util.Executors;
+import com.android.launcher3.util.PendingRequestArgs;
+import com.android.launcher3.LauncherConstants.ActivityCodes;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -98,6 +102,19 @@ public class WidgetStackBindingTest {
                 scenario.onActivity(launcher -> {
                     AbstractFloatingView.closeAllOpenViews(launcher);
                     LauncherAppWidgetProviderInfo provider = provider(launcher, component);
+                    int cancelledId = launcher.getAppWidgetHolder().allocateAppWidgetId();
+                    allocatedIds.add(cancelledId);
+                    LauncherAppWidgetInfo pending = new LauncherAppWidgetInfo(cancelledId, component);
+                    pending.container = stackId.get();
+                    pending.screenId = screen.get();
+                    launcher.setWaitingForResult(PendingRequestArgs.forWidgetInfo(cancelledId,
+                            new WidgetAddFlowHandler(provider), pending));
+                    launcher.onActivityResult(ActivityCodes.REQUEST_BIND_APPWIDGET,
+                            Activity.RESULT_CANCELED, null);
+                    assertFalse("Cancellation without an Intent must release its allocated ID",
+                            Arrays.stream(launcher.getAppWidgetHolder().getAppWidgetIds())
+                                    .anyMatch(id -> id == cancelledId));
+                    assertEquals(1, info(launcher, stackId.get()).getContents().size());
                     int id = bind(launcher, provider, allocatedIds);
                     LauncherAppWidgetInfo member = new LauncherAppWidgetInfo(id, component);
                     assertTrue(WidgetStackController.completeAdd(launcher, stackId.get(), member,
