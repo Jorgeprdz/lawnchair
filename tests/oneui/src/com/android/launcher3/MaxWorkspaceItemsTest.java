@@ -41,15 +41,19 @@ public class MaxWorkspaceItemsTest {
         try (ActivityScenario<Launcher> scenario = ActivityScenario.launch(launch)) {
             try {
                 ready(scenario);
+                var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+                AppInfo app = Executors.MODEL_EXECUTOR.submit(() -> {
+                    var apps = context.getSystemService(LauncherApps.class)
+                            .getActivityList("com.android.settings", Process.myUserHandle());
+                    assertFalse("An actual launchable Settings app is required", apps.isEmpty());
+                    var result = new AppInfo(context, apps.get(0), Process.myUserHandle());
+                    LauncherAppState.getInstance(context).getIconCache()
+                            .getTitleAndIcon(result, apps.get(0), DEFAULT_LOOKUP_FLAG);
+                    return result;
+                }).get(30, TimeUnit.SECONDS);
                 scenario.onActivity(launcher -> {
                     int screen = launcher.getWorkspace().getScreenIdForPageIndex(0);
                     CellLayout grid = launcher.getWorkspace().getScreenWithId(screen);
-                    var apps = launcher.getSystemService(LauncherApps.class)
-                            .getActivityList("com.android.settings", Process.myUserHandle());
-                    assertFalse("An actual launchable Settings app is required", apps.isEmpty());
-                    var app = new AppInfo(launcher, apps.get(0), Process.myUserHandle());
-                    LauncherAppState.getInstance(launcher).getIconCache()
-                            .getTitleAndIcon(app, apps.get(0), DEFAULT_LOOKUP_FLAG);
                     WorkspaceItemInfo icon = new WorkspaceItemInfo(app);
                     int[] cell = new int[2];
                     assertTrue(grid.findCellForSpan(cell, 2, 2));
