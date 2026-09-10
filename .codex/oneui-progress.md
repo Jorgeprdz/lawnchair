@@ -95,4 +95,5 @@ Screenshots:
 Blockers:
 - ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
 - Phone default HOME app.lawnchair.nightly 16.Dev.(#5074); Finder resolves; Pixel provider .SearchWidget exists.
-- No phone installation/settings changes yet; final installation authorized. CI emulator remains separate.
+- Phone Nightly signer747c3645 differs from CI Nightly signer07f6de48; direct update impossible, NEVER uninstall.
+- Final validated Debug can coexist (all modules integrated); no phone installation/settings changes yet.
