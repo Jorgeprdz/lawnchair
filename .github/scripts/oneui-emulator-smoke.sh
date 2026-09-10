@@ -39,6 +39,11 @@ timeout 120 adb install -r "${app_apks[0]}"
 timeout 120 adb install -r -t "${test_apks[0]}"
 timeout 30 adb shell cmd package set-home-activity app.lawnchair.debug/app.lawnchair.LawnchairLauncher > oneui-emulator-results/home-role.txt 2>&1 || true
 timeout 15 adb logcat -c
-timeout 300 adb shell am instrument -w -r app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+python3 .github/scripts/oneui-screenshots.py > oneui-emulator-results/screenshots.txt 2>&1 &
+screenshot_pid=$!
+# Allow the ADB log stream to connect before instrumentation publishes capture requests.
+sleep 1
+timeout 600 adb shell am instrument -w -r -e oneuiScreenshots true app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+kill "$screenshot_pid" 2>/dev/null || true
 grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/instrumentation.txt
 ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' oneui-emulator-results/instrumentation.txt

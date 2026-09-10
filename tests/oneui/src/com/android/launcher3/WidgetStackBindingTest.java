@@ -101,6 +101,7 @@ public class WidgetStackBindingTest {
                     firstHost.set(host);
                 });
                 drainModel();
+                OneUiScreenshots.capture("08-widget-grid.png");
                 scenario.onActivity(launcher -> WidgetStackController.create(launcher, firstHost.get()));
                 await(scenario, launcher -> {
                     int id = first.get().container;
@@ -167,8 +168,14 @@ public class WidgetStackBindingTest {
                 float right = stackBounds.left + stackBounds.width() * 0.8f;
                 sendGesture(left, stackBounds.centerY(), right, stackBounds.centerY(), true);
                 awaitPage(scenario, stackId.get(), firstRow.get());
+                OneUiScreenshots.capture("09-widget-stack-page1.png");
                 sendGesture(right, stackBounds.centerY(), left, stackBounds.centerY(), true);
                 awaitPage(scenario, stackId.get(), secondRow.get());
+                OneUiScreenshots.capture("10-widget-stack-page2.png");
+                scenario.onActivity(launcher -> app.lawnchair.widgetstack.WidgetStackEditor.show(
+                        launcher, WidgetStackController.findStack(launcher, stackId.get())));
+                OneUiScreenshots.capture("11-widget-stack-editor.png");
+                scenario.onActivity(AbstractFloatingView::closeAllOpenViews);
                 scenario.onActivity(launcher -> assertEquals(workspacePage.get(),
                         launcher.getWorkspace().getCurrentPage()));
                 AtomicInteger active = new AtomicInteger();
