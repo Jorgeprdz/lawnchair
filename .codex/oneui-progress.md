@@ -1,17 +1,17 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): fbdbc36b6462711ee86c2bd5eaf5976754def788
-Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): 00be58c6178605ce03743fa7a7a141bd9791055b
+Global: 39% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
-- M1 Large Folders: 0% — no committed implementation.
+- M1 Large Folders: 35% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
 - M2 Pixel Search: 0% — not started; real provider discovery/hosting required.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
 - M4 Dock Glass: 0% — Off/Solid/Blur/Crystal not started.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
 - M6 Widget Stacks: 45% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
-- M7 Max Icons / Max Folders: 0% — registered; workspace-only real 1x1/2x2 items.
+- M7 Max Icons / Max Folders: 30% — native Max Icon action/rendering; shared folder state/placement.
 
 Completed:
 - No M1/M6 implementation survived original recovery; M6 reconstructed afterward.
@@ -27,13 +27,13 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- M6 geometry/removal CI green; gesture ownership, accessibility and first-provider checks committed.
-- Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
+- M1/M7 source implemented: shared CellLayout resize, canonical flags, loader, Max Icon, folder preview/menu.
+- Latest M1/M7 changes are source-reviewed only; no intermediate builds per user instruction.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
-- Real swipe reaches page0/scroll0 but active row stayed on page1; use native notifyPageSwitchListener hook.
-- Finish M6 source gaps, then implement M1+M7, M4, M2; all unrun validation remains explicitly pending.
+- M6 active-page correction fbdbc36 uses notifyPageSwitchListener; runtime revalidation deferred.
+- Finish Max item drag/drop and migration safety; resolve remaining M6 source gaps, then M4/M2.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:
@@ -63,7 +63,7 @@ Relevant files:
 - src/com/android/launcher3/model/data/WidgetStackInfo.kt; model/PackageUpdatedTask.java
 - src/com/android/launcher3/widget/{WidgetStackView.kt,WidgetStackController.kt,WidgetGridPreflight.kt}
 - src/com/android/launcher3/widget/{BaseWidgetSheet.java,PendingAppWidgetHostView.java,picker/WidgetsFullSheet.java}
-- src/com/android/launcher3/util/{ItemInflater.kt,LauncherBindableItemsContainer.kt}
+- src/com/android/launcher3/util/{WorkspaceItemSize.java,ItemInflater.kt,LauncherBindableItemsContainer.kt}
 - lawnchair/src/app/lawnchair/widgetstack/WidgetStackEditor.kt; tests/oneui/; .github/scripts/oneui-emulator-smoke.sh
 - lawnchair/src/app/lawnchair/ui/preferences/destinations/HomeScreenGridPreferences.kt
 

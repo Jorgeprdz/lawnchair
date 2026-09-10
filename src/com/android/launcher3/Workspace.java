@@ -1970,6 +1970,9 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
             if (btv.isDisplaySearchResult()) {
                 dragOptions.preDragEndScale = (float) mAllAppsIconSize / btv.getIconSize();
             }
+        } else if (child instanceof FolderIcon && !dragOptions.isAccessibleDrag) {
+            dragOptions.preDragCondition =
+                    com.android.launcher3.util.WorkspaceItemSize.showFolderActions(mLauncher, child);
         }
 
         boolean lockHomeScreen = PreferenceCacheExtensionsKt.firstCached(mPreferenceManager2.getLockHomeScreen());
