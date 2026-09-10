@@ -320,7 +320,7 @@ public class WidgetStackBindingTest {
         return host == null ? null : host.findViewById(android.R.id.text1);
     }
 
-    private static void sendGesture(float fromX, float fromY, float toX, float toY, boolean swipe) {
+    static void sendGesture(float fromX, float fromY, float toX, float toY, boolean swipe) {
         long down = SystemClock.uptimeMillis();
         sendMotion(down, MotionEvent.ACTION_DOWN, fromX, fromY);
         if (swipe) {
