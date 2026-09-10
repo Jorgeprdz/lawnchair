@@ -140,23 +140,23 @@ class ItemInflater<T>(
     /** Recreates a stack member without deleting its persistent membership on failure. */
     fun inflateWidgetStackMember(member: LauncherAppWidgetInfo): View {
         return try {
-        val result = widgetInflater.inflateAppWidget(member)
-        if (result.type == WidgetInflater.TYPE_DELETE) {
+            val result = widgetInflater.inflateAppWidget(member)
+            if (result.type == WidgetInflater.TYPE_DELETE) {
+                unavailableStackMember(member)
+            } else {
+                if (result.isUpdate) context.modelWriter.updateItemInDatabase(member)
+                val provider = result.widgetInfo
+                val view =
+                    if (result.type == WidgetInflater.TYPE_PENDING || provider == null)
+                        PendingAppWidgetHostView(context, widgetHolder, member, provider)
+                    else widgetHolder.createView(member.appWidgetId, provider)
+                prepareAppWidget(view, member)
+                view
+            }
+        } catch (e: RuntimeException) {
+            Log.w("WidgetStack", "Unable to inflate member ${member.id}", e)
             unavailableStackMember(member)
-        } else {
-            if (result.isUpdate) context.modelWriter.updateItemInDatabase(member)
-            val provider = result.widgetInfo
-            val view =
-                if (result.type == WidgetInflater.TYPE_PENDING || provider == null)
-                    PendingAppWidgetHostView(context, widgetHolder, member, provider)
-                else widgetHolder.createView(member.appWidgetId, provider)
-            prepareAppWidget(view, member)
-            view
         }
-    } catch (e: RuntimeException) {
-        Log.w("WidgetStack", "Unable to inflate member ${member.id}", e)
-        unavailableStackMember(member)
-    }
     }
 
     private fun unavailableStackMember(member: LauncherAppWidgetInfo): View =
