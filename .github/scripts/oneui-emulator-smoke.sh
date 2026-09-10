@@ -43,7 +43,13 @@ python3 .github/scripts/oneui-screenshots.py > oneui-emulator-results/screenshot
 screenshot_pid=$!
 # Allow the ADB log stream to connect before instrumentation publishes capture requests.
 sleep 1
-timeout 600 adb shell am instrument -w -r -e oneuiScreenshots true app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+timeout 600 adb shell am instrument -w -r -e oneuiScreenshots true -e notClass com.android.launcher3.WidgetStackProcessTest app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
 kill "$screenshot_pid" 2>/dev/null || true
+timeout 180 adb shell am instrument -w -r -e class com.android.launcher3.WidgetStackProcessTest -e oneuiPhase seed app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/process-seed.txt
+grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/process-seed.txt
+timeout 15 adb shell am force-stop app.lawnchair.debug
+timeout 180 adb shell am instrument -w -r -e class com.android.launcher3.WidgetStackProcessTest -e oneuiPhase verify app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/process-verify.txt
+grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/process-verify.txt
+
 grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/instrumentation.txt
 ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' oneui-emulator-results/instrumentation.txt

@@ -303,18 +303,18 @@ public class WidgetStackBindingTest {
         }
     }
 
-    private static WidgetStackInfo info(Launcher launcher, int id) {
+    static WidgetStackInfo info(Launcher launcher, int id) {
         return (WidgetStackInfo) WidgetStackController.findStack(launcher, id).getTag();
     }
 
-    private static LauncherAppWidgetProviderInfo provider(Launcher launcher, ComponentName component) {
+    static LauncherAppWidgetProviderInfo provider(Launcher launcher, ComponentName component) {
         AppWidgetProviderInfo result = AppWidgetManager.getInstance(launcher).getInstalledProviders()
                 .stream().filter(p -> component.equals(p.provider)).findFirst().orElse(null);
         assertNotNull("The actual instrumentation widget provider must be installed", result);
         return LauncherAppWidgetProviderInfo.fromProviderInfo(launcher, result);
     }
 
-    private static int bind(Launcher launcher, LauncherAppWidgetProviderInfo provider, List<Integer> ids) {
+    static int bind(Launcher launcher, LauncherAppWidgetProviderInfo provider, List<Integer> ids) {
         int id = launcher.getAppWidgetHolder().allocateAppWidgetId();
         ids.add(id);
         assertTrue("Android must bind the real provider", AppWidgetManager.getInstance(launcher)
@@ -322,12 +322,12 @@ public class WidgetStackBindingTest {
         return id;
     }
 
-    private static void drainModel() throws Exception {
+    static void drainModel() throws Exception {
         Executors.MODEL_EXECUTOR.submit(() -> {}).get(30, TimeUnit.SECONDS);
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     }
 
-    private static void await(ActivityScenario<Launcher> scenario, Predicate<Launcher> condition)
+    static void await(ActivityScenario<Launcher> scenario, Predicate<Launcher> condition)
             throws Exception {
         for (int attempt = 0; attempt < 150; attempt++) {
             drainModel();
