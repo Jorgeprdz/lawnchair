@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 5e4a4a7ecbdd22fbdb2785a84b33bab651e3378b
+HEAD (audited before checkpoint): 5e597aaf6076b296e8338f284cec8d5ff570710a
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -31,8 +31,8 @@ Current:
 - Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
 
 Next:
-- Monitor 5e4a4a7 push34435007930; after build, dispatch emulator with oneui-apk-run=34435007930.
-- Paging test now logs OneUiPagingTest state/events; diagnose first swipe timeout before changing implementation.
+- Validate selected-page persistence fix in WidgetStackView; use next successful push APK for emulator.
+- Real swipe reaches page0/scroll0 but active row stayed on page1; use native notifyPageSwitchListener hook.
 - Run latest interaction tests after compile; finish provider failure, vertical scroll, picker/editor and migration acceptance.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
@@ -72,7 +72,7 @@ Validation:
 - Three APKs/style green: 1960ee0/34427352339, f84b4c7/34429849107, 2e6eba2/34429976188.
 - b0aad3d/34430802520, 1bc97b0/34431464980, 6dd63d6/34431706677: APKs/instrumentation/style compiled.
 - AVD path issue fixed: API35 boot/install/startup confirmed; 1 of 2 instrumentation tests passes.
-- Latest diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34434641844, artifact10135787121.
+- Latest paging diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34435384391, artifact10136032142.
 - Explicit ANDROID_USER_HOME/ANDROID_AVD_HOME + AVD existence checks dc9c8cd; bounded ADB/setup waits.
 - 51b25f6/34434279638 compile/style green; emulator34434641844: host regression PASS, real widget tap PASS; first swipe timed out.
 - Feature pushes: GithubDebug + instrumentation/style; duplicate feature PR jobs skipped (f70e137).

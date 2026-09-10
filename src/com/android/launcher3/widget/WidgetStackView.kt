@@ -243,10 +243,16 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
             )
         }
 
+        override fun notifyPageSwitchListener(prevPage: Int) {
+            super.notifyPageSwitchListener(prevPage)
+            // PagedView publishes the selected page here, after updating mCurrentPage.
+            // Animation completion alone does not cover every page-selection path.
+            if (prevPage != currentPage) onSettled?.invoke()
+        }
+
         override fun onPageEndTransition() {
             if (childCount == 0) return
             super.onPageEndTransition()
-            onSettled?.invoke()
         }
 
         override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
