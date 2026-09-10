@@ -1086,4 +1086,7 @@
     <string name="widget_stack_resize_failed">No valid space for this size, or a widget does not support it.</string>
     <string name="widget_grid_incompatible">This grid cannot safely fit all current widgets. Keep a larger grid or resize the affected widgets first.</string>
     <string name="widget_stack_page">Widget %1$d of %2$d</string>
+    <string name="workspace_item_maximize">Maximize</string>
+    <string name="workspace_item_normal_size">Normal size</string>
+    <string name="workspace_item_resize_unavailable">Not enough space to enlarge this item</string>
 </resources>
