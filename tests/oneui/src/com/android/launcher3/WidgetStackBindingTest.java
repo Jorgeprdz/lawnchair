@@ -132,10 +132,24 @@ public class WidgetStackBindingTest {
                 });
                 await(scenario, launcher -> info(launcher, stackId.get()).getContents().size() == 2);
                 Rect tapBounds = new Rect();
+                AtomicInteger stableBounds = new AtomicInteger();
                 await(scenario, launcher -> {
                     TextView text = activeText(launcher, stackId.get());
-                    return text != null && text.getText().toString().startsWith("OneUI test widget")
-                            && text.getGlobalVisibleRect(tapBounds);
+                    WidgetStackView stack = WidgetStackController.findStack(launcher, stackId.get());
+                    PagedView<?> pager = (PagedView<?>) stack.getChildAt(0);
+                    Rect currentBounds = new Rect();
+                    if (!launcher.hasWindowFocus() || pager.isPageInTransition()
+                            || pager.getCurrentPage() != pager.getNextPage()
+                            || text == null || !text.getText().toString().startsWith("OneUI test widget")
+                            || !text.getGlobalVisibleRect(currentBounds)) {
+                        stableBounds.set(0);
+                        return false;
+                    }
+                    if (currentBounds.equals(tapBounds)) stableBounds.incrementAndGet();
+                    else stableBounds.set(0);
+                    tapBounds.set(currentBounds);
+                    // Native insertion/reorder animations can move a visible widget after binding.
+                    return stableBounds.get() >= 5;
                 });
                 sendGesture(tapBounds.centerX(), tapBounds.centerY(),
                         tapBounds.centerX(), tapBounds.centerY(), false);
