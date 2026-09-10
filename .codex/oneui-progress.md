@@ -1,40 +1,38 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 3f97017e193b2b3381403e172edaae60b2d15068
+HEAD (audited before checkpoint): 531301f448752ed3865da2575ceb277b795efbe4
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
-Global: 76% — equal-weight estimate across seven modules, not acceptance completion.
+Global: 66% — revised after physical-device feedback; seven equally weighted modules.
 
 Modules:
-- M1 Large Folders: 85% — persisted 2x2, safe placement, 3x3 direct preview; rounded square/label/direct launch/recreation validated.
-- M2 Pixel Search: 60% — real provider discovery/native QSB host/lifecycle; absent-provider fallback tested.
-- M3 One UI Finder: 90% — native gesture action and safe missing-component test; Samsung validation pending.
-- M4 Dock Glass: 65% — four persisted modes and geometry/recreation tested; true blur/device coverage pending.
-- M5 Widget Grid Snap: 70% — native provider constraints, proportional migration and grid preflight.
-- M6 Widget Stacks: 80% — persistent real hosts, picker/editor, paging, resize, reorder/remove and process restore.
-- M7 Max Icons / Max Folders: 85% — per-item Max Icon; SAME folder model/placement as M1.
+- M1 Large Folders: 60% — enlarge/direct launch work; occupancy overlap and adding apps FAIL on device.
+- M2 Pixel Search: 40% — real provider exists on phone but dock hosting FAILS; investigate binding.
+- M3 One UI Finder: 95% — user confirms configurable gesture works on Samsung; do not repeat passing tests.
+- M4 Dock Glass: 45% — options work but Blur/Crystal effects not visible on device.
+- M5 Widget Grid Snap: 85% — user confirms working; retain existing validation, no redundant tests.
+- M6 Widget Stacks: 70% — add/swipe work; long press for options/move freezes on device.
+- M7 Max Icons / Max Folders: 65% — user cannot find enlarge-icon action; folder shares M1 defects.
 
 Completed:
 - M3 explicit Samsung component; native configurable gesture and guarded platform failures.
 - M5 uses existing CellLayout/reorder/migrations; rejects impossible provider minima before destructive migration.
 - M6 persistent parent/member rows, native widget host, picker/config routing and bottom-sheet editor.
 - M6 hidden/recreated host lookup, active-page persistence, generation-guarded rebind and individual ID cleanup.
-- M1/M7 share safe 1x1<->2x2 placement, persisted flags/spans, native actions and grid migration.
+- M1/M7 share 1x1<->2x2 placement (device occupancy bug under investigation), persisted flags/spans, native actions and grid migration.
 - M1 9-icon direct preview with all contents accessible; Max/normal restoration preserves identity/metadata.
 - M4 Off/Solid/Blur/Crystal; M2 real Pixel Search replaces Google option with native search fallback.
 
 Current:
-- USER: conserve quota; do NOT repeat passing tests; no further work on home-return bug unless requested.
-- CI34453991685 GREEN: Debug APK/AndroidTest/style and ONLY pending Max recreation regression.
-- CI34452779043: all13 light screenshots; labels/direct launches/folder open PASS; old harness recreate failed.
-- Actual current-activity recreation fixed3f97017; isolated regression PASS; previous approved cases not repeated.
-- APK downloaded and ADB-installed successfully on Samsung SM-S931B/API36; cold launch OK (2216ms), PID3109.
-- Installed app.lawnchair.debug separately; original Nightly signature differs; Nightly remains default HOME.
+- Physical-device acceptance found real gaps not covered by prior emulator tests; no feature is declared complete.
+- Priority: M1 occupancy/drop safety and M6 long-press freeze, then M7 popup, M2 actual provider, M4 effects.
+- No source fixes for this feedback committed yet; investigate actual native placement/touch paths.
+- Conserve quota: test only changed/failing cases; M3/M5 user-approved; do not revisit home-return bug.
 
 Next:
-- User can choose Debug as HOME to validate actual Samsung gesture return; do not replace their default silently.
-- Physical real Pixel hosting/Finder gesture, drag/grid/orientation/provider-failure/true-blur checks remain pending.
-- No further broad test suites or extra builds without a new failure/change that needs them.
+- Inspect CellLayout temporary occupancy commit and Workspace large-folder drop targeting.
+- Inspect stack long-press/drag routing and targeted device crash/ANR evidence.
+- Commit coherent fixes and focused regressions; one remote CI run at a time; update Debug without data loss.
 
 Bugfixes:
 - 0ddd824/7bb4ad7/52ddec6 GNC: valid laid-out surface before hiding icon, no springs on original icon.
