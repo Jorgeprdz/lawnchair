@@ -3,54 +3,62 @@
 Branch:
 feature/oneui-enhancements
 
-Last verified HEAD:
-a3e7649cae81303ee00888b256e317b68b9ae143
+HEAD (code audited before this checkpoint):
+5c25056dc25b15e8b2505e20d5c5790ca57ce22c
 
 Global:
-18%
+23% (equal-weight estimate across six modules; not acceptance completion)
 
 Modules:
-- M1 Large Folders: 0% - no committed implementation found
-- M2 Pixel Search: 0% - not started
-- M3 One UI Finder: 85% - implemented and registered; CI/device validation pending
-- M4 Dock Glass: 0% - not started
-- M5 Widget Grid Snap: 75% - drop/migration snapping implemented; provider clamp improved; CI/device validation pending
-- M6 Widget Stacks: 0% - not started; means multiple real widgets in one persistent swipable stack
+- M1 Large Folders: 0% — no committed implementation
+- M2 Pixel Search: 0% — not started
+- M3 One UI Finder: 80% — selector/config/explicit launch present; validation pending
+- M4 Dock Glass: 0% — not started
+- M5 Widget Grid Snap: 60% — migration/drop code present; unsafe post-placement clamp needs correction
+- M6 Widget Stacks: 0% — no committed model or rank normalization
 
 Completed:
-- Recovered remote-only state on 2026-09-10.
-- Verified feature branch was 6 commits ahead of 16-dev and 0 behind before recovery checkpoint.
-- Verified 16-dev HEAD and merge-base: 155ccd1ee49e29e839ca603072777a9b7ef1e52c.
-- Verified feature HEAD before recovery checkpoint: a7c22c87b71d682a98560df39d3ac14791c4e016.
-- M3 One UI Finder gesture committed in 88df5140c318d69df1980e3bea569d2fa009515b.
-- M5 widget span snapping and grid migration preservation committed through a7c22c87b71d682a98560df39d3ac14791c4e016.
-- M5 bound-widget snap now clamps with provider min/max spans and fixed-axis resizeMode in a3e7649cae81303ee00888b256e317b68b9ae143.
-- No M1 files are present in the branch diff; transient large-folder work did not survive remotely.
+- Remote recovery verified 9 commits ahead, 0 behind before this checkpoint.
+- Base and merge-base: 155ccd1ee49e29e839ca603072777a9b7ef1e52c.
+- Inspected all feature code diffs and existing CI workflow.
+- M1/M6 transient work did not survive: no WidgetStack files in remote tree.
+- M3 action is registered and catches launch failures.
+- M5 migration searches vacant spans instead of always using minimum size.
 
 Current:
-- Begin M6 Widget Stacks architecture discovery.
+- Validate M3, repair M5 placement safety, establish remote CI.
 
 Next:
-- Inspect Launcher3 model/database/widget binding paths for a minimal persistent widget-stack container.
+- Move widget constraints before CellLayout placement; never enlarge its reserved result.
+- Check Finder availability handling, then run existing CI on feature branch.
+- Continue M6 architecture discovery only after M5 safety correction.
 
 Architecture decisions:
-- Remote GitHub only; no clone, pull, fetch, ZIP download, local checkout, or local build.
-- One UI Finder uses explicit component com.sec.android.app.launcher/.search.SearchActivity and fails safely.
-- Widget snapping stays within CellLayout spans, GridOccupancy, provider spans, and resizeMode.
-- M6 must be a persistent widget-stack container, not overlapping independent widgets.
+- Remote GitHub is durable state; no local clone or full local build.
+- Only feature/oneui-enhancements may change; never merge into 16-dev.
+- Use existing CellLayout placement, spans and AppWidget host.
+- Stack model must persist membership/rank and own one workspace footprint.
+- Inspect DefaultLauncher/Lawnchair PR 7029 and stack references before design/reuse.
+- Preserve existing functionality and provider resize constraints.
 
 Relevant files:
 - lawnchair/src/app/lawnchair/gestures/config/GestureHandlerConfig.kt
 - lawnchair/src/app/lawnchair/gestures/config/GestureHandlerOption.kt
 - lawnchair/src/app/lawnchair/gestures/config/GestureHandlerOptions.kt
 - lawnchair/src/app/lawnchair/gestures/handlers/OpenOneUiFinderGestureHandler.kt
-- lawnchair/res/values/strings.xml
 - src/com/android/launcher3/Workspace.java
 - src/com/android/launcher3/model/GridSizeMigrationDBController.java
 - src/com/android/launcher3/model/GridSizeMigrationLogic.kt
+- src/com/android/launcher3/model/WorkspaceItemProcessor.kt
+- .github/workflows/ci.yml
 
 Validation:
-- No GitHub Actions runs found yet for feature/oneui-enhancements; CI push filter only matches *-dev branches, PR, dispatch, or workflow_call.
+- No feature Actions runs; Actions enabled but workflow registry is empty.
+- CI dispatch by ci.yml returned HTTP 404: workflow not found on default branch.
+- Existing CI builds LawnWithQuickstep NightlyRelease/GithubDebug/PlayDebug and spotlessCheck.
+- Device interaction/persistence/provider validation remains pending for all modules.
 
-Known blockers:
-- None
+Blockers:
+- Remote CI workflow registration unresolved; source writes being verified by this checkpoint.
+- User prompt ends in APK section after “build”; remaining APK instructions not received.
+- WIP: none committed; no transient feature edits.
