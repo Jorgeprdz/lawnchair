@@ -157,7 +157,7 @@ object WidgetStackController {
                 as? LauncherAppWidgetProviderInfo ?: return false
             if (!fits(candidate, provider)) return false
         }
-        val layout = launcher.workspace.getParentCellLayoutForView(view) ?: return false
+        val layout = view.parent?.parent as? com.android.launcher3.CellLayout ?: return false
         if (!layout.resizeWidgetStack(view, spanX, spanY)) return false
         for (member in stack.getContents()) {
             member.spanX = spanX
