@@ -143,6 +143,26 @@ public class WidgetStackBindingTest {
                     TextView text = activeText(launcher, stackId.get());
                     return text != null && text.getText().toString().startsWith("Clicked widget");
                 });
+                Rect listBounds = new Rect();
+                AtomicInteger selectedBeforeScroll = new AtomicInteger();
+                await(scenario, launcher -> {
+                    WidgetStackInfo stack = info(launcher, stackId.get());
+                    selectedBeforeScroll.set(stack.getActiveWidgetId());
+                    var host = WidgetStackController.findStack(launcher, stack.id)
+                            .findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
+                    android.widget.ListView list = host.findViewById(android.R.id.list);
+                    return list != null && list.getCount() == 20 && list.getGlobalVisibleRect(listBounds);
+                });
+                sendGesture(listBounds.centerX(), listBounds.top + listBounds.height() * 0.8f,
+                        listBounds.centerX(), listBounds.top + listBounds.height() * 0.2f, true);
+                await(scenario, launcher -> {
+                    WidgetStackInfo stack = info(launcher, stackId.get());
+                    assertEquals(selectedBeforeScroll.get(), stack.getActiveWidgetId());
+                    var host = WidgetStackController.findStack(launcher, stack.id)
+                            .findWidgetByAppWidgetId(stack.getActiveWidget().appWidgetId);
+                    android.widget.ListView list = host.findViewById(android.R.id.list);
+                    return list.getFirstVisiblePosition() > 0;
+                });
                 Rect stackBounds = new Rect();
                 AtomicInteger firstRow = new AtomicInteger();
                 AtomicInteger secondRow = new AtomicInteger();

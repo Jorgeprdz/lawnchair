@@ -35,7 +35,17 @@ public class OneUiTestWidgetProvider extends AppWidgetProvider {
     }
 
     private static void render(Context context, AppWidgetManager manager, int id, boolean clicked) {
-        RemoteViews views = new RemoteViews("android", android.R.layout.simple_list_item_1);
+        int layout = context.getResources().getIdentifier("oneui_test_widget_content", "layout", context.getPackageName());
+        RemoteViews views = new RemoteViews(context.getPackageName(), layout);
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            var rows = new RemoteViews.RemoteCollectionItems.Builder().setHasStableIds(true).setViewTypeCount(1);
+            for (int row = 0; row < 20; row++) {
+                RemoteViews entry = new RemoteViews("android", android.R.layout.simple_list_item_1);
+                entry.setTextViewText(android.R.id.text1, "Widget row " + row);
+                rows.addItem(row, entry);
+            }
+            views.setRemoteAdapter(android.R.id.list, rows.build());
+        }
         views.setTextViewText(android.R.id.text1,
                 (clicked ? "Clicked widget " : "OneUI test widget ") + id);
         Intent tap = new Intent(context, OneUiTestWidgetProvider.class).setAction(TAP)
