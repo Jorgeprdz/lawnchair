@@ -85,6 +85,7 @@ public class MaxWorkspaceItemsTest {
                 });
                 drain();
                 OneUiScreenshots.capture("01-home.png");
+                launchSettingsAndReturn(scenario, iconId.get(), false);
                 scenario.onActivity(launcher -> {
                     assertTrue(find(launcher, folderId.get()).performClick());
                     assertNotNull(Folder.getOpen(launcher));
@@ -97,6 +98,7 @@ public class MaxWorkspaceItemsTest {
                 });
                 drain();
                 OneUiScreenshots.capture("12-max-icon.png");
+                launchSettingsAndReturn(scenario, iconId.get(), false);
                 scenario.onActivity(launcher -> {
                     FolderIcon view = (FolderIcon) find(launcher, folderId.get());
                     assertTrue(WorkspaceItemSize.toggle(launcher, view));
@@ -114,6 +116,7 @@ public class MaxWorkspaceItemsTest {
                 });
                 OneUiScreenshots.capture("02-large-folder.png");
                 OneUiScreenshots.capture("13-max-folder.png");
+                launchSettingsAndReturn(scenario, folderId.get(), true);
                 scenario.onActivity(launcher -> {
                     find(launcher, folderId.get()).performClick();
                     assertNotNull(Folder.getOpen(launcher));
@@ -155,6 +158,46 @@ public class MaxWorkspaceItemsTest {
                 drain();
             }
         }
+    }
+
+    /** Real injected taps must open the same installed app, including a closed folder preview. */
+    private static void launchSettingsAndReturn(ActivityScenario<Launcher> scenario, int id,
+            boolean preview) throws Exception {
+        var instrumentation = InstrumentationRegistry.getInstrumentation();
+        float[] point = new float[2];
+        scenario.onActivity(launcher -> {
+            View view = find(launcher, id);
+            assertNotNull(view);
+            int[] location = new int[2];
+            view.getLocationOnScreen(location);
+            if (preview) {
+                assertNull("Preview launch starts with the full folder closed", Folder.getOpen(launcher));
+                int side = ((FolderIcon) view).getLargePreviewSize();
+                float column = view.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? 5f / 6f : 1f / 6f;
+                point[0] = location[0] + (view.getWidth() - side) / 2f + side * column;
+                point[1] = location[1] + view.getPaddingTop() + side / 6f;
+            } else {
+                point[0] = location[0] + view.getWidth() / 2f;
+                point[1] = location[1] + view.getHeight() / 2f;
+            }
+        });
+        WidgetStackBindingTest.sendGesture(point[0], point[1], point[0], point[1], false);
+        awaitForegroundPackage("com.android.settings");
+        try (var input = new android.os.ParcelFileDescriptor.AutoCloseInputStream(
+                instrumentation.getUiAutomation().executeShellCommand("input keyevent KEYCODE_HOME"))) {
+            while (input.read() != -1) { }
+        }
+        awaitForegroundPackage(instrumentation.getTargetContext().getPackageName());
+        ready(scenario);
+    }
+
+    private static void awaitForegroundPackage(String expected) {
+        for (int attempt = 0; attempt < 150; attempt++) {
+            var root = InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow();
+            if (root != null && expected.contentEquals(root.getPackageName() == null ? "" : root.getPackageName())) return;
+            SystemClock.sleep(100);
+        }
+        fail("Expected foreground application: " + expected);
     }
 
     private static View find(Launcher launcher, int id) {
