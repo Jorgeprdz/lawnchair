@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-062a8702c2efb30dc319da30d0e65e968914311c
+dde98937b25a09c663fd98ffb50b45e94860c4c7
 
 Global:
 26% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,7 +36,7 @@ Completed:
 - M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
-- M6 page rebinding safely detaches reused host views; continue picker integration/native editor.
+- M6 workspace lookup now finds nested host IDs; next fix PendingAppWidgetHostView reinflation before picker/editor.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
@@ -87,7 +87,7 @@ Validation:
 - d73d45d: eight isolated Java constraint scenarios passed; not an Android build.
 - CI 34423066055 (d73d45d): all three APK builds and spotlessCheck PASSED.
 - CI a78a0c9 (34423420226) and M6 loader 59c25cf (34423937406): all APKs/style PASSED.
-- M6 view CI 34424246855 failed ItemInflater.kt:154 context.modelWriter; fixed in 8909ad2; recheck latest CI.
+- M6 migration CI 34424966519 (df78685): all APK builds/style PASSED; latest host fixes CI pending.
 - Cancel duplicate pull_request runs; keep push runs. Progress-only PR updates also trigger duplicate CI.
 - CI builds NightlyRelease/GithubDebug/PlayDebug; does not execute multivalent Android tests.
 - APK artifacts exist for d73d45d/a78a0c9; all runtime/device acceptance checks remain pending.

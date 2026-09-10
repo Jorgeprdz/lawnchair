@@ -3812,8 +3812,24 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     }
 
     public LauncherAppWidgetHostView getWidgetForAppWidgetId(final int appWidgetId) {
-        return (LauncherAppWidgetHostView) mapOverItems((info, v) ->
+        LauncherAppWidgetHostView widget = (LauncherAppWidgetHostView) mapOverItems((info, v) ->
                 (info instanceof LauncherAppWidgetInfo lawi) && lawi.appWidgetId == appWidgetId);
+        if (widget != null) {
+            return widget;
+        }
+        for (CellLayout layout : getWorkspaceAndHotseatCellLayouts()) {
+            ShortcutAndWidgetContainer children = layout.getShortcutsAndWidgets();
+            for (int i = 0; i < children.getChildCount(); i++) {
+                if (children.getChildAt(i) instanceof
+                        com.android.launcher3.widget.WidgetStackView stackView) {
+                    widget = stackView.findWidgetByAppWidgetId(appWidgetId);
+                    if (widget != null) {
+                        return widget;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     void clearDropTargets() {

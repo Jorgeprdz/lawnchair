@@ -106,6 +106,16 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         }
     }
 
+    /** Finds the actual host view, including widgets on inactive pages. */
+    fun findWidgetByAppWidgetId(appWidgetId: Int): LauncherAppWidgetHostView? {
+        for (i in 0 until pager.childCount) {
+            val page = pager.getChildAt(i) as FrameLayout
+            val host = page.getChildAt(0) as? LauncherAppWidgetHostView ?: continue
+            if (host.appWidgetId == appWidgetId) return host
+        }
+        return null
+    }
+
     /** Connects views created during asynchronous inflation to the activity's existing host. */
     fun attachWidgetsToHost(holder: LauncherWidgetHolder) {
         for (i in 0 until pager.childCount) {
