@@ -3,7 +3,7 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy at
+ * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.lawnchair.oneui.OneUiGlassPreferences
+import app.lawnchair.oneui.OneUiLargeFolderShape
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.preferenceManager
 import app.lawnchair.preferences2.preferenceManager2
@@ -60,6 +61,9 @@ fun FolderPreferences(
         var folderIntensity by remember {
             mutableIntStateOf(OneUiGlassPreferences.getFolderIntensity(context))
         }
+        var largeFolderShape by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getLargeFolderShape(context))
+        }
         val folderIconShapeAdapter = prefs2.folderShape.getAdapter()
         val folderIconShapeSubtitle = iconShapeEntries(context)
             .firstOrNull { it.value == folderIconShapeAdapter.state.value }
@@ -73,6 +77,22 @@ fun FolderPreferences(
                 endWidget = {
                     IconShapePreview(iconShape = folderIconShapeAdapter.state.value)
                 },
+            )
+            ListPreference(
+                value = largeFolderShape,
+                onValueChange = { shape ->
+                    OneUiGlassPreferences.setLargeFolderShape(context, shape)
+                    largeFolderShape = shape
+                },
+                entries = listOf(
+                    ListPreferenceEntry(OneUiLargeFolderShape.ROUNDED_SQUARE) {
+                        stringResource(R.string.large_folder_shape_rounded_square)
+                    },
+                    ListPreferenceEntry(OneUiLargeFolderShape.CIRCLE) {
+                        stringResource(R.string.large_folder_shape_circle)
+                    },
+                ),
+                label = stringResource(R.string.large_folder_shape),
             )
             ListPreference(
                 value = folderMode,
