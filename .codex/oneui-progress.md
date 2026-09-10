@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): f275b4934f79abf334f93a4dc00816e6adf4fdbc
+HEAD (audited before checkpoint): 563725faa64a8b540c4bc5b90a992772969826f5
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -28,8 +28,9 @@ Current:
 - USER visual correction f275b49: Large/Max Folder must be a ROUNDED SQUARE, never circular.
 - Native RoundedSquare corner radius is 16% of measured preview edge; drawing/clipping/reveal share shape.
 - 2x2 occupancy, persistence, 3x3 preview and normal-folder theme unchanged by visual correction.
-- CI34442888473/f275b49 compile/style GREEN; emulator preparing new rounded-square screenshots.
-- CI34442569058/4acde68 emulator running: wait for stable widget bounds before injecting touch.
+- CI34442888473/f275b49 GREEN: compile/style, all8 tests and process-death restore; 13 actual screenshots.
+- Follow-up e278912 fixes negative label padding; full3-variant CI34443803289 running.
+- Latest CI34443965188/563725f adds real normal/Max/preview app-launch tests; HOME-category harness6f60a5b.
 
 Next:
 - Inspect current CI failures if any; preserve validation; repeat until coherent acceptance checks pass.
@@ -69,7 +70,7 @@ Validation:
 - M6 real tap/vertical scroll/horizontal paging/resize/reorder/remove/model reload PASS there; hidden host regression PASS.
 - Missing Finder/Pixel fallback tests PASS; this does NOT validate genuine Samsung/Pixel providers.
 - CI34441778019: Max toggle/occupancy/10-member folder/open/recreation/restore PASS; dock and SQLite migrations PASS.
-- That run had intermittent widget tap failure after Max; stable touch-bounds wait4acde68 is being tested.
+- Intermittent test focus/taps investigated: stable bounds4acde68 and actual HOME intent6f60a5b; retain real assertions.
 - API35 boots/installs/starts actual launcher; force-stop/restore test PASS across two instrumentation invocations.
 - Original13 multivalent cases unexecuted; current Android suite includes real SQLite Max migration tests.
 - Manual final CI: oneui-emulator=true; oneui-fast=true for Debug/test/style, false for all3 APK variants.
@@ -78,11 +79,11 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 25 PNG files downloaded, covering13 views; canonical files use latest/best verified capture, older versions run-prefixed.
-- Artifacts Lawnchair-OneUI-Screenshots: run34441778019/10138414543 and34441287074/10138255813 plus earlier runs.
+- 44 PNG files downloaded, covering13 views; canonical02/13 replaced with visually verified square; old versions retained.
+- Latest artifact Lawnchair-OneUI-Screenshots: run34442888473/10138782051 (all13); previous runs also downloaded.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.
-- Square correction screenshots still pending; current02/13 are previous circular design and MUST be replaced.
+- Square shape confirmed visually; label was partially covered. Label-padding fix e278912 needs refreshed screenshots.
 - Pixel/Finder screenshots ONLY if real providers present; stock emulator lacks them; never fabricate images.
 - Final report: compile/emulator/physical validation separately; screenshot count/names/artifact/run/path/omissions.
 
