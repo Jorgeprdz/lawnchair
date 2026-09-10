@@ -2006,7 +2006,8 @@ public class CellLayout extends ViewGroup {
 
     public boolean isOccupied(int x, int y) {
         if (x >= 0 && x < mCountX && y >= 0 && y < mCountY) {
-            return mOccupied.cells[x][y] && !PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap());
+            return mOccupied.cells[x][y] && (!PreferenceCacheExtensionsKt.firstCached(
+                    pref.getAllowWidgetOverlap()) || intersectsProtectedWorkspaceItem(x, y, 1, 1));
         }
         if (BuildConfigs.IS_STUDIO_BUILD) {
             throw new RuntimeException("Position exceeds the bound of this CellLayout");
@@ -2088,8 +2089,26 @@ public class CellLayout extends ViewGroup {
         return occupancy;
     }
 
+    /** Max items and stacks always own their complete footprint, even with widget overlap enabled. */
+    public boolean intersectsProtectedWorkspaceItem(int x, int y, int spanX, int spanY) {
+        for (int i = 0; i < mShortcutsAndWidgets.getChildCount(); i++) {
+            View child = mShortcutsAndWidgets.getChildAt(i);
+            if (!(child.getTag() instanceof ItemInfo info)
+                    || !(com.android.launcher3.util.WorkspaceItemSize.isMax(info)
+                    || info instanceof com.android.launcher3.model.data.WidgetStackInfo)) continue;
+            CellLayoutLayoutParams lp = (CellLayoutLayoutParams) child.getLayoutParams();
+            if (x < lp.getCellX() + lp.cellHSpan && x + spanX > lp.getCellX()
+                    && y < lp.getCellY() + lp.cellVSpan && y + spanY > lp.getCellY()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isRegionVacant(int x, int y, int spanX, int spanY) {
-        return mOccupied.isRegionVacant(x, y, spanX, spanY) || PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap());
+        return mOccupied.isRegionVacant(x, y, spanX, spanY)
+                || PreferenceCacheExtensionsKt.firstCached(pref.getAllowWidgetOverlap())
+                && !intersectsProtectedWorkspaceItem(x, y, spanX, spanY);
     }
 
     public void setSpaceBetweenCellLayoutsPx(@Px int spaceBetweenCellLayoutsPx) {

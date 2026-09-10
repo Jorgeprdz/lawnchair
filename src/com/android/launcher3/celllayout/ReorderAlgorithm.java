@@ -134,7 +134,13 @@ public class ReorderAlgorithm {
         Rect occupiedRect = new Rect(cellX, cellY, cellX + spanX, cellY + spanY);
 
         // Lawnchair: Widget overlap
-        if (PreferenceCacheExtensionsKt.firstCached(mCellLayout.pref.getAllowWidgetOverlap(), mCellLayout.pref)) {
+        boolean protectedDrag = ignoreView != null
+                && ignoreView.getTag() instanceof com.android.launcher3.model.data.ItemInfo info
+                && (com.android.launcher3.util.WorkspaceItemSize.isMax(info)
+                || info instanceof com.android.launcher3.model.data.WidgetStackInfo);
+        if (PreferenceCacheExtensionsKt.firstCached(mCellLayout.pref.getAllowWidgetOverlap(), mCellLayout.pref)
+                && !protectedDrag
+                && !mCellLayout.intersectsProtectedWorkspaceItem(cellX, cellY, spanX, spanY)) {
             solution.intersectingViews = new ArrayList<>(intersectingViews);
             return true;
         }
