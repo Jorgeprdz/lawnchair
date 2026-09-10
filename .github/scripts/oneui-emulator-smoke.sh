@@ -39,11 +39,15 @@ timeout 120 adb install -r "${app_apks[0]}"
 timeout 120 adb install -r -t "${test_apks[0]}"
 timeout 30 adb shell cmd package set-home-activity app.lawnchair.debug/app.lawnchair.LawnchairLauncher > oneui-emulator-results/home-role.txt 2>&1 || true
 timeout 15 adb logcat -c
+timeout 180 adb shell am instrument -w -r -e class com.android.launcher3.OneUiWallpaperTest app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/wallpaper.txt
+grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/wallpaper.txt
+# Allow wallpaper colors and launcher theme updates to settle before UI scenarios.
+sleep 2
 python3 .github/scripts/oneui-screenshots.py > oneui-emulator-results/screenshots.txt 2>&1 &
 screenshot_pid=$!
 # Allow the ADB log stream to connect before instrumentation publishes capture requests.
 sleep 1
-timeout 600 adb shell am instrument -w -r -e oneuiScreenshots true -e notClass com.android.launcher3.WidgetStackProcessTest app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+timeout 600 adb shell am instrument -w -r -e oneuiScreenshots true -e notClass com.android.launcher3.WidgetStackProcessTest,com.android.launcher3.OneUiWallpaperTest app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
 kill "$screenshot_pid" 2>/dev/null || true
 timeout 180 adb shell am instrument -w -r -e class com.android.launcher3.WidgetStackProcessTest -e oneuiPhase seed app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/process-seed.txt
 grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/process-seed.txt
