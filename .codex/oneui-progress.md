@@ -44,7 +44,7 @@ Next:
 Bugfixes:
 - 0ddd824: GNC surface layout/valid bounds before handoff; no translation springs on real workspace icon.
 - Restore visibility on surface loss/finish/3s callback timeout; isolate stale finish callbacks per contract.
-- Native surface regression test covers completion/lost callback/late callback; CI34448143425 running.
+- Native surface test covers completion/lost callback/late callback; CI34448143425 style issues corrected.
 - Samsung physical gesture reproduction still pending; do not claim fixed solely from code.
 
 Architecture decisions:
@@ -98,4 +98,3 @@ Blockers:
 - ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
 - Phone has app.lawnchair.nightly; Finder resolves; actual Pixel provider rk.android.app.pixelsearch/.SearchWidget.
 - No phone installation/settings changes yet; final installation authorized. CI emulator remains separate.
-- CTX unavailable; report no available metric, never invent percentage; no manual /compact.

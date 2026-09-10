@@ -66,6 +66,7 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
     private var mContract: GestureNavContract? = null
     private var mContentAnimator: AnimatorSet? = null
     private var mHasValidPosition = false
+
     // A dead/aborted OEM callback must never leave the workspace icon suppressed indefinitely.
     private val mFinishTimeout = Runnable { if (mIsOpen) close(false) }
 
@@ -321,7 +322,9 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
             mSurfaceView.left != mIconPosition.left.roundToInt() ||
             mSurfaceView.top != mIconPosition.top.roundToInt() ||
             !Utilities.ATLEAST_Q || !mSurfaceView.surfaceControl.isValid
-        ) return
+        ) {
+            return
+        }
         // Keep the real icon in its CellLayout transform. Only the remote surface is animated.
         if (drawOnSurface() && contract.sendEndPosition(mIconPosition, mLauncher, mSurfaceView.surfaceControl)) {
             setCurrentIconVisible(false)

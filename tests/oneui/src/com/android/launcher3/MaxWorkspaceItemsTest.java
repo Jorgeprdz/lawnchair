@@ -173,12 +173,22 @@ public class MaxWorkspaceItemsTest {
     private static void launchSettingsAndReturn(ActivityScenario<Launcher> scenario, int id,
             boolean preview) throws Exception {
         var instrumentation = InstrumentationRegistry.getInstrumentation();
-        WidgetStackBindingTest.await(scenario, launcher -> {
-            View target = find(launcher, id);
-            return launcher.hasWindowFocus() && launcher.getWorkspace().isFinishedSwitchingState()
-                    && Folder.getOpen(launcher) == null && target != null && target.isShown()
-                    && !target.isLayoutRequested() && target.getWidth() > 0;
-        });
+        String[] readiness = new String[1];
+        try {
+            WidgetStackBindingTest.await(scenario, launcher -> {
+                View target = find(launcher, id);
+                readiness[0] = "focus=" + launcher.hasWindowFocus()
+                        + " switchingFinished=" + launcher.getWorkspace().isFinishedSwitchingState()
+                        + " folderOpen=" + (Folder.getOpen(launcher) != null)
+                        + " target=" + target + " shown=" + (target != null && target.isShown())
+                        + " layoutRequested=" + (target != null && target.isLayoutRequested());
+                return launcher.hasWindowFocus() && launcher.getWorkspace().isFinishedSwitchingState()
+                        && Folder.getOpen(launcher) == null && target != null && target.isShown()
+                        && !target.isLayoutRequested() && target.getWidth() > 0;
+            });
+        } catch (AssertionError error) {
+            throw new AssertionError("Home icon not ready: " + readiness[0], error);
+        }
         float[] point = new float[2];
         scenario.onActivity(launcher -> {
             View view = find(launcher, id);
