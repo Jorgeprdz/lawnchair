@@ -131,6 +131,33 @@ object WidgetStackController {
         refresh(launcher, view)
     }
 
+    /** Every member must accept the same dimensions before CellLayout can reserve them. */
+    fun resize(launcher: Launcher, view: WidgetStackView, spanX: Int, spanY: Int): Boolean {
+        val stack = view.tag as WidgetStackInfo
+        if (!view.isAttachedToWindow || spanX < 1 || spanY < 1) return false
+        val candidate = stack.makeShallowCopy() as WidgetStackInfo
+        candidate.spanX = spanX
+        candidate.spanY = spanY
+        for (member in stack.getContents()) {
+            val provider = view.findWidgetByAppWidgetId(member.appWidgetId)?.appWidgetInfo
+                as? LauncherAppWidgetProviderInfo ?: return false
+            if (!fits(candidate, provider)) return false
+        }
+        val layout = launcher.workspace.getParentCellLayoutForView(view) ?: return false
+        if (!layout.resizeWidgetStack(view, spanX, spanY)) return false
+        for (member in stack.getContents()) {
+            member.spanX = spanX
+            member.spanY = spanY
+            launcher.modelWriter.updateItemInDatabase(member)
+            view.findWidgetByAppWidgetId(member.appWidgetId)?.let { host ->
+                com.android.launcher3.widget.util.WidgetSizes.updateWidgetSizeRanges(
+                    host, launcher, spanX, spanY,
+                )
+            }
+        }
+        return true
+    }
+
     fun persistOrder(launcher: Launcher, stack: WidgetStackInfo) {
         launcher.modelWriter.moveItemsInDatabase(ArrayList<ItemInfo>(stack.getContents()),
             stack.id, stack.screenId)

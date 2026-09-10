@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-71c3076b718b18326460bd74290a08f597a8ca77
+1960ee09061824f0187c5c655ccd89c72607773d
 
 Global:
 28% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,14 +36,14 @@ Completed:
 - M6 context fix: 8909ad2; selector 50bfffb/editor 294f23b; creation uses native widget resize frame.
 
 Current:
-- M6 member insertion/active selection now transactional; stale/failed binding reports host ID cleanup.
+- M6 editor resizing validates all providers then uses CellLayout reorder/occupancy commit.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
 - M6: validate picker recreation/drag routes, model callback membership and cancellation.
-- M6: editor/remove/reorder/add, resize, restore/provider updates and integration tests pending.
+- M6: validate editor/add/remove/resize interactions; provider updates and M5 integration still pending.
 
 Architecture decisions:
 - Remote GitHub is durable state; no local clone or full local build.
@@ -65,7 +65,7 @@ Architecture decisions:
 - Lawnchair LICENSE.txt is Apache-2.0; no DefaultLauncher source copied.
 - PR LawnchairLauncher/lawnchair#7029 is preview-only; does not supply large-folder footprint.
 - Stack discovery: CollectionInfo, WorkspaceData.kt, LoaderCursor, ItemInflater, ModelWriter/LauncherWidgetHolder.
-- Preserve existing functionality and provider resize constraints.
+- Stack parent owns geometry; loader reapplies parent spans to every member after restart/migration.
 
 Relevant files:
 - lawnchair/src/app/lawnchair/gestures/config/GestureHandlerConfig.kt

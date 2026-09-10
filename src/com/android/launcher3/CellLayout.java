@@ -1610,6 +1610,37 @@ public class CellLayout extends ViewGroup {
         return swapSolution.isSolution;
     }
 
+    /** Resizes a stack using the same occupancy solution and commit path as widget resizing. */
+    public boolean resizeWidgetStack(com.android.launcher3.widget.WidgetStackView stack,
+            int spanX, int spanY) {
+        if (stack.getParent() != mShortcutsAndWidgets || spanX < 1 || spanY < 1
+                || spanX > getCountX() || spanY > getCountY()) return false;
+        CellLayoutLayoutParams lp = (CellLayoutLayoutParams) stack.getLayoutParams();
+        int cellX = Math.min(lp.getCellX(), getCountX() - spanX);
+        int cellY = Math.min(lp.getCellY(), getCountY() - spanY);
+        int[] center = new int[2];
+        regionToCenterPoint(cellX, cellY, spanX, spanY, center);
+        int[] direction = {Integer.compare(spanX, lp.cellHSpan),
+                Integer.compare(spanY, lp.cellVSpan)};
+        ItemConfiguration solution = findReorderSolution(center[0], center[1], spanX, spanY,
+                spanX, spanY, direction, stack, true);
+        if (solution == null || !solution.isSolution || solution.spanX != spanX
+                || solution.spanY != spanY) return false;
+        setUseTempCoords(true);
+        copySolutionToTempState(solution, stack);
+        lp.setTmpCellX(solution.cellX);
+        lp.setTmpCellY(solution.cellY);
+        lp.cellHSpan = spanX;
+        lp.cellVSpan = spanY;
+        animateItemsToSolution(solution, stack, true);
+        commitTempPlacement(null);
+        completeAndClearReorderPreviewAnimations();
+        setItemPlacementDirty(false);
+        setUseTempCoords(false);
+        mShortcutsAndWidgets.requestLayout();
+        return true;
+    }
+
     public ReorderAlgorithm createReorderAlgorithm() {
         return new ReorderAlgorithm(this);
     }

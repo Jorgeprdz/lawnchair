@@ -1078,4 +1078,10 @@
     <string name="widget_stack_move">Move stack</string>
     <string name="widget_stack_create">Create widget stack</string>
     <string name="widget_stack_create_failed">Could not create the widget stack. Try again.</string>
+    <string name="widget_stack_dimensions">Size: %1$d × %2$d</string>
+    <string name="widget_stack_narrower">Narrower</string>
+    <string name="widget_stack_wider">Wider</string>
+    <string name="widget_stack_shorter">Shorter</string>
+    <string name="widget_stack_taller">Taller</string>
+    <string name="widget_stack_resize_failed">No valid space for this size, or a widget does not support it.</string>
 </resources>

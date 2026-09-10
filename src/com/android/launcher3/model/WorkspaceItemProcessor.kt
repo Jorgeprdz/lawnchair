@@ -704,7 +704,14 @@ class WorkspaceItemProcessor(
 
     private fun processWidgetStackItems() {
         for (item in loadedItems) {
-            if (item is WidgetStackInfo) item.sortWidgetsByRank()
+            if (item is WidgetStackInfo) {
+                item.sortWidgetsByRank()
+                // The parent owns geometry, including after an interrupted resize or migration.
+                item.getContents().forEach { member ->
+                    member.spanX = item.spanX
+                    member.spanY = item.spanY
+                }
+            }
         }
     }
 

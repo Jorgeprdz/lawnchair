@@ -1,5 +1,6 @@
 package app.lawnchair.widgetstack
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,14 @@ object WidgetStackEditor {
         ComposeBottomSheet.show(launcher, PaddingValues(16.dp)) {
             var members by remember { mutableStateOf(stack.getContents()) }
             var active by remember { mutableStateOf(stack.getActiveWidget()?.id) }
+            var size by remember { mutableStateOf(stack.spanX to stack.spanY) }
+            val resize: (Int, Int) -> Unit = { x, y ->
+                if (WidgetStackController.resize(launcher, view, x, y)) {
+                    size = stack.spanX to stack.spanY
+                } else {
+                    Toast.makeText(launcher, R.string.widget_stack_resize_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
             val reorder: (List<LauncherAppWidgetInfo>) -> Unit = { ordered ->
                 ordered.forEachIndexed { index, member ->
                     val from = stack.getContents().indexOf(member)
@@ -99,6 +108,23 @@ object WidgetStackEditor {
                                 }
                             }
                         }
+                    }
+                }
+                Text(stringResource(R.string.widget_stack_dimensions, size.first, size.second))
+                Row {
+                    TextButton(onClick = { resize(size.first - 1, size.second) }) {
+                        Text(stringResource(R.string.widget_stack_narrower))
+                    }
+                    TextButton(onClick = { resize(size.first + 1, size.second) }) {
+                        Text(stringResource(R.string.widget_stack_wider))
+                    }
+                }
+                Row {
+                    TextButton(onClick = { resize(size.first, size.second - 1) }) {
+                        Text(stringResource(R.string.widget_stack_shorter))
+                    }
+                    TextButton(onClick = { resize(size.first, size.second + 1) }) {
+                        Text(stringResource(R.string.widget_stack_taller))
                     }
                 }
                 Row {
