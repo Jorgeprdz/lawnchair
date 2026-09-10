@@ -1,12 +1,12 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 773176c276f58def59ba741a56a9c9e9c2b239d2
-Global: 44% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): e6a956c01fb9bd80e27cdcc91c24e185ba598eb7
+Global: 49% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
 - M1 Large Folders: 35% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
-- M2 Pixel Search: 0% — not started; real provider discovery/hosting required.
+- M2 Pixel Search: 35% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
 - M4 Dock Glass: 35% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
@@ -27,13 +27,13 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- M1/M7 size/model/preview/menu committed; M4 modes/rendering 773176c source-reviewed, XML parsed.
+- M2 e6a956c: real QSB hosting; mode migration, provider fallback, lifecycle/size/ID cleanup reviewed.
 - Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Integrate M2 real provider/host lifecycle; close M1/M7 and M5/M6 gaps before final validation.
+- Close M1/M7 geometry and M5/M6 impossible restore-grid gaps; final build/emulator still deferred.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:
@@ -63,9 +63,9 @@ Relevant files:
 - src/com/android/launcher3/model/data/WidgetStackInfo.kt; model/PackageUpdatedTask.java
 - src/com/android/launcher3/widget/{WidgetStackView.kt,WidgetStackController.kt,WidgetGridPreflight.kt}
 - src/com/android/launcher3/widget/{BaseWidgetSheet.java,PendingAppWidgetHostView.java,picker/WidgetsFullSheet.java}
-- util/{WorkspaceItemSize.java,ItemInflater.kt}; graphics/DockGlassBackground.java; Hotseat.java
+- util/WorkspaceItemSize.java; graphics/DockGlassBackground.java; Hotseat.java; qsb/QsbContainerView.java
 - lawnchair/src/app/lawnchair/widgetstack/WidgetStackEditor.kt; tests/oneui/; .github/scripts/oneui-emulator-smoke.sh
-- lawnchair/src/app/lawnchair/ui/preferences/destinations/HomeScreenGridPreferences.kt
+- lawnchair: HomeScreenGridPreferences.kt; DockPreferences.kt; qsb/PixelSearchQsbFragment.kt
 
 Validation:
 - 5 grid scaling + 5 stack model + 3 migration cases in multivalentTests remain unexecuted.

@@ -195,7 +195,6 @@ public class QsbContainerView extends FrameLayout {
             mWrapper = createWrapper(getContext());
             // Only add the view when enabled
             if (isQsbEnabled()) {
-                if (!isInPreviewMode()) mQsbWidgetHost.startListening();
                 mWrapper.addView(createQsb(mWrapper));
             }
             return mWrapper;
@@ -264,6 +263,7 @@ public class QsbContainerView extends FrameLayout {
                 mQsb = (QsbWidgetHostView) mQsbWidgetHost.createView(context, widgetId,
                         mWidgetInfo);
                 mQsb.setId(R.id.qsb_widget);
+                onWidgetCreated(mQsb);
 
                 if (!isInPreviewMode()) {
                     if (!containsAll(AppWidgetManager.getInstance(context)
@@ -307,6 +307,16 @@ public class QsbContainerView extends FrameLayout {
 
         @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
+            try {
+                handleWidgetResult(requestCode, resultCode, data);
+            } catch (RuntimeException unavailable) {
+                // Retain tracked IDs for cleanup/retry if the widget service is temporarily down.
+                android.util.Log.w("QsbContainerView", "Search widget result unavailable", unavailable);
+                rebindFragment();
+            }
+        }
+
+        private void handleWidgetResult(int requestCode, int resultCode, Intent data) {
             if (requestCode != REQUEST_BIND_QSB && requestCode != REQUEST_CONFIGURE_QSB) {
                 super.onActivityResult(requestCode, resultCode, data);
                 return;
@@ -346,17 +356,34 @@ public class QsbContainerView extends FrameLayout {
         }
 
         @Override
+        public void onStart() {
+            super.onStart();
+            if (!isInPreviewMode() && isQsbEnabled()) {
+                try {
+                    mQsbWidgetHost.startListening();
+                } catch (RuntimeException unavailable) {
+                    android.util.Log.w("QsbContainerView", "Unable to listen to search widget", unavailable);
+                    rebindFragment();
+                }
+            }
+        }
+
+        @Override
         public void onResume() {
             super.onResume();
+            mOrientation = getContext().getResources().getConfiguration().orientation;
             if (mQsb != null && mQsb.isReinflateRequired(mOrientation)) {
                 rebindFragment();
             }
         }
 
         @Override
-        public void onDestroy() {
-            mQsbWidgetHost.stopListening();
-            super.onDestroy();
+        public void onStop() {
+            try {
+                if (!isInPreviewMode()) mQsbWidgetHost.stopListening();
+            } finally {
+                super.onStop();
+            }
         }
 
         private void rebindFragment() {
@@ -374,6 +401,8 @@ public class QsbContainerView extends FrameLayout {
         public boolean isQsbEnabled() {
             return BuildConfigs.QSB_ON_FIRST_SCREEN;
         }
+
+        protected void onWidgetCreated(QsbWidgetHostView host) { }
 
         protected Bundle createBindOptions() {
             InvariantDeviceProfile idp = LauncherAppState.getIDP(getContext());

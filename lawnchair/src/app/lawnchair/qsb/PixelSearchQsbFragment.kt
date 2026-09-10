@@ -28,6 +28,23 @@ class PixelSearchQsbFragment : QsbContainerView.QsbFragment() {
     override fun isQsbEnabled(): Boolean =
         PreferenceManager2.getInstance(context).hotseatMode.firstCached() == PixelSearchHotseat
 
+    override fun onWidgetCreated(host: com.android.launcher3.qsb.QsbWidgetHostView) {
+        host.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+            val width = right - left
+            val height = bottom - top
+            if (width > 0 && height > 0 &&
+                (width != oldRight - oldLeft || height != oldBottom - oldTop)) {
+                val density = host.resources.displayMetrics.density
+                try {
+                    host.updateAppWidgetSize(null, (width / density).toInt(), (height / density).toInt(),
+                        (width / density).toInt(), (height / density).toInt())
+                } catch (_: RuntimeException) {
+                    // Keep the real host; the provider can recover on the next binding/layout.
+                }
+            }
+        }
+    }
+
     override fun getSearchWidgetProvider(): AppWidgetProviderInfo? = try {
         AppWidgetManager.getInstance(context)
             .getInstalledProvidersForPackage(PixelSearch.packageName, android.os.Process.myUserHandle())
@@ -47,11 +64,16 @@ class PixelSearchQsbFragment : QsbContainerView.QsbFragment() {
         @JvmStatic
         fun release(context: Context) {
             val prefs = LauncherPrefs.getPrefs(context)
-            val host = AppWidgetHost(context, QSB_WIDGET_HOST_ID)
+            val host = AppWidgetHost(context, QsbContainerView.QsbFragment.QSB_WIDGET_HOST_ID)
             val ids = setOf(prefs.getInt(WIDGET_ID_KEY, -1), prefs.getInt(WIDGET_ID_KEY + "_pending", -1))
-            ids.filter { it >= 0 }.forEach(host::deleteAppWidgetId)
-            prefs.edit().remove(WIDGET_ID_KEY).remove(WIDGET_ID_KEY + "_pending")
-                .remove(WIDGET_ID_KEY + "_configured").apply()
+            try {
+                ids.filter { it >= 0 }.forEach(host::deleteAppWidgetId)
+                prefs.edit().remove(WIDGET_ID_KEY).remove(WIDGET_ID_KEY + "_pending")
+                    .remove(WIDGET_ID_KEY + "_configured").apply()
+            } catch (unavailable: RuntimeException) {
+                // Keep IDs recorded so a later launch can finish cleanup.
+                android.util.Log.w("PixelSearchQsb", "Widget ID cleanup deferred", unavailable)
+            }
         }
     }
 }
