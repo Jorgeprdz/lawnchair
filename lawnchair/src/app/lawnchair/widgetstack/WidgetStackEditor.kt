@@ -65,8 +65,9 @@ object WidgetStackEditor {
                     ) { index, member, _ ->
                         key(member.id) {
                             ReorderableItem {
+                                val reorderScope = this
                                 Row(Modifier.fillMaxWidth().a11yDrag(index, members, reorder, reorder)) {
-                                    ReorderableDragHandle(scope = this)
+                                    ReorderableDragHandle(scope = reorderScope)
                                     val label = remember(member.id) {
                                         view.findWidgetByAppWidgetId(member.appWidgetId)?.appWidgetInfo
                                             ?.loadLabel(launcher.packageManager)
