@@ -64,9 +64,45 @@ jobs:
           else
             echo "Merging upstream/16-dev ($UPSTREAM) into fork 16-dev ($BEFORE)..."
             if ! git merge --no-edit upstream/16-dev; then
-              git merge --abort || true
-              echo '::error::Upstream merge has conflicts. Fork was NOT modified or pushed.'
-              exit 1
+              CONFLICTS="$(git diff --name-only --diff-filter=U)"
+
+              # One-time semantic resolution for upstream #7272. Upstream intentionally enables
+              # normal widgets in the hotseat; our OneUI fork must still keep widget stacks and
+              # 2x2 Max items out of the dock. Never apply this resolver to a different upstream
+              # revision or to any additional conflict: future conflicts fail closed.
+              if [ "$UPSTREAM" = '3a07a739afe22cfc09421e7bf0bdbc1a6f67d63c' ] \
+                 && [ "$CONFLICTS" = 'src/com/android/launcher3/Workspace.java' ]; then
+                git checkout --ours src/com/android/launcher3/Workspace.java
+                python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/com/android/launcher3/Workspace.java')
+          s = p.read_text()
+          old = '''        if (mLauncher.getHotseat() == null
+                          || mLauncher.getHotseat().getShortcutsAndWidgets() == null
+                          || isDragWidget(dragObject)
+                          || com.android.launcher3.util.WorkspaceItemSize.isMax(dragObject.dragInfo)) {
+          '''
+          new = '''        // Upstream allows regular widgets in the hotseat. OneUI widget stacks and
+                  // Max 2x2 items remain workspace-only because their persistence/layout contracts
+                  // are different from a normal AppWidgetHostView.
+                  if (mLauncher.getHotseat() == null
+                          || mLauncher.getHotseat().getShortcutsAndWidgets() == null
+                          || dragObject.dragInfo instanceof com.android.launcher3.model.data.WidgetStackInfo
+                          || com.android.launcher3.util.WorkspaceItemSize.isMax(dragObject.dragInfo)) {
+          '''
+          if old not in s:
+              raise SystemExit('Expected OneUI hotseat guard not found; refusing automatic conflict resolution')
+          p.write_text(s.replace(old, new, 1))
+          PY
+                git add src/com/android/launcher3/Workspace.java
+                git commit --no-edit
+              else
+                git merge --abort || true
+                echo "::error::Upstream merge conflict requires review: ${CONFLICTS//$'\n'/, }"
+                echo '::error::Fork was NOT modified or pushed.'
+                exit 1
+              fi
             fi
             echo 'updated=true' >> "$GITHUB_OUTPUT"
           fi
