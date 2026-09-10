@@ -20,6 +20,7 @@ object OneUiGlassPreferences {
     private const val KEY_FOLDER_MODE = "folder_glass_mode"
     private const val KEY_FOLDER_BLUR_INTENSITY = "folder_blur_intensity"
     private const val KEY_FOLDER_CRYSTAL_INTENSITY = "folder_crystal_intensity"
+    private const val KEY_LARGE_FOLDER_SHAPE = "large_folder_shape"
 
     // Kept only to migrate builds that already exposed the first glass prototype.
     private const val LEGACY_DOCK_FROSTY = "dock_frosty"
@@ -82,6 +83,27 @@ object OneUiGlassPreferences {
     fun setFolderCrystalIntensity(context: Context, value: Int) {
         prefs(context).edit().putInt(KEY_FOLDER_CRYSTAL_INTENSITY, value.coerceIn(0, 100)).apply()
     }
+
+    /**
+     * Shape of the 2x2 large-folder preview. Rounded square remains the default One UI appearance;
+     * Circle is retained as an explicit alternative instead of being imposed by glass rendering.
+     */
+    @JvmStatic
+    fun getLargeFolderShape(context: Context): Int =
+        prefs(context).getInt(KEY_LARGE_FOLDER_SHAPE, OneUiLargeFolderShape.ROUNDED_SQUARE)
+            .coerceIn(OneUiLargeFolderShape.ROUNDED_SQUARE, OneUiLargeFolderShape.CIRCLE)
+
+    @JvmStatic
+    fun setLargeFolderShape(context: Context, value: Int) {
+        prefs(context).edit().putInt(
+            KEY_LARGE_FOLDER_SHAPE,
+            value.coerceIn(OneUiLargeFolderShape.ROUNDED_SQUARE, OneUiLargeFolderShape.CIRCLE),
+        ).apply()
+    }
+
+    @JvmStatic
+    fun isLargeFolderCircular(context: Context): Boolean =
+        getLargeFolderShape(context) == OneUiLargeFolderShape.CIRCLE
 
     // Binary/source compatibility for the first prototype while the branch transitions.
     @JvmStatic
