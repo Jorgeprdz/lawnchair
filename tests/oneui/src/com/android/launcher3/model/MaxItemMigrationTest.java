@@ -22,7 +22,10 @@ public class MaxItemMigrationTest {
         var context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         try (DatabaseHelper helper = new DatabaseHelper(context, null, user -> 0L, () -> {})) {
             var db = helper.getWritableDatabase();
-            db.execSQL("CREATE TABLE oneui_source AS SELECT * FROM favorites WHERE 0");
+            try (var schema = db.rawQuery("SELECT sql FROM sqlite_master WHERE type='table' AND name='favorites'", null)) {
+                assertTrue(schema.moveToFirst());
+                db.execSQL(schema.getString(0).replaceFirst("favorites", "oneui_source"));
+            }
             for (int type : new int[]{ITEM_TYPE_APPLICATION, ITEM_TYPE_FOLDER}) {
                 int id = 9000 + type;
                 int flag = type == ITEM_TYPE_FOLDER ? FolderInfo.FLAG_LARGE_FOLDER : WorkspaceItemInfo.FLAG_MAX_ICON;

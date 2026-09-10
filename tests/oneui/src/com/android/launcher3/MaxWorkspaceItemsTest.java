@@ -147,7 +147,7 @@ public class MaxWorkspaceItemsTest {
     }
 
     private static View find(Launcher launcher, int id) {
-        return launcher.getWorkspace().mapOverItems((item, view) -> item.id == id);
+        return launcher.getWorkspace().mapOverItems((item, view) -> item != null && id >= 0 && item.id == id);
     }
 
     private static void assertNoOverlap(CellLayout grid) {

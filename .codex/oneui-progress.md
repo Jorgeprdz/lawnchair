@@ -33,7 +33,7 @@ Current:
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator running, screenshot acknowledgement bug known.
+- Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator failed: test thread/schema/context/null-tag errors; screenshot ack fixed.
 - Latest fast CI 34440512144/cfde191 running: fixes UiAutomation screenshot ack; superseded 34440174457 cancelled.
 
 Architecture decisions:
@@ -96,5 +96,5 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. None downloaded yet.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 08-widget-grid.png downloaded and PNG-verified (1080x1920), run34439748126 artifact10137783512.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.

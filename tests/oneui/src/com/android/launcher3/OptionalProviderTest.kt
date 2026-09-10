@@ -51,7 +51,7 @@ class OptionalProviderTest {
         val original = preference.firstCached()
         ActivityScenario.launch<LawnchairLauncher>(launchIntent()).use { scenario ->
             try {
-                preference.setBlocking(PixelSearchHotseat)
+                InstrumentationRegistry.getInstrumentation().runOnMainSync { preference.setBlocking(PixelSearchHotseat) }
                 SystemClock.sleep(1200)
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync()
                 scenario.onActivity { launcher ->
@@ -66,7 +66,7 @@ class OptionalProviderTest {
                     assertNotNull(launcher.findViewById<android.view.View>(R.id.btn_qsb_search))
                 }
             } finally {
-                preference.setBlocking(original)
+                InstrumentationRegistry.getInstrumentation().runOnMainSync { preference.setBlocking(original) }
             }
         }
     }

@@ -28,7 +28,7 @@ public class WidgetStackProcessTest {
         org.junit.Assume.assumeTrue("seed".equals(phase) || "verify".equals(phase));
         var instrumentation = InstrumentationRegistry.getInstrumentation();
         var context = instrumentation.getTargetContext();
-        var state = instrumentation.getContext().getSharedPreferences("oneui-process", 0);
+        var state = context.getSharedPreferences("oneui-process", 0);
         ComponentName component = new ComponentName(instrumentation.getContext().getPackageName(),
                 OneUiTestWidgetProvider.class.getName());
         try (var input = new ParcelFileDescriptor.AutoCloseInputStream(
@@ -76,9 +76,9 @@ public class WidgetStackProcessTest {
                 await(scenario, launcher -> info(launcher, first.get().container).getContents().size() == 2);
                 scenario.onActivity(launcher -> {
                     WidgetStackInfo stack = info(launcher, first.get().container);
-                    state.edit().putInt("stack", stack.id).putInt("active", stack.getActiveWidgetId())
+                    assertTrue("Process fixture must be durably saved", state.edit().putInt("stack", stack.id).putInt("active", stack.getActiveWidgetId())
                             .putInt("first", stack.getContents().get(0).appWidgetId)
-                            .putInt("second", stack.getContents().get(1).appWidgetId).commit();
+                            .putInt("second", stack.getContents().get(1).appWidgetId).commit());
                 });
                 drainModel();
             } else {

@@ -38,7 +38,8 @@ public class DockBackgroundTest {
                     assertTrue(bounds[0] > 0 && bounds[1] > 0);
                 });
                 for (int mode = 0; mode < 4; mode++) {
-                    PreferenceExtensionsKt.setBlocking(preference, mode);
+                    final int selectedMode = mode;
+                    instrumentation.runOnMainSync(() -> PreferenceExtensionsKt.setBlocking(preference, selectedMode));
                     SystemClock.sleep(1000);
                     ready(scenario);
                     final int expected = mode;
@@ -58,7 +59,7 @@ public class DockBackgroundTest {
                     assertNotNull(launcher.getHotseat().getBackground());
                 });
             } finally {
-                PreferenceExtensionsKt.setBlocking(preference, original);
+                instrumentation.runOnMainSync(() -> PreferenceExtensionsKt.setBlocking(preference, original));
             }
         }
     }
