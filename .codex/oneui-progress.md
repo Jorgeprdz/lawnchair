@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-0ad6862d1d66879444fe56fe1d657dad8a84121f
+399ea1b04f0efaae5253a4da6a2b7bf6626176bd
 
 Global:
 28% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,14 +36,14 @@ Completed:
 - M6 context fix: 8909ad2; selector 50bfffb/editor 294f23b; creation uses native widget resize frame.
 
 Current:
-- M6 provider removal retains affected member; model callbacks rebind nested pages; resize CI pending.
+- M6 standard migration shares M5 proportional span/center calculation using all-member bounds.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
 - M6: validate picker recreation/drag routes, model callback membership and cancellation.
-- M6: validate editor/add/remove/resize/provider interactions; finish M5 migration integration.
+- M6: validate editor/add/remove/resize/provider interactions; guard impossible grid changes and legacy routes.
 
 Architecture decisions:
 - Remote GitHub is durable state; no local clone or full local build.

@@ -303,6 +303,12 @@ class GridSizeMigrationLogic {
         if (sourceSize != targetSize) {
             val widgetManager = WidgetManagerHelper(destReader.mContext)
             for (entry in workspaceToBeAdded) {
+                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
+                    scaleWidgetFootprint(entry, sourceSize, targetSize,
+                        AppWidgetProviderInfo.RESIZE_BOTH, entry.minSpanX, entry.minSpanY,
+                        entry.stackMaxSpanX, entry.stackMaxSpanY)
+                    continue
+                }
                 if (entry.itemType != LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET) continue
                 val component = entry.mProvider?.let { ComponentName.unflattenFromString(it) }
                 val provider = widgetManager.getLauncherAppWidgetInfo(entry.appWidgetId, component)
@@ -333,23 +339,31 @@ class GridSizeMigrationLogic {
         target: Point,
         provider: LauncherAppWidgetProviderInfo,
     ) {
+        scaleWidgetFootprint(entry, source, target, provider.resizeMode,
+            provider.minSpanX, provider.minSpanY, provider.maxSpanX, provider.maxSpanY)
+    }
+
+    private fun scaleWidgetFootprint(
+        entry: DbEntry, source: Point, target: Point, resizeMode: Int,
+        providerMinX: Int, providerMinY: Int, providerMaxX: Int, providerMaxY: Int,
+    ) {
         if (source.x <= 0 || source.y <= 0 || target.x <= 0 || target.y <= 0) return
 
         val oldSpanX = entry.spanX
         val oldSpanY = entry.spanY
         val scaleX = target.x.toFloat() / source.x
         val scaleY = target.y.toFloat() / source.y
-        if (provider.resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0) {
-            val minimum = maxOf(1, entry.minSpanX, provider.minSpanX)
-            val maximum = minOf(target.x, provider.maxSpanX)
+        if (resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0) {
+            val minimum = maxOf(1, entry.minSpanX, providerMinX)
+            val maximum = minOf(target.x, providerMaxX)
             if (minimum <= maximum) {
                 entry.spanX = (oldSpanX * scaleX).roundToInt().coerceIn(minimum, maximum)
                 entry.minSpanX = minimum
             }
         }
-        if (provider.resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0) {
-            val minimum = maxOf(1, entry.minSpanY, provider.minSpanY)
-            val maximum = minOf(target.y, provider.maxSpanY)
+        if (resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0) {
+            val minimum = maxOf(1, entry.minSpanY, providerMinY)
+            val maximum = minOf(target.y, providerMaxY)
             if (minimum <= maximum) {
                 entry.spanY = (oldSpanY * scaleY).roundToInt().coerceIn(minimum, maximum)
                 entry.minSpanY = minimum

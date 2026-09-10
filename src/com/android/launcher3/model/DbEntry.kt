@@ -41,6 +41,9 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
     @JvmField var appWidgetId: Int = NO_ID
     @JvmField var activeWidgetId: Int = NO_ID
     @JvmField var activeWidgetHostId: Int = NO_ID
+    // Aggregate provider bounds used only while placing a stack during migration.
+    @JvmField var stackMaxSpanX: Int = Int.MAX_VALUE
+    @JvmField var stackMaxSpanY: Int = Int.MAX_VALUE
 
     /** Comparator according to the reading order */
     override fun compareTo(other: DbEntry): Int {

@@ -743,16 +743,23 @@ public class GridSizeMigrationDBController {
                     } catch (RuntimeException e) {
                         Log.w(TAG, "Unable to resolve stack member " + rowId, e);
                     }
-                    maxSpanX = Math.min(maxSpanX, provider == null ? entry.spanX : provider.maxSpanX);
-                    maxSpanY = Math.min(maxSpanY, provider == null ? entry.spanY : provider.maxSpanY);
-                    // An unavailable provider cannot safely authorize shrinking its footprint.
-                    Point minimum = provider == null ? null : provider.getMinSpans();
+                    boolean horizontal = provider != null && (provider.resizeMode
+                            & android.appwidget.AppWidgetProviderInfo.RESIZE_HORIZONTAL) != 0;
+                    boolean vertical = provider != null && (provider.resizeMode
+                            & android.appwidget.AppWidgetProviderInfo.RESIZE_VERTICAL) != 0;
+                    maxSpanX = Math.min(maxSpanX, horizontal && provider.maxSpanX > 0
+                            ? provider.maxSpanX : entry.spanX);
+                    maxSpanY = Math.min(maxSpanY, vertical && provider.maxSpanY > 0
+                            ? provider.maxSpanY : entry.spanY);
+                    // Fixed axes and unavailable providers retain their existing footprint.
                     entry.minSpanX = Math.max(entry.minSpanX,
-                            minimum != null && minimum.x > 0 ? minimum.x : entry.spanX);
+                            horizontal ? Math.max(1, provider.minSpanX) : entry.spanX);
                     entry.minSpanY = Math.max(entry.minSpanY,
-                            minimum != null && minimum.y > 0 ? minimum.y : entry.spanY);
+                            vertical ? Math.max(1, provider.minSpanY) : entry.spanY);
                 }
             }
+            entry.stackMaxSpanX = maxSpanX;
+            entry.stackMaxSpanY = maxSpanY;
             if (entry.minSpanX <= maxSpanX) {
                 entry.spanX = Math.max(entry.minSpanX, Math.min(entry.spanX, maxSpanX));
             }
