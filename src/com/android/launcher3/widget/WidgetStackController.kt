@@ -27,6 +27,17 @@ object WidgetStackController {
         val member = widgetView.tag as? LauncherAppWidgetInfo ?: return
         if (!widgetView.isAttachedToWindow ||
             !com.android.launcher3.touch.ItemLongClickListener.canStartDrag(launcher)) return
+        val provider = widgetView.appWidgetInfo as? LauncherAppWidgetProviderInfo
+        val candidate = WidgetStackInfo().apply {
+            spanX = member.spanX
+            spanY = member.spanY
+        }
+        // A standalone widget may have been force-resized below its provider constraints.
+        // Refuse conversion rather than start a stack with an already incompatible member.
+        if (provider == null || !fits(candidate, provider)) {
+            Toast.makeText(launcher, R.string.widget_stack_incompatible, Toast.LENGTH_SHORT).show()
+            return
+        }
         launcher.modelWriter.createWidgetStack(member, { stack ->
             if (launcher.isDestroyed || !widgetView.isAttachedToWindow) {
                 launcher.model.forceReload()
