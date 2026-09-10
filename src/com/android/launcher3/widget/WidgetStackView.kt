@@ -106,6 +106,23 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         }
     }
 
+    /** Replaces one page's host without changing membership, order, or the active page. */
+    fun replaceWidgetView(previous: View, replacement: View) {
+        for (i in 0 until pager.childCount) {
+            val page = pager.getChildAt(i) as FrameLayout
+            if (page.getChildAt(0) !== previous) continue
+            if (replacement === previous) return
+            (replacement.parent as? ViewGroup)?.removeView(replacement)
+            page.removeView(previous)
+            replacement.setOnLongClickListener { performLongClick() }
+            page.addView(replacement, LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
+            ))
+            updatePageAccessibility()
+            return
+        }
+    }
+
     /** Finds the actual host view, including widgets on inactive pages. */
     fun findWidgetByAppWidgetId(appWidgetId: Int): LauncherAppWidgetHostView? {
         for (i in 0 until pager.childCount) {

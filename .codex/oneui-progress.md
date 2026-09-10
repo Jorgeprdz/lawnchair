@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-dde98937b25a09c663fd98ffb50b45e94860c4c7
+59f20b3fde8623ee5844de298e6a44fc5bf8b5fb
 
 Global:
 26% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,7 +36,7 @@ Completed:
 - M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
-- M6 workspace lookup now finds nested host IDs; next fix PendingAppWidgetHostView reinflation before picker/editor.
+- M6 nested host lookup and pending-member reinflation preserve stack pages; monitor CI, then picker/editor.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
