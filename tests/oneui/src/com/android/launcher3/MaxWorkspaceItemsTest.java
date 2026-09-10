@@ -173,6 +173,12 @@ public class MaxWorkspaceItemsTest {
     private static void launchSettingsAndReturn(ActivityScenario<Launcher> scenario, int id,
             boolean preview) throws Exception {
         var instrumentation = InstrumentationRegistry.getInstrumentation();
+        WidgetStackBindingTest.await(scenario, launcher -> {
+            View target = find(launcher, id);
+            return launcher.hasWindowFocus() && launcher.getWorkspace().isFinishedSwitchingState()
+                    && Folder.getOpen(launcher) == null && target != null && target.isShown()
+                    && !target.isLayoutRequested() && target.getWidth() > 0;
+        });
         float[] point = new float[2];
         scenario.onActivity(launcher -> {
             View view = find(launcher, id);
@@ -187,7 +193,8 @@ public class MaxWorkspaceItemsTest {
                 point[1] = location[1] + view.getPaddingTop() + side / 6f;
             } else {
                 point[0] = location[0] + view.getWidth() / 2f;
-                point[1] = location[1] + view.getHeight() / 2f;
+                point[1] = location[1] + view.getPaddingTop()
+                        + ((BubbleTextView) view).getIconSize() / 2f;
             }
         });
         WidgetStackBindingTest.sendGesture(point[0], point[1], point[0], point[1], false);

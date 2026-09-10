@@ -17,6 +17,12 @@ public final class OneUiScreenshots {
         }
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         SystemClock.sleep(700);
+        // A file survives logcat buffer pressure while the emulator is booting services.
+        try (var input = new ParcelFileDescriptor.AutoCloseInputStream(
+                InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(
+                        "touch /storage/emulated/0/Download/lawnchair/" + filename + ".request"))) {
+            while (input.read() != -1) { }
+        }
         Log.i("OneUiScreenshot", "capture " + filename);
         for (int attempt = 0; attempt < 100; attempt++) {
             try (var input = new ParcelFileDescriptor.AutoCloseInputStream(

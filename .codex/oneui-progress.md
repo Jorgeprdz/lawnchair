@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 418396ff9db2d036d87a30b6457fc10c6d2a5130
+HEAD (audited before checkpoint): 51bc0d00afd7914fc7aeb8babbec9a82046318ec
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -33,7 +33,8 @@ Current:
 - HOME-category harness6f60a5b passed full emulator CI34443608218.
 - Real normal/Max/preview launch test563725f, shared touch helper2887d36; CI34444494208 emulator running.
 - 418396f initializes preview rule before spring animation; shares square shape and all9 preview members.
-- CI34445531657 validates spring fix;34444924076 failed, targeted diagnostics pending.
+- CI34445531657 all3 APK GREEN; spring crash absent; Max touch/Crystal capture failed.
+- Capture requests now durable shell files (logcat pressure dropped07); wait settled workspace before app taps.
 - USER: emulator wallpaper light through bottom; separate native WallpaperManager setup before screenshots.
 
 Next:
@@ -83,7 +84,7 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 76 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- 94 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
 - Downloaded artifacts:34443803289/10139228809,34443608218/10139079462,34442888473/10138782051 + earlier.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.

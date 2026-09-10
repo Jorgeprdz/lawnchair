@@ -5,25 +5,24 @@ import re
 import signal
 import struct
 import subprocess
-import sys
+import time
 
 DEST = pathlib.Path("oneui-screenshots")
 REMOTE = "/storage/emulated/0/Download/lawnchair"
 DEST.mkdir(exist_ok=True)
 subprocess.run(["adb", "shell", "mkdir", "-p", REMOTE], check=True, timeout=15)
-stream = subprocess.Popen(["adb", "logcat", "-v", "raw", "-s", "OneUiScreenshot:I", "*:S"],
-                          stdout=subprocess.PIPE, text=True)
-
 def stop(*_):
-    stream.terminate()
     raise SystemExit(0)
 
 signal.signal(signal.SIGTERM, stop)
 signal.signal(signal.SIGINT, stop)
-try:
-    for line in stream.stdout:
-        match = re.fullmatch(r"capture ([0-9]{2}-[a-z0-9-]+\.png)", line.strip())
-        if not match:
+completed = set()
+while True:
+    listing = subprocess.run(["adb", "shell", "ls", REMOTE], check=True,
+                             timeout=15, capture_output=True, text=True)
+    for line in listing.stdout.splitlines():
+        match = re.fullmatch(r"([0-9]{2}-[a-z0-9-]+\.png)\.request", line.strip())
+        if not match or match.group(1) in completed:
             continue
         name = match.group(1)
         subprocess.run(["adb", "shell", "screencap", "-p", f"{REMOTE}/{name}"], check=True, timeout=20)
@@ -37,5 +36,5 @@ try:
             raise RuntimeError(f"Empty PNG: {name}")
         subprocess.run(["adb", "shell", "touch", f"{REMOTE}/{name}.done"], check=True, timeout=15)
         print(f"Captured {name}: {width}x{height}", flush=True)
-finally:
-    stream.terminate()
+        completed.add(name)
+    time.sleep(0.2)
