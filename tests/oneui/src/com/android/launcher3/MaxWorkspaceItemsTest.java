@@ -105,6 +105,13 @@ public class MaxWorkspaceItemsTest {
                     assertNoOverlap((CellLayout) view.getParent().getParent());
                 });
                 drain();
+                scenario.onActivity(launcher -> {
+                    FolderIcon view = (FolderIcon) find(launcher, folderId.get());
+                    var name = view.getFolderName();
+                    float labelTop = name.getTop() + name.getBaseline() + name.getPaint().getFontMetrics().top;
+                    assertTrue("Large folder background must not cover its label",
+                            labelTop >= view.getPaddingTop() + view.getLargePreviewSize());
+                });
                 OneUiScreenshots.capture("02-large-folder.png");
                 OneUiScreenshots.capture("13-max-folder.png");
                 scenario.onActivity(launcher -> {

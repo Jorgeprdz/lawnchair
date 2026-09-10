@@ -671,7 +671,10 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         DeviceProfile profile = mActivity.getDeviceProfile();
         FrameLayout.LayoutParams nameParams = (FrameLayout.LayoutParams) mFolderName.getLayoutParams();
+        mFolderName.setCenterVertically(profile.iconCenterVertically && !isLargeFolder());
         if (isLargeFolder()) {
+            // This child contains only the label; centering it as an icon gives negative top padding.
+            mFolderName.setPadding(mFolderName.getPaddingLeft(), 0, mFolderName.getPaddingRight(), 0);
             Paint.FontMetrics metrics = mFolderName.getPaint().getFontMetrics();
             int labelHeight = (int) Math.ceil(metrics.bottom - metrics.top);
             int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
