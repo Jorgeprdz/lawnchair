@@ -940,6 +940,16 @@ public class CellLayout extends ViewGroup {
      * Returns the distance between the given coordinate and the visual center of the given cell.
      */
     public float getDistanceFromWorkspaceCellVisualCenter(float x, float y, int[] cell) {
+        View child = getChildAt(cell[0], cell[1]);
+        if (child instanceof com.android.launcher3.folder.FolderIcon folder
+                && folder.mInfo.isLargeFolder()) {
+            // Every part of the large preview is a drop target, including its other three cells.
+            folder.getWorkspaceVisualDragBounds(mTempRect);
+            mTempRect.offset(child.getLeft(), child.getTop());
+            float dx = Math.max(mTempRect.left - x, Math.max(0, x - mTempRect.right));
+            float dy = Math.max(mTempRect.top - y, Math.max(0, y - mTempRect.bottom));
+            return (float) Math.hypot(dx, dy);
+        }
         getWorkspaceCellVisualCenter(cell[0], cell[1], mTmpPoint);
         return (float) Math.hypot(x - mTmpPoint[0], y - mTmpPoint[1]);
     }
@@ -949,7 +959,8 @@ public class CellLayout extends ViewGroup {
         if (child instanceof DraggableView) {
             DraggableView draggableChild = (DraggableView) child;
             if (draggableChild.getViewType() == DRAGGABLE_ICON) {
-                cellToPoint(cellX, cellY, outPoint);
+                CellLayoutLayoutParams lp = (CellLayoutLayoutParams) child.getLayoutParams();
+                cellToPoint(lp.getCellX(), lp.getCellY(), outPoint);
                 draggableChild.getWorkspaceVisualDragBounds(mTempRect);
                 mTempRect.offset(outPoint[0], outPoint[1]);
                 outPoint[0] = mTempRect.centerX();
@@ -964,6 +975,11 @@ public class CellLayout extends ViewGroup {
      * Returns the max distance from the center of a cell that can accept a drop to create a folder.
      */
     public float getFolderCreationRadius(int[] targetCell) {
+        if (getChildAt(targetCell[0], targetCell[1]) instanceof
+                com.android.launcher3.folder.FolderIcon folder && folder.mInfo.isLargeFolder()) {
+            // Large-folder distance is measured from its preview rectangle, not a 1x1 center.
+            return 0;
+        }
         DeviceProfile grid = mActivity.getDeviceProfile();
         float iconVisibleRadius = ICON_VISIBLE_AREA_FACTOR * grid.iconSizePx / 2;
         // Halfway between reorder radius and icon.
