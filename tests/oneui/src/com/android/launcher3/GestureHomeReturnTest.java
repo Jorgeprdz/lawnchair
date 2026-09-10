@@ -1,7 +1,7 @@
 package com.android.launcher3;
 
 import static org.junit.Assert.*;
-import static com.android.launcher3.icons.IconCache.DEFAULT_LOOKUP_FLAG;
+import static com.android.launcher3.icons.cache.CacheLookupFlag.DEFAULT_LOOKUP_FLAG;
 
 import android.content.Intent;
 import android.content.pm.LauncherApps;
