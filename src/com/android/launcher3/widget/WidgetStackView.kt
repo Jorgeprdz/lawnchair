@@ -42,6 +42,10 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
     private lateinit var writer: ModelWriter
 
     init {
+        contentDescription = context.getText(com.android.launcher3.R.string.widget_stack_title)
+        (context as? com.android.launcher3.Launcher)?.let {
+            accessibilityDelegate = it.accessibilityDelegate
+        }
         clipChildren = true
         clipToPadding = true
         pager.attachIndicator(indicator)
@@ -179,6 +183,10 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         private var downY = 0f
         private var verticalGesture = false
         private val slop = ViewConfiguration.get(context).scaledTouchSlop
+
+        override fun getCurrentPageDescription(): String =
+            context.getString(com.android.launcher3.R.string.widget_stack_page,
+                nextPage + 1, childCount)
 
         fun attachIndicator(indicator: PageIndicatorDots) {
             mPageIndicator = indicator

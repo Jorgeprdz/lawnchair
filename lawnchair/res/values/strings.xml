@@ -1085,4 +1085,5 @@
     <string name="widget_stack_taller">Taller</string>
     <string name="widget_stack_resize_failed">No valid space for this size, or a widget does not support it.</string>
     <string name="widget_grid_incompatible">This grid cannot safely fit all current widgets. Keep a larger grid or resize the affected widgets first.</string>
+    <string name="widget_stack_page">Widget %1$d of %2$d</string>
 </resources>

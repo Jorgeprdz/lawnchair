@@ -354,7 +354,8 @@ public class LauncherAccessibilityDelegate extends BaseAccessibilityDelegate<Lau
             mDragInfo.dragType = DragType.FOLDER;
         } else if (info instanceof AppPairInfo) {
             mDragInfo.dragType = DragType.APP_PAIR;
-        } else if (info instanceof LauncherAppWidgetInfo) {
+        } else if (info instanceof LauncherAppWidgetInfo
+                || info instanceof com.android.launcher3.model.data.WidgetStackInfo) {
             mDragInfo.dragType = DragType.WIDGET;
         }
 

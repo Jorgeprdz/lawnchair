@@ -135,7 +135,9 @@ object WidgetStackEditor {
                         close(true)
                     }) { Text(stringResource(R.string.widget_stack_add)) }
                     TextButton(onClick = {
-                        addOnCloseListener { ItemLongClickListener.INSTANCE_WORKSPACE.onLongClick(view) }
+                        addOnCloseListener {
+                            launcher.accessibilityDelegate.performAccessibilityAction(view, R.id.action_move, null)
+                        }
                         close(true)
                     }) { Text(stringResource(R.string.widget_stack_move)) }
                 }
