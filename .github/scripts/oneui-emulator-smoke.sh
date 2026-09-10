@@ -26,7 +26,7 @@ if [ "$booted" != true ]; then
     exit 1
 fi
 adb shell input keyevent 82
-mapfile -t app_apks < <(find oneui-apks -path '*/lawnWithQuickstepGithub/debug/*.apk')
+mapfile -t app_apks < <(find oneui-apks -path '*/lawnWithQuickstepGithub/debug/*.apk' ! -path '*/androidTest/*')
 mapfile -t test_apks < <(find oneui-apks -path '*/androidTest/lawnWithQuickstepGithub/debug/*.apk')
 [ "${#app_apks[@]}" -eq 1 ]
 [ "${#test_apks[@]}" -eq 1 ]
