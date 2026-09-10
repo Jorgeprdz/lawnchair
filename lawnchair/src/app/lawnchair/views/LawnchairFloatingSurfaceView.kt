@@ -321,12 +321,14 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
             mSurfaceView.height != mIconPosition.height().roundToInt() ||
             mSurfaceView.left != mIconPosition.left.roundToInt() ||
             mSurfaceView.top != mIconPosition.top.roundToInt() ||
-            !Utilities.ATLEAST_Q || !mSurfaceView.surfaceControl.isValid
+            !Utilities.ATLEAST_Q
         ) {
             return
         }
+        val surface: SurfaceControl = mSurfaceView.surfaceControl ?: return
+        if (!surface.isValid) return
         // Keep the real icon in its CellLayout transform. Only the remote surface is animated.
-        if (drawOnSurface() && contract.sendEndPosition(mIconPosition, mLauncher, mSurfaceView.surfaceControl)) {
+        if (drawOnSurface() && contract.sendEndPosition(mIconPosition, mLauncher, surface)) {
             setCurrentIconVisible(false)
         } else {
             close(false)
