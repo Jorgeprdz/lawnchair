@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 51bc0d00afd7914fc7aeb8babbec9a82046318ec
+HEAD (audited before checkpoint): 0ddd82470638c76cd0b2c74fea1e2ce53dfb55a6
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -28,10 +28,7 @@ Current:
 - USER visual correction f275b49: Large/Max Folder must be a ROUNDED SQUARE, never circular.
 - Native RoundedSquare corner radius is 16% of measured preview edge; drawing/clipping/reveal share shape.
 - 2x2 occupancy, persistence, 3x3 preview and normal-folder theme unchanged by visual correction.
-- CI34442888473/f275b49 GREEN: compile/style, all8 tests and process-death restore; 13 actual screenshots.
-- e278912 fixes negative label padding; CI34443803289 all3 APK/style GREEN; label-bound test failed.
-- HOME-category harness6f60a5b passed full emulator CI34443608218.
-- Current CI34446579147/b7c3855 validates settled icon-centered taps and durable screenshot requests.
+- CI34446579147: 7/8 PASS; Max second tap waiting for readiness timed out. Diagnose exact state next.
 - 418396f initializes preview rule before spring animation; shares square shape and all9 preview members.
 - CI34445531657 all3 APK GREEN; spring crash absent; Max touch/Crystal capture failed.
 - Capture requests now durable shell files (logcat pressure dropped07); wait settled workspace before app taps.
@@ -43,6 +40,12 @@ Next:
 - Visually verify new square folder and replace canonical02/13 screenshots; preserve prior versions with run prefix.
 - Finish remaining provider/drag/grid/orientation coverage as available; report physical-device gaps honestly.
 - USER authorizes final verified APK download and automatic installation on phone; report Android confirmation if required.
+
+Bugfixes:
+- 0ddd824: GNC surface layout/valid bounds before handoff; no translation springs on real workspace icon.
+- Restore visibility on surface loss/finish/3s callback timeout; isolate stale finish callbacks per contract.
+- Native surface regression test covers completion/lost callback/late callback; CI34448143425 running.
+- Samsung physical gesture reproduction still pending; do not claim fixed solely from code.
 
 Architecture decisions:
 - GitHub is durable state; only this feature branch; no clone/full checkout/local full build, force push or merge.
@@ -72,10 +75,8 @@ Relevant files:
 
 Validation:
 - All3 APK variants + AndroidTest/style GREEN: CI34443803289/e278912, including square shape and label-padding fix.
-- CI34441287074: 7/8 tests PASS + process-death PASS; only Max fixture failed (fixed04d433a).
 - M6 real tap/vertical scroll/horizontal paging/resize/reorder/remove/model reload PASS there; hidden host regression PASS.
 - Missing Finder/Pixel fallback tests PASS; this does NOT validate genuine Samsung/Pixel providers.
-- CI34441778019: Max toggle/occupancy/10-member folder/open/recreation/restore PASS; dock and SQLite migrations PASS.
 - Intermittent test focus/taps investigated: stable bounds4acde68 and actual HOME intent6f60a5b; retain real assertions.
 - API35 boots/installs/starts actual launcher; force-stop/restore test PASS across two instrumentation invocations.
 - Original13 multivalent cases unexecuted; current Android suite includes real SQLite Max migration tests.
@@ -85,7 +86,7 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 104 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- 114 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
 - Latest light screenshots: CI34445977242/artifact10139936029; main10 updated; canonical02/03/13 still older.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.
