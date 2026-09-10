@@ -76,6 +76,14 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         views.forEach { view ->
             // The existing AppWidget host may return a view from the previous binding.
             (view.parent as? ViewGroup)?.removeView(view)
+            if (view is NavigableAppWidgetHostView) {
+                // Pages measure hosts within the stack's actual widget bounds. Clear transforms
+                // left by a previous standalone CellLayout binding before reusing the host.
+                view.setScaleToFit(1f)
+                view.translateDelegate.setTranslation(
+                    MultiTranslateDelegate.INDEX_WIDGET_CENTERING, 0f, 0f,
+                )
+            }
             val page = FrameLayout(context)
             view.setOnLongClickListener { performLongClick() }
             page.addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
