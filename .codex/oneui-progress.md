@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 531301f448752ed3865da2575ceb277b795efbe4
+HEAD (audited before checkpoint): 77b7a63a24048a2ecdcd535e924c44af8c2d030d
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 66% — revised after physical-device feedback; seven equally weighted modules.
 
@@ -24,15 +24,21 @@ Completed:
 - M4 Off/Solid/Blur/Crystal; M2 real Pixel Search replaces Google option with native search fallback.
 
 Current:
-- Physical-device acceptance found real gaps not covered by prior emulator tests; no feature is declared complete.
-- Priority: M1 occupancy/drop safety and M6 long-press freeze, then M7 popup, M2 actual provider, M4 effects.
-- No source fixes for this feedback committed yet; investigate actual native placement/touch paths.
-- Conserve quota: test only changed/failing cases; M3/M5 user-approved; do not revisit home-return bug.
+- Device feedback: M1 overlap/drop, M2 real dock widget, M4 effects, M6 long press, M7 missing action.
+- c521b12 adds missing WORKSPACE_SIZE to Quickstep override; df54890 routes stack holds to editor/releases interception.
+- e319889 uses actual large-folder preview drop rectangle; dd3d72c protects Max/stacks from allow_widget_overlap bypass.
+- Device has allow_widget_overlap=true; prior native reorder returned success without checking any occupied item.
+- Focused CI34495067024 running at147c0a4; later overlap fix/test dc91ba4 NOT included; build them next.
+- 77b7a63 adds read-only Samsung blur/provider diagnostics for the next AndroidTest APK.
+- User currently has hotseat_mode=disabled and search-provider=pixel_search; clarify which control was tested.
+- Window dump reports mBlurEnabled=false; actual app API/OEM capabilities need targeted verification.
+- Conserve quota: only changed/failing cases; M3/M5 approved; home-return bug closed to further work.
 
 Next:
-- Inspect CellLayout temporary occupancy commit and Workspace large-folder drop targeting.
-- Inspect stack long-press/drag routing and targeted device crash/ANR evidence.
-- Commit coherent fixes and focused regressions; one remote CI run at a time; update Debug without data loss.
+- Inspect focused CI result; fix real failures; run one updated Debug/targeted regression CI for overlap guard.
+- Run new read-only dock capability diagnostic on Samsung; determine supported M4 rendering path.
+- Resolve real M2 hosting once user clarifies disabled mode versus search-provider selection.
+- Update Debug in place after validation; preserve all user data/default HOME; never uninstall Nightly.
 
 Bugfixes:
 - 0ddd824/7bb4ad7/52ddec6 GNC: valid laid-out surface before hiding icon, no springs on original icon.
@@ -91,6 +97,6 @@ Screenshots:
 
 Blockers:
 - ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
-- Phone default HOME app.lawnchair.nightly 16.Dev.(#5074); Finder resolves; Pixel provider .SearchWidget exists.
+- Phone HOME now app.lawnchair.debug (chosen by user); Finder resolves; Pixel provider .SearchWidget exists.
 - Phone Nightly signer747c3645 differs from CI Nightly signer07f6de48; direct update impossible, NEVER uninstall.
-- Debug installed and starts; actual HOME gesture validation requires choosing it as HOME (Nightly preserved).
+- Debug installed and user-tested; Nightly preserved. Existing overlaps must not be deleted during repair.
