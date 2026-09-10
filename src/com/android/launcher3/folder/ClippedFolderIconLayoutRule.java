@@ -22,6 +22,24 @@ public class ClippedFolderIconLayoutRule {
 
     private float[] mTmpPoint = new float[2];
 
+    private boolean mLargeFolder;
+
+    public void setLargeFolder(boolean largeFolder) {
+        mLargeFolder = largeFolder;
+    }
+
+    private PreviewItemDrawingParams largeGridParams(int index, PreviewItemDrawingParams params) {
+        float scale = scaleForItem(9, 0);
+        int column = index >= 0 && index < 9 ? index % 3 : 1;
+        int row = index >= 0 && index < 9 ? index / 3 : 1;
+        if (mIsRtl) column = 2 - column;
+        float x = mAvailableSpace * (0.09f + 0.29f * column);
+        float y = mAvailableSpace * (0.09f + 0.29f * row);
+        if (params == null) return new PreviewItemDrawingParams(x, y, scale);
+        params.update(x, y, scale);
+        return params;
+    }
+
     private float mAvailableSpace;
     private float mRadius;
     private float mIconSize;
@@ -54,6 +72,7 @@ public class ClippedFolderIconLayoutRule {
      */
     public PreviewItemDrawingParams computePreviewItemDrawingParams(int index, int curNumItems,
             PreviewItemDrawingParams params) {
+        if (mLargeFolder) return largeGridParams(index, params);
         float totalScale = scaleForItem(curNumItems, 0);
         float transX;
         float transY;
@@ -94,6 +113,7 @@ public class ClippedFolderIconLayoutRule {
      */
     public PreviewItemDrawingParams computeSpringAnimationItemParams(int index, int numItemsInPage,
             int page, PreviewItemDrawingParams params) {
+        if (mLargeFolder) return largeGridParams(index, params);
         float totalScale = scaleForItem(numItemsInPage, page);
         float transX;
         float transY;
@@ -196,6 +216,7 @@ public class ClippedFolderIconLayoutRule {
      * @return scale for icons in Folder
      */
     public float scaleForItem(int numItems, int page) {
+        if (mLargeFolder) return 0.24f * mBaselineIconScale;
         float scale;
         if (page > 0) {
             scale = MIN_SCALE;

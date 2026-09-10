@@ -55,6 +55,9 @@ public final class WorkspaceItemSize {
         if (view instanceof BubbleTextView icon && item instanceof WorkspaceItemInfo info) {
             icon.applyFromWorkspaceItem(info);
         }
+        if (view instanceof com.android.launcher3.folder.FolderIcon folder) {
+            folder.onItemsChanged(false);
+        }
         view.requestLayout();
         view.invalidate();
         return true;

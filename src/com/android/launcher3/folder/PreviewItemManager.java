@@ -20,7 +20,6 @@ import static com.android.launcher3.BubbleTextView.DISPLAY_FOLDER;
 import static com.android.launcher3.LauncherSettings.Favorites.DESKTOP_ICON_FLAG;
 import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.ENTER_INDEX;
 import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.EXIT_INDEX;
-import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.MAX_NUM_ITEMS_IN_PREVIEW;
 import static com.android.launcher3.folder.FolderIcon.DROP_IN_ANIMATION_DURATION;
 import static com.android.launcher3.graphics.PreloadIconDrawable.newPendingIcon;
 import static com.android.launcher3.icons.BitmapInfo.FLAG_THEMED;
@@ -75,6 +74,7 @@ public class PreviewItemManager {
     private float mIntrinsicIconSize = -1;
     private int mTotalWidth = -1;
     private int mPrevTopPadding = -1;
+    private int mPrevLargePreviewSize = -1;
     private Drawable mReferenceDrawable = null;
 
     private int mNumOfPrevItems = 0;
@@ -125,13 +125,16 @@ public class PreviewItemManager {
 
     private void computePreviewDrawingParams(int drawableSize, int totalSize) {
         if (mIntrinsicIconSize != drawableSize || mTotalWidth != totalSize ||
-                mPrevTopPadding != mIcon.getPaddingTop()) {
+                mPrevTopPadding != mIcon.getPaddingTop()
+                || mPrevLargePreviewSize != mIcon.getLargePreviewSize()) {
             mIntrinsicIconSize = drawableSize;
             mTotalWidth = totalSize;
             mPrevTopPadding = mIcon.getPaddingTop();
+            mPrevLargePreviewSize = mIcon.getLargePreviewSize();
 
             mIcon.mBackground.setup(mIcon.getContext(), mIcon.mActivity, mIcon, mTotalWidth,
                     mIcon.getPaddingTop());
+            mIcon.mPreviewLayoutRule.setLargeFolder(mIcon.isLargeFolder());
             mIcon.mPreviewLayoutRule.init(
                     mIcon.mBackground.previewSize, mIntrinsicIconSize,
                     Utilities.isRtl(mIcon.getResources()),
@@ -225,7 +228,7 @@ public class PreviewItemManager {
         // enter/exit
         // animation purposes and they were added to the front of the list.
         // To index the params properly, we need to skip these params.
-        index = index + Math.max(mFirstPageParams.size() - MAX_NUM_ITEMS_IN_PREVIEW, 0);
+        index = index + Math.max(mFirstPageParams.size() - mIcon.getPreviewCapacity(), 0);
 
         PreviewItemDrawingParams params = index < mFirstPageParams.size() ? mFirstPageParams.get(index) : null;
         if (params != null) {
@@ -244,7 +247,7 @@ public class PreviewItemManager {
             params.add(new PreviewItemDrawingParams(0, 0, 0));
         }
 
-        int numItemsInFirstPagePreview = page == 0 ? items.size() : MAX_NUM_ITEMS_IN_PREVIEW;
+        int numItemsInFirstPagePreview = page == 0 ? items.size() : mIcon.getPreviewCapacity();
         for (int i = 0; i < params.size(); i++) {
             PreviewItemDrawingParams p = params.get(i);
             setDrawable(p, items.get(i));

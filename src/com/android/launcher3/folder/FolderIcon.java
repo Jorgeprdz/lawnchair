@@ -20,7 +20,6 @@ package com.android.launcher3.folder;
 
 import static com.android.launcher3.Flags.enableCursorHoverStates;
 import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.ICON_OVERLAP_FACTOR;
-import static com.android.launcher3.folder.ClippedFolderIconLayoutRule.MAX_NUM_ITEMS_IN_PREVIEW;
 import static com.android.launcher3.folder.FolderGridOrganizer.createFolderGridOrganizer;
 import static com.android.launcher3.folder.PreviewItemManager.INITIAL_ITEM_ANIMATION_DURATION;
 import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_FOLDER_AUTO_LABELED;
@@ -138,6 +137,38 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
     private Animator mDotScaleAnim;
 
     private Rect mTouchArea = new Rect();
+    private int mLargePreviewSize;
+    private WorkspaceItemInfo mPreviewTapItem;
+    private float mPreviewDownX;
+    private float mPreviewDownY;
+
+    public boolean isLargeFolder() {
+        return mInfo != null && mInfo.isLargeFolder()
+                && mInfo.container == LauncherSettings.Favorites.CONTAINER_DESKTOP;
+    }
+
+    public int getPreviewCapacity() {
+        return isLargeFolder() ? 9 : 4;
+    }
+
+    public int getLargePreviewSize() {
+        return isLargeFolder() ? Math.max(1, mLargePreviewSize) : 0;
+    }
+
+    private WorkspaceItemInfo previewItemAt(float x, float y) {
+        if (!isLargeFolder() || !mBackgroundIsVisible) return null;
+        mPreviewItemManager.recomputePreviewDrawingParams();
+        for (int i = 0; i < mCurrentPreviewItems.size(); i++) {
+            if (!(mCurrentPreviewItems.get(i) instanceof WorkspaceItemInfo item)) continue;
+            PreviewItemDrawingParams p = mPreviewItemManager.computePreviewItemDrawingParams(
+                    i, mCurrentPreviewItems.size(), mTmpParams);
+            float left = p.transX + mBackground.basePreviewOffsetX;
+            float top = p.transY + mBackground.basePreviewOffsetY;
+            float size = p.scale * mPreviewItemManager.getIntrinsicIconSize();
+            if (x >= left && x <= left + size && y >= top && y <= top + size) return item;
+        }
+        return null;
+    }
 
     private float mScaleForReorderBounce = 1f;
 
@@ -350,9 +381,9 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
                 workspace.resetTransitionTransform();
             }
 
-            int numItemsInPreview = Math.min(MAX_NUM_ITEMS_IN_PREVIEW, index + 1);
+            int numItemsInPreview = Math.min(getPreviewCapacity(), index + 1);
             boolean itemAdded = false;
-            if (itemReturnedOnFailedDrop || index >= MAX_NUM_ITEMS_IN_PREVIEW) {
+            if (itemReturnedOnFailedDrop || index >= getPreviewCapacity()) {
                 List<ItemInfo> oldPreviewItems = new ArrayList<>(mCurrentPreviewItems);
                 getFolder().addFolderContent(item, index, false);
                 mCurrentPreviewItems.clear();
@@ -388,7 +419,7 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
                 to.offset(center[0] - animateView.getMeasuredWidth() / 2,
                         center[1] - animateView.getMeasuredHeight() / 2);
 
-                float finalAlpha = index < MAX_NUM_ITEMS_IN_PREVIEW ? 1f : 0f;
+                float finalAlpha = index < getPreviewCapacity() ? 1f : 0f;
 
                 float finalScale = scale * scaleRelativeToDragLayer;
 
@@ -555,7 +586,7 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     private float getLocalCenterForIndex(int index, int curNumItems, int[] center) {
         mTmpParams = mPreviewItemManager.computePreviewItemDrawingParams(
-                Math.min(MAX_NUM_ITEMS_IN_PREVIEW, index), curNumItems, mTmpParams);
+                Math.min(getPreviewCapacity(), index), curNumItems, mTmpParams);
 
         mTmpParams.transX += mBackground.basePreviewOffsetX;
         mTmpParams.transY += mBackground.basePreviewOffsetY;
@@ -637,7 +668,26 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        boolean shouldCenterIcon = mActivity.getDeviceProfile().iconCenterVertically;
+        DeviceProfile profile = mActivity.getDeviceProfile();
+        FrameLayout.LayoutParams nameParams = (FrameLayout.LayoutParams) mFolderName.getLayoutParams();
+        if (isLargeFolder()) {
+            Paint.FontMetrics metrics = mFolderName.getPaint().getFontMetrics();
+            int labelHeight = (int) Math.ceil(metrics.bottom - metrics.top);
+            int width = MeasureSpec.getSize(widthMeasureSpec) - getPaddingLeft() - getPaddingRight();
+            int height = MeasureSpec.getSize(heightMeasureSpec);
+            mLargePreviewSize = Math.max(1, Math.min(width,
+                    height - labelHeight - profile.iconDrawablePaddingPx));
+            setPadding(getPaddingLeft(), Math.max(0, (height - mLargePreviewSize
+                    - labelHeight - profile.iconDrawablePaddingPx) / 2), getPaddingRight(), 0);
+            nameParams.topMargin = mLargePreviewSize + profile.iconDrawablePaddingPx;
+        } else {
+            mLargePreviewSize = 0;
+            nameParams.topMargin = isInAppDrawer()
+                    ? profile.getAllAppsProfile().getIconSizePx()
+                        + profile.getAllAppsProfile().getIconDrawablePaddingPx()
+                    : profile.iconSizePx + profile.iconDrawablePaddingPx;
+        }
+        boolean shouldCenterIcon = profile.iconCenterVertically && !isLargeFolder();
         if (shouldCenterIcon) {
             int iconSize = mActivity.getDeviceProfile().iconSizePx;
             Paint.FontMetrics fm = mFolderName.getPaint().getFontMetrics();
@@ -666,6 +716,10 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
      * Returns the list of items which should be visible in the preview
      */
     public List<ItemInfo> getPreviewItemsOnPage(int page) {
+        if (isLargeFolder() && page == 0) {
+            List<ItemInfo> contents = mInfo.getContents();
+            return new ArrayList<>(contents.subList(0, Math.min(9, contents.size())));
+        }
         return mPreviewVerifier.setFolderInfo(mInfo).previewItemsForPage(page, mInfo.getContents());
     }
 
@@ -703,6 +757,31 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            mPreviewTapItem = previewItemAt(event.getX(), event.getY());
+            mPreviewDownX = event.getX();
+            mPreviewDownY = event.getY();
+        } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+            int slop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
+            if (Math.hypot(event.getX() - mPreviewDownX, event.getY() - mPreviewDownY) > slop) {
+                mPreviewTapItem = null;
+            }
+        } else if (event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+            mPreviewTapItem = null;
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP && mPreviewTapItem != null
+                && !mLongPressHelper.hasPerformedLongPress()) {
+            WorkspaceItemInfo item = mPreviewTapItem;
+            mPreviewTapItem = null;
+            MotionEvent cancel = MotionEvent.obtain(event);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            super.onTouchEvent(cancel);
+            mLongPressHelper.onTouchEvent(cancel);
+            cancel.recycle();
+            com.android.launcher3.touch.ItemClickHandler.onClickAppShortcut(this, item,
+                    Launcher.getLauncher(getContext()));
+            playSoundEffect(android.view.SoundEffectConstants.CLICK);
+            return true;
+        }
         if (event.getAction() == MotionEvent.ACTION_DOWN
                 && shouldIgnoreTouchDown(event.getX(), event.getY())) {
             return false;
@@ -789,11 +868,11 @@ public class FolderIcon extends FrameLayout implements FloatingIconViewCompanion
             title = getContext().getString(R.string.unnamed_folder);
         }
         int size = mInfo.getContents().size();
-        if (size < MAX_NUM_ITEMS_IN_PREVIEW) {
+        if (size < getPreviewCapacity()) {
             return getContext().getString(R.string.folder_name_format_exact, title, size);
         } else {
             return getContext().getString(R.string.folder_name_format_overflow, title,
-                    MAX_NUM_ITEMS_IN_PREVIEW);
+                    getPreviewCapacity());
         }
     }
 
