@@ -4,10 +4,10 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-3aa989047164896b857c9d94127cfff2d68de25f
+df7868595d8e1623689ffdc1aea4080327db5541
 
 Global:
-30% (equal-weight estimate across six modules; not acceptance completion)
+26% (rounded equal-weight estimate across seven modules; not acceptance completion)
 
 Modules:
 - M1 Large Folders: 0% — no committed implementation
@@ -15,7 +15,8 @@ Modules:
 - M3 One UI Finder: 90% — complete CI passed; Samsung/missing-component device checks pending
 - M4 Dock Glass: 0% — not started
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints and proportional migration; CI/device checks pending
-- M6 Widget Stacks: 20% — model/load/paging/host foundations; no creation/editor/resize/migration yet
+- M6 Widget Stacks: 25% — model/load/view, atomic create/delete and migration foundations; UI/resize/runtime pending
+- M7 Max Icons / Max Folders: 0% — required annex; individual workspace-only 1x1/2x2 items
 
 Completed:
 - Recovery: original feature HEAD 5c25056, 9 ahead/0 behind base 155ccd1ee49e29e839ca603072777a9b7ef1e52c.
@@ -31,7 +32,8 @@ Completed:
 - M6 model/type12/rank tests: 07309a0; OPTIONS stores active member row ID.
 - M6 nested loading and rank normalization: 59c25cf; broken providers retained.
 - M6 PagedView/PageIndicatorDots/real host views and async host attachment: 3aa9890.
-- No UI entry creates stacks yet; do not expose until persistence/deletion/migration are safe.
+- M6 atomic create/delete: 7f2734c; migration copies members and remaps active row: df78685.
+- M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
 - Monitor M6 CI; implement atomic creation/deletion, picker integration and native editor.
@@ -40,12 +42,20 @@ Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
-- M6: atomic create through ModelWriter; reuse BaseWidgetSheet picker and PendingRequestArgs container.
-- M6: editor/remove/reorder/add, stack resize/constraints, migration, restore/provider updates still pending.
+- M6: connect atomic ModelWriter creation, BaseWidgetSheet picker and PendingRequestArgs container.
+- M6: editor/remove/reorder/add, resize, restore/provider updates and integration tests pending.
 
 Architecture decisions:
 - Remote GitHub is durable state; no local clone or full local build.
 - Only feature/oneui-enhancements may change; never merge into 16-dev.
+- Order: M3 -> M5 -> M6 -> M1 + M7 together -> M4 -> M2; finish current M6 unit first.
+- M7: per-app contextual maximize/restore, real 2x2 CellLayout occupancy, intentional persisted state.
+- M7 folders MUST share M1 canonical state/3x3 direct-launch preview; no duplicate flags/systems.
+- M7: native popup, nearest safe placement/refusal, same item identity, adaptive/themed icons/badges.
+- M7: workspace only, no Hotseat/global scaling/Nothing mode; preserve drag, labels, a11y, animations.
+- M7: restart/reboot/restore/orientation/grid persistence; use M5 migration; do not apply to stacks.
+- Nothing is UX inspiration only; no proprietary assets/code; inspect open-source file licenses.
+- Future normal/final/BACKUP-STOP reports include M7 and global across all seven modules.
 - Use existing CellLayout placement, spans and AppWidget host.
 - Stack model must persist membership/rank and own one workspace footprint.
 - DefaultLauncher stack model/view studied; files are GPLv3 despite repository Apache metadata.
@@ -73,8 +83,8 @@ Relevant files:
 Validation:
 - d73d45d: eight isolated Java constraint scenarios passed; not an Android build.
 - CI 34423066055 (d73d45d): all three APK builds and spotlessCheck PASSED.
-- CI 34423420226 (a78a0c9): all three APK builds and spotlessCheck PASSED.
-- M6 CI: 34423714535 (model), 34423937406 (loader), 34424246855 (view) running/partial success.
+- CI a78a0c9 (34423420226) and M6 loader 59c25cf (34423937406): all APKs/style PASSED.
+- M6 view CI 34424246855 failed ItemInflater.kt:154 context.modelWriter; fixed in 8909ad2; recheck latest CI.
 - Cancel duplicate pull_request runs; keep push runs. Progress-only PR updates also trigger duplicate CI.
 - CI builds NightlyRelease/GithubDebug/PlayDebug; does not execute multivalent Android tests.
 - APK artifacts exist for d73d45d/a78a0c9; all runtime/device acceptance checks remain pending.
