@@ -31,11 +31,11 @@ Current:
 - CI34442888473/f275b49 GREEN: compile/style, all8 tests and process-death restore; 13 actual screenshots.
 - e278912 fixes negative label padding; CI34443803289 all3 APK/style GREEN; label-bound test failed.
 - HOME-category harness6f60a5b passed full emulator CI34443608218.
-- Real normal/Max/preview launch test563725f, shared touch helper2887d36; CI34444494208 emulator running.
+- Current CI34446579147/b7c3855 validates settled icon-centered taps and durable screenshot requests.
 - 418396f initializes preview rule before spring animation; shares square shape and all9 preview members.
 - CI34445531657 all3 APK GREEN; spring crash absent; Max touch/Crystal capture failed.
 - Capture requests now durable shell files (logcat pressure dropped07); wait settled workspace before app taps.
-- USER: emulator wallpaper light through bottom; separate native WallpaperManager setup before screenshots.
+- CI34445977242: light wallpaper setup PASS;10 real light-background captures downloaded; Max tap still failed.
 
 Next:
 - Inspect current CI failures if any; preserve validation; repeat until coherent acceptance checks pass.
@@ -85,8 +85,8 @@ Validation:
 Screenshots:
 - USER destination on emulator AND user's Android: /storage/emulated/0/Download/lawnchair/
 - REAL ADB screencap/pull only; PNG signature/IHDR checked in CI, full CRC/zlib integrity checked locally.
-- 94 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
-- Downloaded artifacts:34443803289/10139228809,34443608218/10139079462,34442888473/10138782051 + earlier.
+- 104 PNG files downloaded, covering13 views; canonical02/13 visually verified square; label recapture pending.
+- Latest light screenshots: CI34445977242/artifact10139936029; main10 updated; canonical02/03/13 still older.
 - Required01-home,02-large-folder,03-large-folder-open,04-dock-off,05-dock-solid,06-dock-blur,07-dock-crystal.png;
 - 08-widget-grid,09-widget-stack-page1,10-widget-stack-page2,11-widget-stack-editor,12-max-icon,13-max-folder.png.
 - Square shape confirmed visually; label-padding fix e278912 needs refreshed screenshot/glyph-bound confirmation.
