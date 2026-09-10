@@ -63,6 +63,7 @@ import com.android.launcher3.model.data.FolderInfo;
 import com.android.launcher3.model.data.IconRequestInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.model.data.WidgetStackInfo;
 import com.android.launcher3.pm.UserCache;
 import com.android.launcher3.shortcuts.ShortcutKey;
 import com.android.launcher3.util.ApiWrapper;
@@ -101,6 +102,7 @@ public class LoaderCursor extends CursorWrapper {
     private final @Nullable LauncherRestoreEventLogger mRestoreEventLogger;
 
     private final IntArray mItemsToRemove = new IntArray();
+    private IntArray mWidgetStackContainers;
     private final IntArray mRestoredRows = new IntArray();
     private final IntSparseArrayMap<GridOccupancy> mOccupied = new IntSparseArrayMap<>();
 
@@ -539,6 +541,35 @@ public class LoaderCursor extends CursorWrapper {
         info.cellY = getInt(mCellYIndex);
     }
 
+    /** Checks persisted parent type, including parents later in cursor order. */
+    public boolean isWidgetStackContainer(int containerId) {
+        if (containerId < 0) return false;
+        if (mWidgetStackContainers == null) {
+            mWidgetStackContainers = new IntArray();
+            try (Cursor parents = mModel.getModelDbController().query(
+                    new String[]{Favorites._ID},
+                    Favorites.ITEM_TYPE + " = ? AND " + Favorites.CONTAINER + " = ?",
+                    new String[]{String.valueOf(Favorites.ITEM_TYPE_WIDGET_STACK),
+                            String.valueOf(Favorites.CONTAINER_DESKTOP)}, null)) {
+                while (parents.moveToNext()) {
+                    mWidgetStackContainers.add(parents.getInt(0));
+                }
+            }
+        }
+        return mWidgetStackContainers.contains(containerId);
+    }
+
+    public WidgetStackInfo findOrMakeWidgetStack(int id, IntSparseArrayMap<ItemInfo> loadedItems) {
+        ItemInfo existing = loadedItems.get(id);
+        if (existing instanceof WidgetStackInfo stack) return stack;
+        CollectionInfo pending = mPendingCollectionInfo.get(id);
+        if (pending instanceof WidgetStackInfo stack) return stack;
+        WidgetStackInfo stack = new WidgetStackInfo();
+        stack.id = id;
+        mPendingCollectionInfo.put(id, stack);
+        return stack;
+    }
+
     /**
      * Return an existing FolderInfo object if we have encountered this ID previously,
      * or make a new one.
@@ -588,6 +619,9 @@ public class LoaderCursor extends CursorWrapper {
                     && info.container != CONTAINER_DESKTOP
                     && info.container != CONTAINER_HOTSEAT) {
                 findOrMakeFolder(info.container, loadedItems).add(info);
+            } else if (info.itemType == Favorites.ITEM_TYPE_APPWIDGET
+                    && isWidgetStackContainer(info.container)) {
+                findOrMakeWidgetStack(info.container, loadedItems).add(info);
             }
             if (mRestoreEventLogger != null) {
                 mRestoreEventLogger.logSingleFavoritesItemRestored(itemType);

@@ -46,6 +46,7 @@ import com.android.launcher3.model.data.IconRequestInfo
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.ItemInfoWithIcon
 import com.android.launcher3.model.data.LauncherAppWidgetInfo
+import com.android.launcher3.model.data.WidgetStackInfo
 import com.android.launcher3.model.data.WorkspaceItemInfo
 import com.android.launcher3.pm.PackageInstallInfo
 import com.android.launcher3.pm.UserCache
@@ -117,6 +118,7 @@ class WorkspaceItemProcessor(
                 Favorites.ITEM_TYPE_SHORTCUT -> processLegacyShortcut()
                 Favorites.ITEM_TYPE_FOLDER,
                 Favorites.ITEM_TYPE_APP_PAIR -> processFolderOrAppPair()
+                Favorites.ITEM_TYPE_WIDGET_STACK -> processWidgetStack()
                 Favorites.ITEM_TYPE_APPWIDGET,
                 Favorites.ITEM_TYPE_CUSTOM_APPWIDGET -> processWidget()
             }
@@ -498,6 +500,22 @@ class WorkspaceItemProcessor(
             ?.firstOrNull()
     }
 
+    private fun processWidgetStack() {
+        if (c.container != Favorites.CONTAINER_DESKTOP || c.spanX <= 0 || c.spanY <= 0) {
+            c.markDeleted("Invalid widget stack footprint", RestoreError.INVALID_WIDGET_SIZE)
+            return
+        }
+        val stack = c.findOrMakeWidgetStack(c.id, loadedItems)
+        c.applyCommonProperties(stack)
+        stack.user = c.user
+        stack.title = c.getString(c.mTitleIndex)
+        stack.spanX = c.spanX
+        stack.spanY = c.spanY
+        stack.activeWidgetId = c.options
+        c.markRestored()
+        c.checkAndAddItem(stack, loadedItems, memoryLogger)
+    }
+
     /**
      * Loads CollectionInfo information from the database and formats it. This function runs while
      * LoaderTask is still active; some of the processing for folder content items is done after all
@@ -555,6 +573,7 @@ class WorkspaceItemProcessor(
         appWidgetInfo.spanX = c.spanX
         appWidgetInfo.spanY = c.spanY
         appWidgetInfo.options = c.options
+        appWidgetInfo.rank = c.rank
         appWidgetInfo.user = c.user
         appWidgetInfo.sourceContainer = c.appWidgetSource
         appWidgetInfo.restoreStatus = c.restoreFlag
@@ -568,7 +587,9 @@ class WorkspaceItemProcessor(
             )
             return
         }
-        if (!c.isOnWorkspaceOrHotseat) {
+        val isStackMember = c.itemType == Favorites.ITEM_TYPE_APPWIDGET &&
+            c.isWidgetStackContainer(c.container)
+        if (!c.isOnWorkspaceOrHotseat && !isStackMember) {
             c.markDeleted(
                 "processWidget: invalid Widget container != CONTAINER_DESKTOP nor CONTAINER_HOTSEAT." +
                     " id=${c.id}," +
@@ -583,6 +604,13 @@ class WorkspaceItemProcessor(
             appWidgetInfo.bindOptions = c.parseIntent()
         }
         val inflationResult = widgetInflater.inflateAppWidget(appWidgetInfo)
+        if (isStackMember && inflationResult.type == WidgetInflater.TYPE_DELETE) {
+            // Preserve a broken member for the editor; other members remain available.
+            appWidgetInfo.restoreStatus = appWidgetInfo.restoreStatus or
+                LauncherAppWidgetInfo.FLAG_PROVIDER_NOT_READY
+            c.checkAndAddItem(appWidgetInfo, loadedItems, memoryLogger)
+            return
+        }
         var shouldUpdate = inflationResult.isUpdate
         val lapi = inflationResult.widgetInfo
         FileLog.d(
@@ -604,6 +632,7 @@ class WorkspaceItemProcessor(
                 if (
                     !c.hasRestoreFlag(LauncherAppWidgetInfo.FLAG_RESTORE_STARTED) &&
                         !isSafeMode &&
+                        !isStackMember &&
                         (si == null) &&
                         (lapi == null) &&
                         !isArchived
@@ -673,6 +702,12 @@ class WorkspaceItemProcessor(
         c.checkAndAddItem(appWidgetInfo, loadedItems, memoryLogger)
     }
 
+    private fun processWidgetStackItems() {
+        for (item in loadedItems) {
+            if (item is WidgetStackInfo) item.sortWidgetsByRank()
+        }
+    }
+
     /**
      * After all items have been processed and added to the BgDataModel, this method can correctly
      * rank items inside folders and load the correct miniature preview icons to be shown when the
@@ -727,6 +762,7 @@ class WorkspaceItemProcessor(
         val itemsDeleted = c.commitDeleted()
 
         processFolderItems()
+        processWidgetStackItems()
         // After all items have been processed and added to the BgDataModel, this method
         // requests high-res icons for the items that are part of an app pair.
         loadedItems.forEach { if (it is AppPairInfo) it.fetchHiResIconsIfNeeded(iconCache) }
