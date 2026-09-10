@@ -53,8 +53,10 @@ object WidgetStackEditor {
             }
             Column {
                 Text(stringResource(R.string.widget_stack_title), style = MaterialTheme.typography.titleLarge)
-                Column(Modifier.heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)
-                    .verticalScroll(rememberScrollState())) {
+                Column(
+                    Modifier.heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
                     ReorderableColumn(
                         list = members,
                         onSettle = { from, to ->
@@ -86,8 +88,9 @@ object WidgetStackEditor {
                                     }
                                     TextButton(onClick = {
                                         WidgetStackController.remove(launcher, view, member)
-                                        if (members.size == 1) close(true)
-                                        else {
+                                        if (members.size == 1) {
+                                            close(true)
+                                        } else {
                                             members = stack.getContents()
                                             active = stack.getActiveWidget()?.id
                                         }
