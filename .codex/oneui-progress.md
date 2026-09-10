@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-59f20b3fde8623ee5844de298e6a44fc5bf8b5fb
+d6c793c61c14b1398b9c33aada28f621748e83db
 
 Global:
 26% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,13 +36,13 @@ Completed:
 - M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
 
 Current:
-- M6 nested host lookup and pending-member reinflation preserve stack pages; monitor CI, then picker/editor.
+- M6 native picker target/binding/config-result routing added; editor and creation entry next.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
-- M6: connect atomic ModelWriter creation, BaseWidgetSheet picker and PendingRequestArgs container.
+- M6: connect creation entry/editor; picker target uses existing PendingRequestArgs container.
 - M6: editor/remove/reorder/add, resize, restore/provider updates and integration tests pending.
 
 Architecture decisions:
@@ -94,5 +94,5 @@ Validation:
 
 Blockers:
 - No remote access blocker. Android interaction and instrumented-test execution pending.
-- User prompt ends in APK section after “build”; remaining APK instructions not received.
+- One-member stacks remain valid; standalone conversion awaits safe atomic footprint replacement.
 - WIP: no transient feature edits; all described source committed.

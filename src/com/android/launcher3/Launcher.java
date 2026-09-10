@@ -891,6 +891,10 @@ public class Launcher extends StatefulActivity<LauncherState>
                         ON_ACTIVITY_RESULT_ANIMATION_DELAY, false,
                         () -> getStateManager().goToState(NORMAL));
             } else {
+                if (requestArgs.container >= 0) {
+                    completeTwoStageWidgetDrop(resultCode, appWidgetId, requestArgs);
+                    return;
+                }
                 CellPos presenterPos = getCellPosMapper().mapModelToPresenter(requestArgs);
                 if (requestArgs.container == CONTAINER_DESKTOP) {
                     // When the screen id represents an actual screen (as opposed to a rank)
@@ -971,6 +975,24 @@ public class Launcher extends StatefulActivity<LauncherState>
     @Thunk
     void completeTwoStageWidgetDrop(
             final int resultCode, final int appWidgetId, final PendingRequestArgs requestArgs) {
+        if (requestArgs.container >= 0) {
+            if (resultCode == RESULT_OK) {
+                completeAddAppWidget(appWidgetId, requestArgs,
+                        mWorkspace.getWidgetForAppWidgetId(appWidgetId), null, false, true, null);
+            } else {
+                com.android.launcher3.widget.WidgetStackView stackView =
+                        com.android.launcher3.widget.WidgetStackController.findStack(
+                                this, requestArgs.container);
+                LauncherAppWidgetHostView memberView = mWorkspace.getWidgetForAppWidgetId(appWidgetId);
+                if (stackView != null && memberView != null
+                        && memberView.getTag() instanceof LauncherAppWidgetInfo member) {
+                    com.android.launcher3.widget.WidgetStackController.remove(this, stackView, member);
+                } else if (appWidgetId >= 0) {
+                    mAppWidgetHolder.deleteAppWidgetId(appWidgetId);
+                }
+            }
+            return;
+        }
         CellLayout cellLayout = mWorkspace.getScreenWithId(
                 getCellPosMapper().mapModelToPresenter(requestArgs).screenId);
         Runnable onCompleteRunnable = null;
@@ -1514,10 +1536,11 @@ public class Launcher extends StatefulActivity<LauncherState>
             // Show resize frame on the newly inflated LauncherAppWidgetHostView.
             LauncherAppWidgetHostView reInflatedHostView =
                     getWorkspace().getWidgetForAppWidgetId(appWidgetId);
-            showWidgetResizeFrame(
-                    reInflatedHostView,
-                    (LauncherAppWidgetInfo) reInflatedHostView.getTag(),
-                    presenterPos);
+            if (reInflatedHostView == null) return;
+            if (itemInfo.container < 0) {
+                showWidgetResizeFrame(reInflatedHostView,
+                        (LauncherAppWidgetInfo) reInflatedHostView.getTag(), presenterPos);
+            }
             // We always update widget size after re-inflating PendingAppWidgetHostView
             WidgetSizes.updateWidgetSizeRanges(
                     reInflatedHostView, this, itemInfo.spanX, itemInfo.spanY);
@@ -1531,6 +1554,10 @@ public class Launcher extends StatefulActivity<LauncherState>
         } else if (itemInfo instanceof PendingRequestArgs) {
             launcherInfo.sourceContainer =
                     ((PendingRequestArgs) itemInfo).getWidgetSourceContainer();
+        }
+        if (com.android.launcher3.widget.WidgetStackController.completeAdd(
+                this, itemInfo.container, launcherInfo, appWidgetInfo, hostView)) {
+            return;
         }
         getModelWriter().addItemToDatabase(launcherInfo,
                 itemInfo.container, presenterPos.screenId, presenterPos.cellX, presenterPos.cellY);

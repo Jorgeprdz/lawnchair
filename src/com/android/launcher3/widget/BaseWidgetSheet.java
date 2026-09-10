@@ -201,6 +201,13 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
      * Click handler for tap to add button. This handler assumes we are in the Launcher activity and
      * should not be used when the widget sheet is displayed elsewhere.
      */
+    private int mWidgetStackTarget = -1;
+
+    /** Scope the existing picker's Add action to one persistent stack. */
+    public void setWidgetStackTarget(int stackId) {
+        mWidgetStackTarget = stackId;
+    }
+
     private void addWidget(@NonNull PendingAddItemInfo info) {
         // Using a boolean flag here to make sure the callback is only run once. This should never
         // happen because we close the sheet and it will be reconstructed the next time it is
@@ -213,6 +220,10 @@ public abstract class BaseWidgetSheet extends AbstractSlideInView<BaseActivity>
             // Going to NORMAL state will also dismiss the All Apps view if it is showing.
             Launcher launcher = Launcher.getLauncher(mActivityContext);
             launcher.getStateManager().goToState(NORMAL, forSuccessCallback(() -> {
+                if (mWidgetStackTarget >= 0) {
+                    WidgetStackController.requestAdd(launcher, mWidgetStackTarget, info);
+                    return;
+                }
                 launcher.getAccessibilityDelegate().addToWorkspace(info,
                         /*accessibility=*/ false,
                         /*finishCallback=*/ (success) -> {
