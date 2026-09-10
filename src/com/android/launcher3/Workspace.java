@@ -3730,6 +3730,16 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
      */
     public void removeWidget(int appWidgetId) {
         mapOverItems((info, view) -> {
+            if (info instanceof com.android.launcher3.model.data.WidgetStackInfo stack
+                    && view instanceof com.android.launcher3.widget.WidgetStackView stackView) {
+                for (LauncherAppWidgetInfo member : stack.getContents()) {
+                    if (member.appWidgetId == appWidgetId) {
+                        com.android.launcher3.widget.WidgetStackController.remove(
+                                mLauncher, stackView, member);
+                        return true;
+                    }
+                }
+            }
             if (info instanceof LauncherAppWidgetInfo) {
                 LauncherAppWidgetInfo appWidgetInfo = (LauncherAppWidgetInfo) info;
                 if (appWidgetInfo.appWidgetId == appWidgetId) {
