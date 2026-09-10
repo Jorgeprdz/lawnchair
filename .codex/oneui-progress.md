@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 5e597aaf6076b296e8338f284cec8d5ff570710a
+HEAD (audited before checkpoint): fbdbc36b6462711ee86c2bd5eaf5976754def788
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -31,9 +31,9 @@ Current:
 - Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
 
 Next:
-- Validate selected-page persistence fix in WidgetStackView; use next successful push APK for emulator.
+- USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - Real swipe reaches page0/scroll0 but active row stayed on page1; use native notifyPageSwitchListener hook.
-- Run latest interaction tests after compile; finish provider failure, vertical scroll, picker/editor and migration acceptance.
+- Finish M6 source gaps, then implement M1+M7, M4, M2; all unrun validation remains explicitly pending.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:
@@ -75,8 +75,8 @@ Validation:
 - Latest paging diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34435384391, artifact10136032142.
 - Explicit ANDROID_USER_HOME/ANDROID_AVD_HOME + AVD existence checks dc9c8cd; bounded ADB/setup waits.
 - 51b25f6/34434279638 compile/style green; emulator34434641844: host regression PASS, real widget tap PASS; first swipe timed out.
-- Feature pushes: GithubDebug + instrumentation/style; duplicate feature PR jobs skipped (f70e137).
-- Manual oneui-fast=true gives quick validation; default manual run retains all 3 APK variants.
+- Automatic feature push CI paused at user request; manual full build/style/tests remain available for final validation.
+- Do not dispatch intermediate builds/emulators; final manual run retains all 3 APK variants and validation.
 - oneui-apk-run reuses successful APKs only after source/build checks (6 guard cases passed).
 - Gradle cache defaults read-only off default branch; feature cache writes enabled b722366 (caching already true).
 
