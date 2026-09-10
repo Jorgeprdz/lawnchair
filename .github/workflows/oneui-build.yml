@@ -1,0 +1,95 @@
+name: OneUI separate build
+
+on:
+  push:
+    branches:
+      - feature/oneui-enhancements
+  workflow_dispatch:
+
+env:
+  ONEUI_APPLICATION_ID: app.lawnchair.oneui
+
+jobs:
+  build-oneui-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Make this build install separately
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('build.gradle')
+          s = p.read_text()
+
+          old_id = "applicationId 'app.lawnchair'"
+          new_id = "applicationId 'app.lawnchair.oneui'"
+          if old_id not in s:
+              raise SystemExit('Expected Github flavor applicationId was not found')
+          s = s.replace(old_id, new_id, 1)
+
+          old_name = 'resValue("string", "derived_app_name", "Lawnchair (Debug)")'
+          new_name = 'resValue("string", "derived_app_name", "Lawnchair OneUI")'
+          if old_name not in s:
+              raise SystemExit('Expected debug app name was not found')
+          s = s.replace(old_name, new_name, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Restore stable signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ONEUI_KEYSTORE_B64 || secrets.ONEUI_KEYSTORE || secrets.STABLE_KEYSTORE_B64 || secrets.STABLE_KEYSTORE || secrets.KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD || secrets.ONEUI_KEYSTORE_PASSWORD || secrets.STABLE_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS || secrets.STABLE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONEUI_KEY_PASSWORD || secrets.STABLE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ] || [ -z "${STORE_PASSWORD:-}" ] || [ -z "${KEY_ALIAS:-}" ] || [ -z "${KEY_PASSWORD:-}" ]; then
+            echo "Stable signing secrets are incomplete."
+            echo "Expected ONEUI_* secrets (or compatible fallback names)."
+            exit 1
+          fi
+
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/oneui-stable.jks"
+          cat > keystore.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
+          EOF
+
+      - name: Build separate OneUI APK
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug
+
+      - name: Verify package and signing certificate
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          if [ -z "$APK" ]; then
+            echo "APK not found"
+            exit 1
+          fi
+
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+
+          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
+          "$APKSIGNER" verify --print-certs "$APK"
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-Separate-Debug
+          path: build/outputs/apk/**/*.apk
+          if-no-files-found: error
