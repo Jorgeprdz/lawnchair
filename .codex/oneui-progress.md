@@ -33,8 +33,8 @@ Current:
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Full CI 34439748126/c340706: style/GithubDebug/PlayDebug passed; Nightly/emulator pending.
-- Latest tests: fast CI 34440174457/44203d9 running in parallel; includes vertical scrolling and missing providers.
+- Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator running, screenshot acknowledgement bug known.
+- Latest fast CI 34440512144/cfde191 running: fixes UiAutomation screenshot ack; superseded 34440174457 cancelled.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -96,5 +96,5 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- /storage/emulated/0/Download/lawnchair created; prior five emulator artifacts have no PNG. Download new PNGs when ready.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. None downloaded yet.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
