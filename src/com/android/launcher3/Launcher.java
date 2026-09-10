@@ -1892,7 +1892,10 @@ public class Launcher extends StatefulActivity<LauncherState>
         final boolean isActivityStarted = addFlowHandler.startConfigActivity(
                 this, appWidgetId, info, REQUEST_CREATE_APPWIDGET);
 
-        if (!enableAddAppWidgetViaConfigActivityV2() && isActivityStarted) {
+        // Stack membership is committed only after configuration succeeds. The existing
+        // PendingRequestArgs retains the stack container and owns cancellation cleanup.
+        if (isActivityStarted && (info.container >= 0
+                || !enableAddAppWidgetViaConfigActivityV2())) {
             return;
         }
 

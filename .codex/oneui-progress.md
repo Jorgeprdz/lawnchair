@@ -4,7 +4,7 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-294f23b3adc48656be51cf143c940a16cab72b3c
+71c3076b718b18326460bd74290a08f597a8ca77
 
 Global:
 28% (rounded equal-weight estimate across seven modules; not acceptance completion)
@@ -36,7 +36,7 @@ Completed:
 - M6 context fix: 8909ad2; selector 50bfffb/editor 294f23b; creation uses native widget resize frame.
 
 Current:
-- M6 creation action wraps one widget atomically and opens editor; monitor CI and lifecycle/resize.
+- M6 member insertion/active selection now transactional; stale/failed binding reports host ID cleanup.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
@@ -87,8 +87,8 @@ Validation:
 - d73d45d: eight isolated Java constraint scenarios passed; not an Android build.
 - CI 34423066055 (d73d45d): all three APK builds and spotlessCheck PASSED.
 - CI a78a0c9 (34423420226) and M6 loader 59c25cf (34423937406): all APKs/style PASSED.
-- M6 migration CI 34424966519 (df78685): all APK builds/style PASSED; latest host fixes CI pending.
-- Cancel duplicate pull_request runs; keep push runs. Progress-only PR updates also trigger duplicate CI.
+- M6 migration CI 34424966519 and host restore CI 34426161207: all APK builds/style PASSED.
+- Selector CI 34426603559 type errors fixed ff78c06; latest picker/editor/creation CI pending.
 - CI builds NightlyRelease/GithubDebug/PlayDebug; does not execute multivalent Android tests.
 - APK artifacts exist for d73d45d/a78a0c9; all runtime/device acceptance checks remain pending.
 

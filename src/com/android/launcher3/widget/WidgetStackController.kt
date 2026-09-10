@@ -89,17 +89,21 @@ object WidgetStackController {
         if (stack.getContents().any { it.appWidgetId == member.appWidgetId }) return true
         member.spanX = stack.spanX
         member.spanY = stack.spanY
-        member.rank = stack.getContents().size
-        launcher.modelWriter.addItemToDatabase(member, stack.id, stack.screenId, 0, 0)
-        stack.add(member)
-        stack.activeWidgetId = member.id
-        launcher.modelWriter.updateItemInDatabase(stack)
-        launcher.itemInflater.prepareAppWidget(view, member)
-        val pages = stack.getContents().map { item ->
-            if (item === member) view else stackView.findWidgetByAppWidgetId(item.appWidgetId)
-                ?: launcher.itemInflater.inflateWidgetStackMember(item)
-        }
-        stackView.bind(stack, launcher.modelWriter, pages)
+        launcher.modelWriter.addWidgetToStack(stack, member, {
+            if (launcher.isDestroyed || !stackView.isAttachedToWindow) {
+                launcher.model.forceReload()
+            } else {
+                launcher.itemInflater.prepareAppWidget(view, member)
+                val pages = stack.getContents().map { item ->
+                    if (item === member) view else stackView.findWidgetByAppWidgetId(item.appWidgetId)
+                        ?: launcher.itemInflater.inflateWidgetStackMember(item)
+                }
+                stackView.bind(stack, launcher.modelWriter, pages)
+            }
+        }, {
+            launcher.appWidgetHolder.deleteAppWidgetId(member.appWidgetId)
+            Toast.makeText(launcher, R.string.widget_stack_incompatible, Toast.LENGTH_SHORT).show()
+        })
         return true
     }
 

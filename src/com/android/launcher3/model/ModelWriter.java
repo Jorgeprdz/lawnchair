@@ -369,6 +369,61 @@ public class ModelWriter {
         addItemsToDatabase(Collections.singletonList(item));
     }
 
+    /** Inserts a member and the active selection together, or reports failure for ID cleanup. */
+    public void addWidgetToStack(WidgetStackInfo stack, LauncherAppWidgetInfo member,
+            Runnable onAdded, Runnable onFailure) {
+        final int loadId = mModel.getLastLoadId();
+        member.id = mModel.getModelDbController().generateNewItemId();
+        member.container = stack.id;
+        member.screenId = stack.screenId;
+        member.cellX = 0;
+        member.cellY = 0;
+        final int spanX = member.spanX;
+        final int spanY = member.spanY;
+        // Unlike an ordinary ModelTask, an obsolete bind must report failure so its host ID
+        // can be released rather than silently dropping the task during a model reload.
+        MODEL_EXECUTOR.execute(() -> {
+            if (loadId != mModel.getLastLoadId()
+                    || mBgDataModel.itemsIdMap.get(stack.id) != stack) {
+                mUiExecutor.execute(onFailure);
+                return;
+            }
+            try (SQLiteTransaction transaction = mModel.getModelDbController().newTransaction()) {
+                ContentValues selection = new ContentValues();
+                selection.put(Favorites.OPTIONS, member.id);
+                int updated = mModel.getModelDbController().update(selection,
+                        Favorites._ID + "=? AND " + Favorites.ITEM_TYPE + "=? AND "
+                                + Favorites.SPANX + "=? AND " + Favorites.SPANY + "=?",
+                        new String[]{String.valueOf(stack.id),
+                                String.valueOf(Favorites.ITEM_TYPE_WIDGET_STACK),
+                                String.valueOf(spanX), String.valueOf(spanY)});
+                if (updated != 1) {
+                    throw new IllegalStateException("Widget stack was removed or resized");
+                }
+                member.rank = stack.getContents().size();
+                ContentWriter values = new ContentWriter(mContext);
+                member.onAddToDatabase(values);
+                values.put(Favorites._ID, member.id);
+                if (mModel.getModelDbController().insert(values.getValues(mContext)) < 0) {
+                    throw new IllegalStateException("Unable to insert widget stack member");
+                }
+                transaction.commit();
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Unable to add widget stack member", e);
+                mUiExecutor.execute(onFailure);
+                return;
+            }
+            synchronized (mBgDataModel) {
+                stack.add(member);
+                stack.setActiveWidgetId(member.id);
+                mBgDataModel.addItems(mContext, Collections.singletonList(member), mOwner);
+                mBgDataModel.updateItems(Collections.singletonList(stack), mOwner);
+            }
+            notifyOtherCallbacks(c -> c.bindItemsUpdated(Collections.singleton(stack)));
+            mUiExecutor.execute(onAdded);
+        });
+    }
+
     /** Wraps an existing widget in a stack without a partially committed overlapping footprint. */
     public void createWidgetStack(final LauncherAppWidgetInfo widget,
             java.util.function.Consumer<WidgetStackInfo> onCreated, Runnable onFailure) {
