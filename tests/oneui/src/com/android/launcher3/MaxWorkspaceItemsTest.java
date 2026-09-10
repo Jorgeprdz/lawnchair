@@ -107,14 +107,23 @@ public class MaxWorkspaceItemsTest {
                     assertNoOverlap((CellLayout) view.getParent().getParent());
                 });
                 drain();
+                WidgetStackBindingTest.await(scenario, launcher -> {
+                    FolderIcon view = (FolderIcon) find(launcher, folderId.get());
+                    return view.getLargePreviewSize() > 0 && !view.isLayoutRequested()
+                            && !view.getFolderName().isLayoutRequested();
+                });
+                OneUiScreenshots.capture("02-large-folder.png");
                 scenario.onActivity(launcher -> {
                     FolderIcon view = (FolderIcon) find(launcher, folderId.get());
                     var name = view.getFolderName();
-                    float labelTop = name.getTop() + name.getBaseline() + name.getPaint().getFontMetrics().top;
-                    assertTrue("Large folder background must not cover its label",
-                            labelTop >= view.getPaddingTop() + view.getLargePreviewSize());
+                    var textBounds = new android.graphics.Rect();
+                    String title = name.getText().toString();
+                    name.getPaint().getTextBounds(title, 0, title.length(), textBounds);
+                    int labelTop = name.getTop() + name.getBaseline() + textBounds.top;
+                    int previewBottom = view.getPaddingTop() + view.getLargePreviewSize();
+                    assertTrue("Large folder label top=" + labelTop + " must be below preview=" + previewBottom,
+                            labelTop >= previewBottom);
                 });
-                OneUiScreenshots.capture("02-large-folder.png");
                 OneUiScreenshots.capture("13-max-folder.png");
                 launchSettingsAndReturn(scenario, folderId.get(), true);
                 scenario.onActivity(launcher -> {
