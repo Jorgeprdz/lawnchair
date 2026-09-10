@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): a98cfe2267ad11ba0eb2c860ad923d46fa6be457
+HEAD (audited before checkpoint): 7b3f3988790bb1aae3cd249ab8740baf56fa2350
 Global: 39% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -28,12 +28,12 @@ Completed:
 
 Current:
 - M1/M7 source implemented: shared CellLayout resize, canonical flags, loader, Max Icon, folder preview/menu.
-- Max drag preserves exact spans; Hotseat/folder insertion requires restoring normal size first.
+- Max drag preserves spans; native migrations retain 2x2 or restore 1x1 on grids smaller than 2x2.
 
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page correction fbdbc36 uses notifyPageSwitchListener; runtime revalidation deferred.
-- Finish Max item migration/drag visuals and M6 source gaps, then M4/M2; final runtime validation pending.
+- Review Max drag/animation geometry and remaining M6 source gaps, then M4/M2; runtime validation pending.
 - M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:

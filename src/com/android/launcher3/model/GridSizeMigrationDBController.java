@@ -451,6 +451,7 @@ public class GridSizeMigrationDBController {
         Iterator<DbEntry> iterator = sortedItemsToPlace.iterator();
         while (iterator.hasNext()) {
             final DbEntry entry = iterator.next();
+            entry.prepareWorkspaceSize(trgX, trgY);
             if (entry.minSpanX > trgX || entry.minSpanY > trgY) {
                 iterator.remove();
                 continue;
@@ -666,6 +667,11 @@ public class GridSizeMigrationDBController {
                 entry.spanX = c.getInt(indexSpanX);
                 entry.spanY = c.getInt(indexSpanY);
                 entry.activeWidgetId = c.getInt(indexOptions);
+                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPLICATION
+                        || entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER) {
+                    entry.workspaceSizeOptions = c.getInt(indexOptions);
+                    entry.prepareWorkspaceSize(Integer.MAX_VALUE, Integer.MAX_VALUE);
+                }
 
                 try {
                     // calculate weight

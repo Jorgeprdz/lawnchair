@@ -620,6 +620,7 @@ class GridSizeMigrationLogic {
         val iterator = itemsToPlace.mRemainingItemsToPlace.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
+            entry.prepareWorkspaceSize(trgX, trgY)
             if (entry.minSpanX > trgX || entry.minSpanY > trgY) {
                 iterator.remove()
                 continue
