@@ -23,6 +23,12 @@ public class DevicePlatformCapabilitiesTest {
         for (String name : new String[]{"android.view.SemBlurInfo", "android.view.SemBlurInfo$Builder"}) {
             try {
                 Class<?> type = Class.forName(name);
+                for (var field : type.getFields()) {
+                    if (field.getType() == int.class
+                            && java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                        Log.i("OneUiCapabilities", field.getName() + "=" + field.getInt(null));
+                    }
+                }
                 for (var constructor : type.getConstructors()) {
                     Log.i("OneUiCapabilities", constructor.toString());
                 }
