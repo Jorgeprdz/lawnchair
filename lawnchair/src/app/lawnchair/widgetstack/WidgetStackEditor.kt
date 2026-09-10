@@ -60,12 +60,13 @@ object WidgetStackEditor {
                 members = stack.getContents()
                 active = stack.getActiveWidget()?.id
             }
-            Column {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.85f).dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 Text(stringResource(R.string.widget_stack_title), style = MaterialTheme.typography.titleLarge)
-                Column(
-                    Modifier.heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.6f).dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
+                Column {
                     ReorderableColumn(
                         list = members,
                         onSettle = { from, to ->
