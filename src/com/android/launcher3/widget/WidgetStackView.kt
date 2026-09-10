@@ -193,6 +193,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         private var downX = 0f
         private var downY = 0f
         private var verticalGesture = false
+        private var touchInProgress = false
         private val slop = ViewConfiguration.get(context).scaledTouchSlop
 
         override fun getCurrentPageDescription(): String =
@@ -208,6 +209,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
                 downX = event.x
                 downY = event.y
                 verticalGesture = false
+                touchInProgress = true
                 parent?.requestDisallowInterceptTouchEvent(childCount > 1)
             }
             return try {
@@ -215,6 +217,7 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
             } finally {
                 if (event.actionMasked == MotionEvent.ACTION_UP ||
                     event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    touchInProgress = false
                     parent?.requestDisallowInterceptTouchEvent(false)
                 }
             }
@@ -230,8 +233,11 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
         }
 
         override fun requestDisallowInterceptTouchEvent(disallowIntercept: Boolean) {
-            // Keep direction arbitration here; child widgets still receive vertical gestures.
-            parent?.requestDisallowInterceptTouchEvent(disallowIntercept)
+            // A child releasing interception must not hand an ongoing stack swipe to Workspace.
+            // Direction arbitration remains here, so vertical scrolling still reaches the widget.
+            parent?.requestDisallowInterceptTouchEvent(
+                disallowIntercept || (touchInProgress && childCount > 1),
+            )
         }
 
         override fun onPageEndTransition() {
