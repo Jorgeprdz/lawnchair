@@ -113,7 +113,7 @@ fun FolderPreferences(
                 OneUiGlassIntensityPreference(
                     label = stringResource(R.string.glass_effect_intensity),
                     value = folderIntensity,
-                    onValueChangeFinished = { value ->
+                    onValueChange = { value ->
                         OneUiGlassPreferences.setFolderIntensity(context, value)
                         folderIntensity = value
                     },
