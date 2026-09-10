@@ -34,6 +34,6 @@ adb install -r "${app_apks[0]}"
 adb install -r -t "${test_apks[0]}"
 adb shell cmd package set-home-activity app.lawnchair.debug/app.lawnchair.LawnchairLauncher > oneui-emulator-results/home-role.txt 2>&1 || true
 adb logcat -c
-adb shell am instrument -w -r app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+timeout 300 adb shell am instrument -w -r app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
 grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/instrumentation.txt
 ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' oneui-emulator-results/instrumentation.txt
