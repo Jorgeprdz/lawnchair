@@ -137,7 +137,8 @@ public class GridSizeMigrationDBController {
 
         boolean shouldMigrateToStrictlyTallerGrid = (Flags.oneGridSpecs() || isDestNewDb)
                 && srcDeviceState.getColumns().equals(destDeviceState.getColumns())
-                && srcDeviceState.getRows() < destDeviceState.getRows();
+                && srcDeviceState.getRows() < destDeviceState.getRows()
+                && !hasWorkspaceWidgets(source);
         if (shouldMigrateToStrictlyTallerGrid) {
             copyTable(source, TABLE_NAME, target.getWritableDatabase(), TABLE_NAME, context);
         } else {
@@ -194,6 +195,20 @@ public class GridSizeMigrationDBController {
         }
     }
 
+    /** Widget footprints need the placement solver, including when only row count grows. */
+    public static boolean hasWorkspaceWidgets(SQLiteDatabase db) {
+        try (Cursor cursor = db.query(TABLE_NAME,
+                new String[]{LauncherSettings.Favorites._ID},
+                LauncherSettings.Favorites.CONTAINER + "=? AND "
+                        + LauncherSettings.Favorites.ITEM_TYPE + " IN (?, ?)",
+                new String[]{String.valueOf(LauncherSettings.Favorites.CONTAINER_DESKTOP),
+                        String.valueOf(LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET),
+                        String.valueOf(LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK)},
+                null, null, null, "1")) {
+            return cursor.moveToFirst();
+        }
+    }
+
     public static boolean migrate(
             @NonNull DatabaseHelper helper,
             @NonNull final DbReader srcReader, @NonNull final DbReader destReader,
@@ -219,6 +234,9 @@ public class GridSizeMigrationDBController {
 
         calcDiff(srcHotseatItems, filteredDstHotseatItems, hotseatToBeAdded, toBeRemoved);
         calcDiff(srcWorkspaceItems, dstWorkspaceItems, workspaceToBeAdded, toBeRemoved);
+        new GridSizeMigrationLogic().scaleWidgetsForGrid(workspaceToBeAdded,
+                new Point(srcDeviceState.getColumns(), srcDeviceState.getRows()),
+                targetSize, destReader.mContext);
 
         final int trgX = targetSize.x;
         final int trgY = targetSize.y;
@@ -666,8 +684,12 @@ public class GridSizeMigrationDBController {
                             entry.appWidgetId = c.getInt(indexAppWidgetId);
                             ComponentName cn = ComponentName.unflattenFromString(entry.mProvider);
 
-                            LauncherAppWidgetProviderInfo pInfo = widgetManagerHelper
-                                    .getLauncherAppWidgetInfo(entry.appWidgetId, cn);
+                            LauncherAppWidgetProviderInfo pInfo = null;
+                            try {
+                                pInfo = widgetManagerHelper.getLauncherAppWidgetInfo(entry.appWidgetId, cn);
+                            } catch (RuntimeException e) {
+                                Log.w(TAG, "Unable to resolve widget " + entry.id, e);
+                            }
                             Point spans = null;
                             if (pInfo != null) {
                                 spans = pInfo.getMinSpans();
@@ -676,8 +698,9 @@ public class GridSizeMigrationDBController {
                                 entry.minSpanX = spans.x > 0 ? spans.x : entry.spanX;
                                 entry.minSpanY = spans.y > 0 ? spans.y : entry.spanY;
                             } else {
-                                // Assume that the widget be resized down to 2x2
-                                entry.minSpanX = entry.minSpanY = 2;
+                                // A missing provider cannot authorize a smaller footprint.
+                                entry.minSpanX = entry.spanX;
+                                entry.minSpanY = entry.spanY;
                             }
 
                             break;

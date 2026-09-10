@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): fbf541299021207252d326bb9160bbd7128cf3f9
+HEAD (audited before checkpoint): 54d356a53e3ab425f7c2602b1fff484662ac1dc7
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -28,11 +28,11 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- Fix/monitor latest CI; grid preference import formatting corrected with this checkpoint.
+- Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
 - Validate M6 drag, resize, provider lifecycle, model callbacks and migration integration.
 
 Next:
-- M5/M6: cover strictly-taller shortcut, legacy migration and impossible restore-grid paths.
+- M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
 - M6: verify all-member sizing, gesture arbitration, deletion/undo, reorder and ID cleanup.
 - M6: instrumented/runtime tests pending; build.gradle currently has no Android test runner.
 - Then implement M1+M7 together, M4, M2; preserve valid M3/M5 work.

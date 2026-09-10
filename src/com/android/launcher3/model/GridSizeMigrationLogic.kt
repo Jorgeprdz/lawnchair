@@ -80,7 +80,8 @@ class GridSizeMigrationLogic {
         )
 
         val shouldMigrateToStrtictlyTallerGrid =
-            shouldMigrateToStrictlyTallerGrid(isDestNewDb, srcDeviceState, destDeviceState)
+            shouldMigrateToStrictlyTallerGrid(isDestNewDb, srcDeviceState, destDeviceState) &&
+                !GridSizeMigrationDBController.hasWorkspaceWidgets(source)
         if (shouldMigrateToStrtictlyTallerGrid) {
             copyTable(source, TABLE_NAME, target.writableDatabase, TABLE_NAME, context)
         } else {
@@ -300,23 +301,7 @@ class GridSizeMigrationLogic {
             )
         }
 
-        if (sourceSize != targetSize) {
-            val widgetManager = WidgetManagerHelper(destReader.mContext)
-            for (entry in workspaceToBeAdded) {
-                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
-                    scaleWidgetFootprint(entry, sourceSize, targetSize,
-                        AppWidgetProviderInfo.RESIZE_BOTH, entry.minSpanX, entry.minSpanY,
-                        entry.stackMaxSpanX, entry.stackMaxSpanY)
-                    continue
-                }
-                if (entry.itemType != LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET) continue
-                val component = entry.mProvider?.let { ComponentName.unflattenFromString(it) }
-                val provider = widgetManager.getLauncherAppWidgetInfo(entry.appWidgetId, component)
-                if (provider != null) {
-                    scaleWidgetForGrid(entry, sourceSize, targetSize, provider)
-                }
-            }
-        }
+        scaleWidgetsForGrid(workspaceToBeAdded, sourceSize, targetSize, destReader.mContext)
 
         val remainingDstWorkspaceItems = destReader.loadAllWorkspaceEntries()
         placeWorkspaceItems(
@@ -329,6 +314,33 @@ class GridSizeMigrationLogic {
             destReader,
             idsInUse,
         )
+    }
+
+    /** Shared by the Kotlin and legacy Java migration entry points. */
+    fun scaleWidgetsForGrid(entries: List<DbEntry>, sourceSize: Point, targetSize: Point, context: Context) {
+        if (sourceSize != targetSize) {
+            val widgetManager = WidgetManagerHelper(context)
+            for (entry in entries) {
+                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
+                    scaleWidgetFootprint(entry, sourceSize, targetSize,
+                        AppWidgetProviderInfo.RESIZE_BOTH, entry.minSpanX, entry.minSpanY,
+                        entry.stackMaxSpanX, entry.stackMaxSpanY)
+                    continue
+                }
+                if (entry.itemType != LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET) continue
+                val component = entry.mProvider?.let { ComponentName.unflattenFromString(it) }
+                val provider = try {
+                    widgetManager.getLauncherAppWidgetInfo(entry.appWidgetId, component)
+                } catch (e: RuntimeException) {
+                    Log.w(TAG, "Unable to resolve widget ${entry.id} while migrating", e)
+                    null
+                }
+                if (provider != null) {
+                    scaleWidgetForGrid(entry, sourceSize, targetSize, provider)
+                }
+            }
+        }
+
     }
 
     /** Computes a preferred cell footprint; the occupancy solver still decides placement. */
