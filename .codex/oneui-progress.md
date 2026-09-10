@@ -1,17 +1,17 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): dff9b4c5f81dfef0cfebcf3574dea37f7d0f4742
-Global: 65% — equal-weight estimate across seven modules; not acceptance completion.
+HEAD (audited before checkpoint): 4acde682a04d62ce4b50dd2a437752b3410d89cd
+Global: 73% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
-- M1 Large Folders: 50% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
+- M1 Large Folders: 75% — shared 2x2 placement, persisted state, 3x3 direct preview and native action.
 - M2 Pixel Search: 60% — installed provider discovery, native QSB host, tracked binding/config IDs, fallback.
 - M3 One UI Finder: 90% — CI passed; actual Samsung/missing-component tests pending.
-- M4 Dock Glass: 60% — four persisted modes, native geometry, optional region blur and crystal styling.
+- M4 Dock Glass: 65% — four persisted modes, native geometry, optional region blur and crystal styling.
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints/proportional standard migration.
 - M6 Widget Stacks: 75% — model, host, picker/editor/create, resize/lifecycle/migration foundations.
-- M7 Max Icons / Max Folders: 50% — native Max Icon action/rendering; shared folder state/placement.
+- M7 Max Icons / Max Folders: 75% — native Max Icon action/rendering; shared folder state/placement.
 
 Completed:
 - No M1/M6 implementation survived original recovery; M6 reconstructed afterward.
@@ -37,7 +37,8 @@ Next:
 - CI34440973789: compile/style GREEN; dock modes + 2 SQLite migrations + hidden host + stack force-stop restore PASS.
 - CI34441287074: 7/8 tests PASS + process-death PASS; only Max icon fixture wrong-thread failure (fixed04d433a).
 - Stack real taps/vertical scroll/paging/resize/reorder/remove/reload PASS; absent Finder/Pixel fallback PASS.
-- Latest CI34441778019/dff9b4c: model-thread icon fixture + wait for visible content before dock screenshots.
+- CI34441778019: Max toggle/occupancy/10-member folder/recreation PASS; 7/8 tests; widget tap intermittent.
+- Latest CI34442569058/4acde68: await stable widget touch bounds before injection; no validation suppressed.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -99,6 +100,6 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 15 PNG files downloaded/CRC-verified; includes stack pages1/2 and editor. Dock Off transition recapture pending.
-- Latest screenshot artifact: run34441287074/10138255813; earlier runs34440973789,34440512144,34439748126 also downloaded.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 25 PNG files downloaded/CRC-verified, covering all13 required views; canonical names use best/latest captures.
+- Screenshot artifacts: run34441778019/10138414543 (Max/dock) +34441287074/10138255813 (stack); older versions retained.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
