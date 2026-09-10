@@ -1,0 +1,196 @@
+name: OneUI nightly upstream sync
+
+on:
+  schedule:
+    # 08:17 UTC = 02:17 in Mexico City. A non-round minute reduces Actions queue congestion.
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: oneui-nightly-16-dev
+  cancel-in-progress: false
+
+env:
+  ONEUI_APPLICATION_ID: app.lawnchair.oneui
+
+jobs:
+  sync-build-nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork 16-dev
+        uses: actions/checkout@v7
+        with:
+          ref: 16-dev
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Merge upstream 16-dev locally
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git remote add upstream https://github.com/LawnchairLauncher/lawnchair.git 2>/dev/null || \
+            git remote set-url upstream https://github.com/LawnchairLauncher/lawnchair.git
+          git fetch --no-tags upstream 16-dev
+
+          BEFORE="$(git rev-parse HEAD)"
+          UPSTREAM="$(git rev-parse upstream/16-dev)"
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "upstream=$UPSTREAM" >> "$GITHUB_OUTPUT"
+
+          if git merge-base --is-ancestor upstream/16-dev HEAD; then
+            echo 'Fork already contains current upstream 16-dev.'
+            echo 'updated=false' >> "$GITHUB_OUTPUT"
+          else
+            echo "Merging upstream/16-dev ($UPSTREAM) into fork 16-dev ($BEFORE)..."
+            if ! git merge --no-edit upstream/16-dev; then
+              git merge --abort || true
+              echo '::error::Upstream merge has conflicts. Fork was NOT modified or pushed.'
+              exit 1
+            fi
+            echo 'updated=true' >> "$GITHUB_OUTPUT"
+          fi
+
+          AFTER="$(git rev-parse HEAD)"
+          echo "after=$AFTER" >> "$GITHUB_OUTPUT"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Make nightly install as Lawnchair OneUI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('build.gradle')
+          s = p.read_text()
+
+          old_id = "applicationId 'app.lawnchair'"
+          new_id = "applicationId 'app.lawnchair.oneui'"
+          if old_id not in s:
+              raise SystemExit('Expected Github flavor applicationId was not found')
+          s = s.replace(old_id, new_id, 1)
+
+          old_name = 'resValue("string", "derived_app_name", "Lawnchair (Debug)")'
+          new_name = 'resValue("string", "derived_app_name", "Lawnchair OneUI Nightly")'
+          if old_name not in s:
+              raise SystemExit('Expected debug app name was not found')
+          s = s.replace(old_name, new_name, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Restore stable signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ONEUI_KEYSTORE_B64 || secrets.ONEUI_KEYSTORE || secrets.STABLE_KEYSTORE_B64 || secrets.STABLE_KEYSTORE || secrets.KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD || secrets.ONEUI_KEYSTORE_PASSWORD || secrets.STABLE_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS || secrets.STABLE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONEUI_KEY_PASSWORD || secrets.STABLE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_B64:-}" ] || [ -z "${STORE_PASSWORD:-}" ] || [ -z "${KEY_ALIAS:-}" ] || [ -z "${KEY_PASSWORD:-}" ]; then
+            echo '::error::Stable OneUI signing secrets are incomplete.'
+            exit 1
+          fi
+
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/oneui-stable.jks"
+          cat > keystore.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
+          EOF
+
+      - name: Build nightly APK
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug
+
+      - name: Verify package and stable signing certificate
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          test -n "$APK" || { echo '::error::APK not found'; exit 1; }
+
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+
+          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
+          "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/oneui-cert.txt
+          grep -F 'B1:94:49:E7:82:C3:04:98:3E:6A:16:86:BA:E0:08:9F:25:C6:2D:33:E8:ED:1B:E1:09:31:F1:2E:B7:A8:2E:CA' /tmp/oneui-cert.txt
+
+      - name: Prepare dated nightly artifact
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y%m%d)"
+          SOURCE_SHA="$(git rev-parse --short=12 HEAD)"
+          SRC="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          mkdir -p nightly
+          OUT="nightly/Lawnchair-OneUI-Nightly-${DATE}-${SOURCE_SHA}.apk"
+          cp "$SRC" "$OUT"
+          SHA256="$(sha256sum "$OUT" | awk '{print $1}')"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "apk=$OUT" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload nightly APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-Nightly-${{ steps.meta.outputs.date }}
+          path: ${{ steps.meta.outputs.apk }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Push tested upstream merge to fork
+        if: steps.sync.outputs.updated == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Build-only mutations must never land in 16-dev.
+          git checkout -- build.gradle
+          rm -f keystore.properties oneui-stable.jks
+
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo '::error::Unexpected tracked changes remain after the nightly build; refusing to push.'
+            git status --short
+            exit 1
+          fi
+
+          # The fork advances only after merge + compile + package/signature checks all succeeded.
+          git push origin HEAD:16-dev
+
+      - name: Nightly summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Lawnchair OneUI Nightly'
+            echo
+            echo "- Fork before: \`${{ steps.sync.outputs.before }}\`"
+            echo "- Upstream: \`${{ steps.sync.outputs.upstream }}\`"
+            echo "- Tested source: \`${{ steps.sync.outputs.after }}\`"
+            echo "- Upstream merged: \`${{ steps.sync.outputs.updated }}\`"
+            if [ -n "${{ steps.meta.outputs.sha256 }}" ]; then
+              echo "- APK SHA-256: \`${{ steps.meta.outputs.sha256 }}\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
