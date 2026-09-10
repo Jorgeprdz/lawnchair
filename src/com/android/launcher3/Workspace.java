@@ -445,6 +445,17 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                             (LauncherAppWidgetInfo) view.getTag();
                     WidgetSizes.updateWidgetSizeRanges((LauncherAppWidgetHostView) view,
                             mLauncher, launcherAppWidgetInfo.spanX, launcherAppWidgetInfo.spanY);
+                } else if (view instanceof com.android.launcher3.widget.WidgetStackView stackView
+                        && view.getTag() instanceof
+                                com.android.launcher3.model.data.WidgetStackInfo stack) {
+                    for (LauncherAppWidgetInfo member : stack.getContents()) {
+                        LauncherAppWidgetHostView host = stackView.findWidgetByAppWidgetId(
+                                member.appWidgetId);
+                        if (host != null) {
+                            WidgetSizes.updateWidgetSizeRanges(host, mLauncher,
+                                    stack.spanX, stack.spanY);
+                        }
+                    }
                 }
             }
         }
@@ -2683,6 +2694,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
 
     private boolean isDragWidget(DragObject d) {
         return (d.dragInfo instanceof LauncherAppWidgetInfo ||
+                d.dragInfo instanceof com.android.launcher3.model.data.WidgetStackInfo ||
                 d.dragInfo instanceof PendingAddWidgetInfo);
     }
 
@@ -2690,6 +2702,12 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     private int[] performReorderForItem(ItemInfo item, CellLayout layout, int pixelX, int pixelY,
             int minSpanX, int minSpanY, int spanX, int spanY, View child,
             int[] targetCell, int[] resultSpan, int mode) {
+        if (item instanceof com.android.launcher3.model.data.WidgetStackInfo) {
+            // Moving a stack preserves its all-member-compatible footprint. Explicit resizing
+            // goes through the stack editor and validates every provider first.
+            return layout.performReorder(pixelX, pixelY, item.spanX, item.spanY,
+                    item.spanX, item.spanY, child, targetCell, resultSpan, mode);
+        }
         AppWidgetProviderInfo provider = null;
         if (item instanceof PendingAddWidgetInfo) {
             provider = ((PendingAddWidgetInfo) item).info;
