@@ -150,6 +150,7 @@ final def quickstepMaxSdk = "36"
 android {
     namespace "com.android.launcher3"
     defaultConfig {
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         /*
          * Lawnchair Launcher 16.0 Development 5.1
          * see CONTRIBUTING.md#versioning-scheme
@@ -288,6 +289,10 @@ android {
     }
 
     sourceSets {
+        androidTest {
+            java.srcDirs = ['tests/oneui/src']
+        }
+
         main {
             res.srcDirs = ['res']
 
@@ -378,6 +383,10 @@ composeCompiler {
 addFrameworkJar('framework-16.jar')
 
 dependencies {
+    androidTestImplementation libs.androidx.test.runner
+    androidTestImplementation libs.androidx.test.rules
+    androidTestImplementation libs.androidx.junit
+
     implementation projects.iconloaderlib
     implementation projects.searchuilib
     implementation projects.animationlib
