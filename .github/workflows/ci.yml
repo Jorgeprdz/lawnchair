@@ -120,6 +120,13 @@ jobs:
           name: Lawnchair-OneUI-Emulator-Smoke
           path: oneui-emulator-results/
           if-no-files-found: error
+      - name: Upload actual emulator screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-Screenshots
+          path: oneui-screenshots/*.png
+          if-no-files-found: warn
 
   check-style:
     if: ${{ !inputs.oneui-apk-run && !(github.event_name == 'pull_request' && github.head_ref == 'feature/oneui-enhancements') }}
