@@ -41,6 +41,10 @@ on:
         description: Run only device-reported folder, Max action and stack long-press regressions
         type: boolean
         default: false
+      oneui-feedback-classes:
+        description: Instrumentation classes for the targeted device-feedback run
+        type: string
+        default: 'com.android.launcher3.MaxWorkspaceItemsTest,com.android.launcher3.WidgetStackBindingTest'
       oneui-apk-run:
         description: Reuse a successful APK run for emulator-only changes (source identity is checked)
         type: string
@@ -123,6 +127,7 @@ jobs:
         env:
           ONEUI_MAX_RESTORE_ONLY: ${{ inputs.oneui-max-restore-only }}
           ONEUI_DEVICE_FEEDBACK_ONLY: ${{ inputs.oneui-device-feedback-only }}
+          ONEUI_FEEDBACK_CLASSES: ${{ inputs.oneui-feedback-classes }}
         run: bash .github/scripts/oneui-emulator-smoke.sh
       - name: Preserve emulator diagnostics
         if: always()

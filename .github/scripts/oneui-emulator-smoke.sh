@@ -40,7 +40,7 @@ timeout 120 adb install -r -t "${test_apks[0]}"
 timeout 30 adb shell cmd package set-home-activity app.lawnchair.debug/app.lawnchair.LawnchairLauncher > oneui-emulator-results/home-role.txt 2>&1 || true
 timeout 15 adb logcat -c
 if [ "${ONEUI_DEVICE_FEEDBACK_ONLY:-false}" = true ]; then
-    timeout 240 adb shell am instrument -w -r -e class com.android.launcher3.MaxWorkspaceItemsTest,com.android.launcher3.WidgetStackBindingTest -e oneuiMaxPhase device-feedback app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
+    timeout 240 adb shell am instrument -w -r -e class "${ONEUI_FEEDBACK_CLASSES:-com.android.launcher3.MaxWorkspaceItemsTest,com.android.launcher3.WidgetStackBindingTest}" -e oneuiMaxPhase device-feedback app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt
     grep -Eq 'OK \([1-9][0-9]* tests?\)' oneui-emulator-results/instrumentation.txt
     ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' oneui-emulator-results/instrumentation.txt
     exit
