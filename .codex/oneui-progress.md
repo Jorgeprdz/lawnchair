@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 54d356a53e3ab425f7c2602b1fff484662ac1dc7
+HEAD (audited before checkpoint): 71977e59cf9b5c236206af83fc04421fb5a53312
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -29,7 +29,7 @@ Completed:
 
 Current:
 - Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
-- Validate M6 drag, resize, provider lifecycle, model callbacks and migration integration.
+- M6 drag preserves full footprint; native accessible Move, profile sizing and small-screen editor updated.
 
 Next:
 - M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
@@ -70,11 +70,11 @@ Relevant files:
 
 Validation:
 - d73d45d: 8 isolated Java constraint cases passed (not Android tests).
-- 5 WidgetGridScalingTest and 5 WidgetStackInfo Android regression cases added; not executed.
+- 5 grid scaling + 5 stack model + 3 stack migration regression cases added; not executed.
 - All 3 APKs/style passed: d73d45d/34423066055, a78a0c9/34423420226, 59c25cf/34423937406.
 - All 3 APKs/style passed: df78685/34424966519, d6c793c/34426161207, 1960ee0/34427352339.
 - 1960ee0 validates creation, picker/editor and atomic add; later resize/provider/migration CI pending.
-- Resize compile failure in 34427492228 fixed 488c0c7; grid UI imports style fixed now.
+- Resize access fixed 488c0c7; provider Java import fixed 8828a43; grid style fixed 54d356a.
 - Keep useful push CI; cancel duplicate/obsolete runs. NightlyRelease/GithubDebug/PlayDebug matrix.
 
 Final emulator/screenshots requirements (after all modules and successful CI):

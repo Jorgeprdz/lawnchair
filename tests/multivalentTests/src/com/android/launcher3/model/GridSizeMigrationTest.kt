@@ -1069,6 +1069,7 @@ class GridSizeMigrationTest {
         }, "$_ID=9003", null)
         val stack = DbEntry().apply {
             id = 9001
+            screenId = 0
             itemType = ITEM_TYPE_WIDGET_STACK
             spanX = 3
             spanY = 2
@@ -1127,6 +1128,7 @@ class GridSizeMigrationTest {
             spanX = 2
             spanY = 3
             cellX = 1
+            cellY = 0
             minSpanX = 2
             minSpanY = 1
             stackMaxSpanX = 2
