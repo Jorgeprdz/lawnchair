@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 58731d24025fe6890294e629a80b34f691caefcc
+HEAD (audited before checkpoint): ac3a2031d3ad44e85a7cad19211fcbf18225904b
 Global: 49% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -33,7 +33,7 @@ Current:
 Next:
 - USER UPDATE: defer new builds/emulator until all implementation is finished; review diffs and commit normally.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
-- Add final integration regressions; audit restore/provider edge cases, then final build/emulator.
+- Final regression/capture tests committed: max items, dock modes, stack activity/process recreation; start final CI next.
 - M5/M6 guard 58731d2 cancels incompatible grid changes before migration; source-grid reload needs testing.
 
 Architecture decisions:
@@ -90,11 +90,11 @@ Final emulator/screenshots requirements (after all modules and successful CI):
   04-dock-off.png, 05-dock-solid.png, 06-dock-blur.png, 07-dock-crystal.png, 08-widget-grid.png,
   09-widget-stack-page1.png, 10-widget-stack-page2.png, 11-widget-stack-editor.png,
   12-max-icon.png, 13-max-folder.png; Pixel Search/Finder screenshots ONLY if genuinely available.
-- Create/use /sdcard/Download/Lawnchair-OneUI/; verify every captured file exists and is valid PNG.
+- Create/use /storage/emulated/0/Download/lawnchair/; verify every captured file exists and is valid PNG.
 - Copy emulator captures to CI host; publish artifact Lawnchair-OneUI-Screenshots.
-- Download/extract to user's /sdcard/Download/Lawnchair-OneUI/ if supported; else give exact run/artifact.
+- Download/extract to user's /storage/emulated/0/Download/lawnchair/ if supported; else give exact run/artifact.
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- No remote access blocker. All described code committed; no transient WIP files.
+- Download/lawnchair created; five recent emulator artifacts checked: no PNGs existed. Remote access works.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.

@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 DEST = pathlib.Path("oneui-screenshots")
-REMOTE = "/sdcard/Download/Lawnchair-OneUI"
+REMOTE = "/storage/emulated/0/Download/lawnchair"
 DEST.mkdir(exist_ok=True)
 subprocess.run(["adb", "shell", "mkdir", "-p", REMOTE], check=True, timeout=15)
 stream = subprocess.Popen(["adb", "logcat", "-v", "raw", "-s", "OneUiScreenshot:I", "*:S"],

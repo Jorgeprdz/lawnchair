@@ -21,7 +21,7 @@ public final class OneUiScreenshots {
         for (int attempt = 0; attempt < 100; attempt++) {
             try (var input = new ParcelFileDescriptor.AutoCloseInputStream(
                     InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(
-                            "test -f /sdcard/Download/Lawnchair-OneUI/" + filename + ".done && echo ready"))) {
+                            "test -f /storage/emulated/0/Download/lawnchair/" + filename + ".done && echo ready"))) {
                 if (input.read() == 'r') return;
             }
             SystemClock.sleep(200);
