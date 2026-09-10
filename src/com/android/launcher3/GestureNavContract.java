@@ -68,8 +68,16 @@ public class GestureNavContract {
         this.mCallback = callback;
     }
 
+    /** Invalidate the previous gesture's completion before this surface starts laying out. */
+    public void begin(ActivityContext context) {
+        if (sMessageReceiver == null) {
+            sMessageReceiver = new StaticMessageReceiver();
+        }
+        sMessageReceiver.setCurrentContext(context, this);
+    }
+
     /**
-     * Sends the position information to the receiver
+     * Sends valid position information; returns false if the receiver is unavailable.
      */
     public boolean sendEndPosition(RectF position, ActivityContext context,
             @Nullable SurfaceControl surfaceControl) {

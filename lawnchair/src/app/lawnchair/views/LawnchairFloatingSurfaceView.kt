@@ -393,6 +393,7 @@ class LawnchairFloatingSurfaceView @JvmOverloads constructor(
             view.mIconPosition.setEmpty()
             view.mIconBounds.setEmpty()
             view.mContract = contract
+            contract?.begin(launcher)
             view.mIsOpen = true
 
             val anim = AnimatorSet()
