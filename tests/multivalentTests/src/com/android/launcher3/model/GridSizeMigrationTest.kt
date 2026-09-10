@@ -1049,6 +1049,98 @@ class GridSizeMigrationTest {
         assertThat(locMap[testPackage5]).isEqualTo(0)
     }
 
+    @Test
+    fun stackMigrationPreservesMembersRanksAndRemapsActiveRow() {
+        addItem(ITEM_TYPE_WIDGET_STACK, 0, CONTAINER_DESKTOP, 0, 0, null, 9001, TMP_TABLE)
+        addItem(ITEM_TYPE_APPWIDGET, 0, 9001, 0, 0, null, 9002, TMP_TABLE)
+        addItem(ITEM_TYPE_APPWIDGET, 0, 9001, 0, 0, null, 9003, TMP_TABLE)
+        db.update(TMP_TABLE, ContentValues().apply {
+            put(OPTIONS, 9002)
+            put(SPANX, 2)
+            put(SPANY, 2)
+        }, "$_ID=9001", null)
+        db.update(TMP_TABLE, ContentValues().apply {
+            put(APPWIDGET_ID, 42)
+            put(RANK, 1)
+        }, "$_ID=9002", null)
+        db.update(TMP_TABLE, ContentValues().apply {
+            put(APPWIDGET_ID, 43)
+            put(RANK, 0)
+        }, "$_ID=9003", null)
+        val stack = DbEntry().apply {
+            id = 9001
+            itemType = ITEM_TYPE_WIDGET_STACK
+            spanX = 3
+            spanY = 2
+            cellX = 1
+            cellY = 1
+            activeWidgetId = 9002
+            mFolderItems["members"] = setOf(9002, 9003)
+        }
+        GridSizeMigrationDBController.insertEntryInDb(
+            dbHelper, stack, TMP_TABLE, TABLE_NAME, mutableListOf(),
+        )
+        db.query(TABLE_NAME, arrayOf(_ID, OPTIONS), "$ITEM_TYPE=$ITEM_TYPE_WIDGET_STACK",
+            null, null, null, null).use { parent ->
+            assertThat(parent.count).isEqualTo(1)
+            assertThat(parent.moveToFirst()).isTrue()
+            val parentId = parent.getInt(0)
+            val activeId = parent.getInt(1)
+            assertThat(parentId).isNotEqualTo(9001)
+            assertThat(activeId).isNotEqualTo(9002)
+            db.query(TABLE_NAME, arrayOf(_ID, APPWIDGET_ID, RANK, SPANX, SPANY),
+                "$CONTAINER=$parentId", null, null, null, RANK).use { members ->
+                assertThat(members.count).isEqualTo(2)
+                assertThat(members.moveToFirst()).isTrue()
+                assertThat(members.getInt(1)).isEqualTo(43)
+                assertThat(members.getInt(2)).isEqualTo(0)
+                assertThat(members.getInt(3)).isEqualTo(3)
+                assertThat(members.getInt(4)).isEqualTo(2)
+                assertThat(members.moveToNext()).isTrue()
+                assertThat(members.getInt(0)).isEqualTo(activeId)
+                assertThat(members.getInt(1)).isEqualTo(42)
+                assertThat(members.getInt(2)).isEqualTo(1)
+                assertThat(members.getInt(3)).isEqualTo(3)
+                assertThat(members.getInt(4)).isEqualTo(2)
+            }
+        }
+        db.query(TMP_TABLE, arrayOf(OPTIONS, SPANX), "$_ID=9001",
+            null, null, null, null).use { original ->
+            assertThat(original.moveToFirst()).isTrue()
+            assertThat(original.getInt(0)).isEqualTo(9002)
+            assertThat(original.getInt(1)).isEqualTo(2)
+        }
+    }
+
+    @Test
+    fun tallerGridRecognizesStackFootprintRatherThanNestedWidgetRows() {
+        addItem(ITEM_TYPE_APPWIDGET, 0, 9001, 0, 0, null)
+        assertThat(GridSizeMigrationDBController.hasWorkspaceWidgets(db)).isFalse()
+        addItem(ITEM_TYPE_WIDGET_STACK, 0, CONTAINER_DESKTOP, 0, 0, null)
+        assertThat(GridSizeMigrationDBController.hasWorkspaceWidgets(db)).isTrue()
+    }
+
+    @Test
+    fun stackScalingRespectsFixedAxisAndTightestMemberMaximum() {
+        val entry = DbEntry().apply {
+            itemType = ITEM_TYPE_WIDGET_STACK
+            spanX = 2
+            spanY = 3
+            cellX = 1
+            minSpanX = 2
+            minSpanY = 1
+            stackMaxSpanX = 2
+            stackMaxSpanY = 5
+        }
+        GridSizeMigrationLogic().scaleWidgetsForGrid(
+            listOf(entry), Point(4, 4), Point(8, 8), context,
+        )
+        assertThat(entry.spanX).isEqualTo(2)
+        assertThat(entry.spanY).isEqualTo(5)
+        assertThat(entry.cellX).isEqualTo(3)
+        assertThat(entry.cellY).isEqualTo(1)
+    }
+
     private fun enableNewMigrationLogic(srcGridSize: String) {
         LauncherPrefs.get(context).putSync(WORKSPACE_SIZE.to(srcGridSize))
     }
