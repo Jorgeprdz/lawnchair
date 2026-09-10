@@ -42,6 +42,7 @@ Next:
 - Download every newly produced PNG, including valid partial runs, to user's requested directory below.
 - Visually verify new square folder and replace canonical02/13 screenshots; preserve prior versions with run prefix.
 - Finish remaining provider/drag/grid/orientation coverage as available; report physical-device gaps honestly.
+- USER authorizes final verified APK download and automatic installation on phone; report Android confirmation if required.
 
 Architecture decisions:
 - GitHub is durable state; only this feature branch; no clone/full checkout/local full build, force push or merge.
