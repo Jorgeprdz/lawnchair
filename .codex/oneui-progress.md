@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): f0e7ee20d4fa0945129543cb972ae665bc3ce8ec
+HEAD (audited before checkpoint): b6f75b1c81f6f9d94b12fdf6f562eb5668b737e9
 Global: 60% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -34,8 +34,8 @@ Next:
 - Final validation phase: implementations compiled; run emulator, fix failures and collect actual screenshots.
 - M6 active-page hook fbdbc36 plus generation guard for queued rebind callbacks; provider-label failure safe.
 - Full CI 34439748126/c340706: all 3 APKs/style GREEN; emulator failed: test thread/schema/context/null-tag errors; screenshot ack fixed.
-- Latest CI 34440973789/f0e7ee2 running; fixes test main-thread writes, SQLite schema defaults, null tags and process fixture UID.
-- CI 34440512144: compile/style passed, emulator running; collect its valid partial screenshots too.
+- CI 34440973789/f0e7ee2 compile/style green; emulator testing fixture fixes (UI thread/schema/null tags/process UID).
+- Latest CI 34441287074/b6f75b1 running: includes Kotlin tests and detects real vertical scroll shorter than a full row.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -97,5 +97,6 @@ Final emulator/screenshots requirements (after all modules and successful CI):
 - Final screenshot report: count, filenames, artifact, workflow run ID, Download path, omissions/reasons.
 
 Blockers:
-- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 08-widget-grid.png downloaded and PNG-verified (1080x1920), run34439748126 artifact10137783512.
+- Download all produced PNGs to /storage/emulated/0/Download/lawnchair, including valid partial runs. 2 valid 1080x1920 PNGs downloaded: 08-widget-grid.png and 34440512144-08-widget-grid.png.
+- Screenshot artifacts: run34439748126/10137783512 and run34440512144/10137967110; remaining captures pending.
 - Runtime/device acceptance pending. Global percentages include all seven modules; CTX unavailable.
