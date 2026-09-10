@@ -39,6 +39,8 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
 
     /** Id of the specific widget. */
     @JvmField var appWidgetId: Int = NO_ID
+    @JvmField var activeWidgetId: Int = NO_ID
+    @JvmField var activeWidgetHostId: Int = NO_ID
 
     /** Comparator according to the reading order */
     override fun compareTo(other: DbEntry): Int {
@@ -89,6 +91,8 @@ class DbEntry : ItemInfo(), Comparable<DbEntry> {
      */
     private fun getEntryMigrationId(): String? {
         when (itemType) {
+            LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK ->
+                return "stack:$activeWidgetHostId:${mFolderItems.keys.sorted().joinToString()}"
             ITEM_TYPE_FOLDER,
             ITEM_TYPE_APP_PAIR -> return getFolderMigrationId()
             ITEM_TYPE_APPWIDGET ->

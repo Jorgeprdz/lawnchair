@@ -332,7 +332,8 @@ public class GridSizeMigrationDBController {
         dest.forEach(entry -> {
             if (entryCountDiff.get(entry) < 0) {
                 toBeRemoved.add(entry.id);
-                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER) {
+                if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER
+                        || entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
                     entry.mFolderItems.values().forEach(ids -> ids.forEach(toBeRemoved::add));
                 }
                 entryCountDiff.put(entry, entryCountDiff.get(entry) + 1);
@@ -344,10 +345,27 @@ public class GridSizeMigrationDBController {
             String srcTableName, String destTableName, List<Integer> idsInUse) {
         int id = copyEntryAndUpdate(helper, entry, srcTableName, destTableName, idsInUse);
         if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_FOLDER
-                || entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_APP_PAIR) {
+                || entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_APP_PAIR
+                || entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
             for (Set<Integer> itemIds : entry.mFolderItems.values()) {
                 for (int itemId : itemIds) {
-                    copyEntryAndUpdate(helper, itemId, id, srcTableName, destTableName, idsInUse);
+                    int memberId = copyEntryAndUpdate(
+                            helper, itemId, id, srcTableName, destTableName, idsInUse);
+                    if (entry.itemType == LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK) {
+                        ContentValues size = new ContentValues();
+                        size.put(LauncherSettings.Favorites.SPANX, entry.spanX);
+                        size.put(LauncherSettings.Favorites.SPANY, entry.spanY);
+                        helper.getWritableDatabase().update(destTableName, size,
+                                LauncherSettings.Favorites._ID + "=?",
+                                new String[]{String.valueOf(memberId)});
+                        if (itemId == entry.activeWidgetId) {
+                            ContentValues active = new ContentValues();
+                            active.put(LauncherSettings.Favorites.OPTIONS, memberId);
+                            helper.getWritableDatabase().update(destTableName, active,
+                                    LauncherSettings.Favorites._ID + "=?",
+                                    new String[]{String.valueOf(id)});
+                        }
+                    }
                 }
             }
         }
@@ -599,7 +617,8 @@ public class GridSizeMigrationDBController {
                             LauncherSettings.Favorites.SPANY,                // 6
                             LauncherSettings.Favorites.INTENT,               // 7
                             LauncherSettings.Favorites.APPWIDGET_PROVIDER,   // 8
-                            LauncherSettings.Favorites.APPWIDGET_ID},        // 9
+                            LauncherSettings.Favorites.APPWIDGET_ID,         // 9
+                            LauncherSettings.Favorites.OPTIONS},             // 10
                     LauncherSettings.Favorites.CONTAINER + " = "
                             + LauncherSettings.Favorites.CONTAINER_DESKTOP);
             final int indexId = c.getColumnIndexOrThrow(LauncherSettings.Favorites._ID);
@@ -615,6 +634,7 @@ public class GridSizeMigrationDBController {
             final int indexAppWidgetId = c.getColumnIndexOrThrow(
                     LauncherSettings.Favorites.APPWIDGET_ID);
 
+            final int indexOptions = c.getColumnIndexOrThrow(LauncherSettings.Favorites.OPTIONS);
             IntArray entriesToRemove = new IntArray();
             WidgetManagerHelper widgetManagerHelper = new WidgetManagerHelper(mContext);
             while (c.moveToNext()) {
@@ -627,6 +647,7 @@ public class GridSizeMigrationDBController {
                 entry.cellY = c.getInt(indexCellY);
                 entry.spanX = c.getInt(indexSpanX);
                 entry.spanY = c.getInt(indexSpanY);
+                entry.activeWidgetId = c.getInt(indexOptions);
 
                 try {
                     // calculate weight
@@ -634,6 +655,10 @@ public class GridSizeMigrationDBController {
                         case LauncherSettings.Favorites.ITEM_TYPE_DEEP_SHORTCUT:
                         case LauncherSettings.Favorites.ITEM_TYPE_APPLICATION: {
                             entry.mIntent = c.getString(indexIntent);
+                            break;
+                        }
+                        case LauncherSettings.Favorites.ITEM_TYPE_WIDGET_STACK: {
+                            readWidgetStackMembers(entry, widgetManagerHelper);
                             break;
                         }
                         case LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET: {
@@ -690,6 +715,50 @@ public class GridSizeMigrationDBController {
             removeEntryFromDb(mDb, mTableName, entriesToRemove);
             c.close();
             return workspaceEntries;
+        }
+
+        /** Reuses the collection-copy map, while treating members as widgets rather than apps. */
+        private void readWidgetStackMembers(DbEntry entry, WidgetManagerHelper widgetManager) {
+            entry.minSpanX = entry.minSpanY = 1;
+            int maxSpanX = Integer.MAX_VALUE;
+            int maxSpanY = Integer.MAX_VALUE;
+            try (Cursor members = queryWorkspace(new String[]{
+                    LauncherSettings.Favorites._ID,
+                    LauncherSettings.Favorites.APPWIDGET_ID,
+                    LauncherSettings.Favorites.APPWIDGET_PROVIDER,
+                    LauncherSettings.Favorites.RANK},
+                    LauncherSettings.Favorites.CONTAINER + "=" + entry.id)) {
+                while (members.moveToNext()) {
+                    int rowId = members.getInt(0);
+                    int widgetId = members.getInt(1);
+                    String providerName = members.getString(2);
+                    String key = providerName + ":" + widgetId + ":" + members.getInt(3);
+                    entry.mFolderItems.computeIfAbsent(key, ignored -> new HashSet<>()).add(rowId);
+                    if (rowId == entry.activeWidgetId) entry.activeWidgetHostId = widgetId;
+                    ComponentName component = providerName == null ? null
+                            : ComponentName.unflattenFromString(providerName);
+                    LauncherAppWidgetProviderInfo provider = null;
+                    try {
+                        provider = widgetManager.getLauncherAppWidgetInfo(widgetId, component);
+                    } catch (RuntimeException e) {
+                        Log.w(TAG, "Unable to resolve stack member " + rowId, e);
+                    }
+                    maxSpanX = Math.min(maxSpanX, provider == null ? entry.spanX : provider.maxSpanX);
+                    maxSpanY = Math.min(maxSpanY, provider == null ? entry.spanY : provider.maxSpanY);
+                    // An unavailable provider cannot safely authorize shrinking its footprint.
+                    Point minimum = provider == null ? null : provider.getMinSpans();
+                    entry.minSpanX = Math.max(entry.minSpanX,
+                            minimum != null && minimum.x > 0 ? minimum.x : entry.spanX);
+                    entry.minSpanY = Math.max(entry.minSpanY,
+                            minimum != null && minimum.y > 0 ? minimum.y : entry.spanY);
+                }
+            }
+            if (entry.minSpanX <= maxSpanX) {
+                entry.spanX = Math.max(entry.minSpanX, Math.min(entry.spanX, maxSpanX));
+            }
+            if (entry.minSpanY <= maxSpanY) {
+                entry.spanY = Math.max(entry.minSpanY, Math.min(entry.spanY, maxSpanY));
+            }
         }
 
         private int getFolderItemsCount(DbEntry entry) {
