@@ -153,13 +153,22 @@ public class WidgetStackBindingTest {
                     firstRow.set(stack.getContents().get(0).id);
                     secondRow.set(stack.getContents().get(1).id);
                     workspacePage.set(launcher.getWorkspace().getCurrentPage());
+                    PagedView<?> pager = (PagedView<?>) view.getChildAt(0);
+                    assertEquals("The newly added member must be visibly selected", 1, pager.getCurrentPage());
+                    pager.setOnTouchListener((v, event) -> {
+                        android.util.Log.i("OneUiPagingTest", "touch=" + event.getActionMasked()
+                                + " x=" + event.getX() + " y=" + event.getY()
+                                + " scroll=" + pager.getScrollX());
+                        return false;
+                    });
+                    logPagingState(launcher, stackId.get());
                 });
                 float left = stackBounds.left + stackBounds.width() * 0.2f;
                 float right = stackBounds.left + stackBounds.width() * 0.8f;
                 sendGesture(left, stackBounds.centerY(), right, stackBounds.centerY(), true);
-                await(scenario, launcher -> info(launcher, stackId.get()).getActiveWidgetId() == firstRow.get());
+                awaitPage(scenario, stackId.get(), firstRow.get());
                 sendGesture(right, stackBounds.centerY(), left, stackBounds.centerY(), true);
-                await(scenario, launcher -> info(launcher, stackId.get()).getActiveWidgetId() == secondRow.get());
+                awaitPage(scenario, stackId.get(), secondRow.get());
                 scenario.onActivity(launcher -> assertEquals(workspacePage.get(),
                         launcher.getWorkspace().getCurrentPage()));
                 AtomicInteger active = new AtomicInteger();
@@ -229,6 +238,28 @@ public class WidgetStackBindingTest {
                 });
             }
         }
+    }
+
+    private static void awaitPage(ActivityScenario<Launcher> scenario, int stackId, int rowId)
+            throws Exception {
+        try {
+            await(scenario, launcher -> info(launcher, stackId).getActiveWidgetId() == rowId);
+        } finally {
+            scenario.onActivity(launcher -> logPagingState(launcher, stackId));
+        }
+    }
+
+    private static void logPagingState(Launcher launcher, int id) {
+        WidgetStackView view = WidgetStackController.findStack(launcher, id);
+        PagedView<?> pager = (PagedView<?>) view.getChildAt(0);
+        Rect bounds = new Rect();
+        view.getGlobalVisibleRect(bounds);
+        android.util.Log.i("OneUiPagingTest", "active=" + info(launcher, id).getActiveWidgetId()
+                + " page=" + pager.getCurrentPage() + " next=" + pager.getNextPage()
+                + " scroll=" + pager.getScrollX() + " width=" + pager.getWidth()
+                + " transitioning=" + pager.isPageInTransition()
+                + " workspace=" + launcher.getWorkspace().getCurrentPage()
+                + " bounds=" + bounds + " sheet=" + AbstractFloatingView.getTopOpenView(launcher));
     }
 
     private static TextView activeText(Launcher launcher, int id) {
