@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 1bc97b059bc09da545a1ef2ef9714581f1f21508
+HEAD (audited before checkpoint): cabc6b371f197649c86ec333960be021e3b5867d
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -28,15 +28,13 @@ Completed:
 - Draft PR #1 exists for review/CI; NEVER merge.
 
 Current:
-- Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
-- M6 gesture ownership fe95ffa, accessibility 407dda4, first-provider constraints 8370fc5 committed.
-- Android host/gesture regressions and real-provider binding/reorder/remove/model-reload suite committed (1bc97b0).
+- M6 geometry/removal CI green; gesture ownership, accessibility and first-provider checks committed.
+- Binding-cancel ID fallback 453a92f + regression f0e6b1d; resize/recreation 6dd63d6; taps/swipes cabc6b3.
 
 Next:
-- M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
-- M6: verify all-member sizing, gesture arbitration, deletion/undo, reorder and ID cleanup.
-- M6: monitor emulator runs 34430802520/34431464980, fix real failures, extend paging/editor/resize coverage.
-- Then implement M1+M7 together, M4, M2; preserve valid M3/M5 work.
+- Monitor CI/emulator 34432524467 (dc9c8cd); verify explicit AVD paths resolve setup failure.
+- Run latest interaction tests after compile; finish provider failure, vertical scroll, picker/editor and migration acceptance.
+- M5/M6 impossible restore-grid failure paths remain pending; then M1+M7, M4, M2.
 
 Architecture decisions:
 - GitHub durable state; no clone/full checkout or local full Android build. Remote CI only.
@@ -66,19 +64,17 @@ Relevant files:
 - src/com/android/launcher3/widget/{WidgetStackView.kt,WidgetStackController.kt,WidgetGridPreflight.kt}
 - src/com/android/launcher3/widget/{BaseWidgetSheet.java,PendingAppWidgetHostView.java,picker/WidgetsFullSheet.java}
 - src/com/android/launcher3/util/{ItemInflater.kt,LauncherBindableItemsContainer.kt}
-- lawnchair/src/app/lawnchair/widgetstack/WidgetStackEditor.kt
+- lawnchair/src/app/lawnchair/widgetstack/WidgetStackEditor.kt; tests/oneui/; .github/scripts/oneui-emulator-smoke.sh
 - lawnchair/src/app/lawnchair/ui/preferences/destinations/HomeScreenGridPreferences.kt
 
 Validation:
-- d73d45d: 8 isolated Java constraint cases passed (not Android tests).
-- 5 grid scaling + 5 stack model + 3 stack migration regression cases added; not executed.
-- All 3 APKs/style passed: d73d45d/34423066055, a78a0c9/34423420226, 59c25cf/34423937406.
-- All 3 APKs/style passed: df78685/34424966519, d6c793c/34426161207, 1960ee0/34427352339.
-- 8828a43/34428638218 and 297149a/34428862164: all 3 APKs/style passed; final-status queued.
-- f84b4c7/34429849107 and 2e6eba2/34429976188: all 3 APKs/style/final-status passed.
-- CI compiles GithubDebug AndroidTest APK; optional dispatch oneui-emulator runs API35 and archives logcat.
-- b0aad3d/34430802520: all APKs + instrumentation compiled; host-only emulator running.
-- 1bc97b0/34431464980: real-provider test build/emulator pending; artifact Lawnchair-OneUI-Emulator-Smoke.
+- 5 grid scaling + 5 stack model + 3 migration cases in multivalentTests remain unexecuted.
+- Three APKs/style green: 1960ee0/34427352339, f84b4c7/34429849107, 2e6eba2/34429976188.
+- b0aad3d/34430802520, 1bc97b0/34431464980, 6dd63d6/34431706677: APKs/instrumentation/style compiled.
+- First emulator failed before APK install: Unknown AVD lawnchair-oneui; cancelled stalled run for logs.
+- Diagnostics: Lawnchair-OneUI-Emulator-Smoke, run34430802520, artifact10134948008; no device test passed.
+- Explicit ANDROID_USER_HOME/ANDROID_AVD_HOME + AVD existence checks dc9c8cd; bounded ADB/setup waits.
+- Latest source/tests need CI/runtime validation. Manual ci.yml input oneui-emulator=true runs API35.
 
 Final emulator/screenshots requirements (after all modules and successful CI):
 - Use remote emulator if available; install actual APK, launch without crash, set home when permitted.
