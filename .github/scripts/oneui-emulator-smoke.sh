@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Preliminary host regressions, not the final seven-module/provider acceptance suite.
 set -euo pipefail
-mkdir -p oneui-emulator-results
+export ANDROID_USER_HOME="$RUNNER_TEMP/lawnchair-oneui-user"
+export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+mkdir -p oneui-emulator-results "$ANDROID_AVD_HOME"
 export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 trap 'timeout 15 adb logcat -d > oneui-emulator-results/logcat.txt 2>&1 || true; timeout 10 adb emu kill >/dev/null 2>&1 || true' EXIT
 if [ ! -e /dev/kvm ]; then
@@ -10,7 +12,10 @@ if [ ! -e /dev/kvm ]; then
 fi
 sudo chmod a+rw /dev/kvm
 timeout 600 sdkmanager 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64'
-timeout 60 avdmanager create avd --force --name lawnchair-oneui --package 'system-images;android-35;google_apis;x86_64' --device pixel_2 <<< no
+timeout 60 avdmanager create avd --force --name lawnchair-oneui --path "$ANDROID_AVD_HOME/lawnchair-oneui.avd" --package 'system-images;android-35;google_apis;x86_64' --device pixel_2 <<< no
+test -s "$ANDROID_AVD_HOME/lawnchair-oneui.ini"
+emulator -list-avds | tee oneui-emulator-results/avds.txt
+grep -Fxq lawnchair-oneui oneui-emulator-results/avds.txt
 emulator -avd lawnchair-oneui -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > oneui-emulator-results/emulator.txt 2>&1 &
 timeout 300 adb wait-for-device
 booted=false
