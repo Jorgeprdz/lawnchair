@@ -6,51 +6,113 @@ package app.lawnchair.oneui
 
 import android.content.Context
 
-/** Small isolated preference store for experimental One UI glass controls. */
+/**
+ * Isolated preference store for One UI glass controls.
+ *
+ * Blur and Crystal intentionally keep independent intensities so tuning one surface style does not
+ * change the other. Legacy single-intensity values are used as migration fallbacks.
+ */
 object OneUiGlassPreferences {
     private const val PREFS = "oneui_glass"
-    private const val KEY_DOCK_FROSTY = "dock_frosty"
-    private const val KEY_DOCK_INTENSITY = "dock_glass_intensity"
+
+    private const val KEY_DOCK_BLUR_INTENSITY = "dock_blur_intensity"
+    private const val KEY_DOCK_CRYSTAL_INTENSITY = "dock_crystal_intensity"
     private const val KEY_FOLDER_MODE = "folder_glass_mode"
-    private const val KEY_FOLDER_INTENSITY = "folder_glass_intensity"
+    private const val KEY_FOLDER_BLUR_INTENSITY = "folder_blur_intensity"
+    private const val KEY_FOLDER_CRYSTAL_INTENSITY = "folder_crystal_intensity"
+
+    // Kept only to migrate builds that already exposed the first glass prototype.
+    private const val LEGACY_DOCK_FROSTY = "dock_frosty"
+    private const val LEGACY_DOCK_INTENSITY = "dock_glass_intensity"
+    private const val LEGACY_FOLDER_INTENSITY = "folder_glass_intensity"
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    @JvmStatic
-    fun isDockFrosty(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_DOCK_FROSTY, false)
-
-    @JvmStatic
-    fun setDockFrosty(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_DOCK_FROSTY, enabled).apply()
+    private fun readIntensity(context: Context, key: String, legacyKey: String, default: Int): Int {
+        val p = prefs(context)
+        return p.getInt(key, p.getInt(legacyKey, default)).coerceIn(0, 100)
     }
 
     @JvmStatic
-    fun getDockIntensity(context: Context): Int =
-        prefs(context).getInt(KEY_DOCK_INTENSITY, 70).coerceIn(0, 100)
+    fun getDockBlurIntensity(context: Context): Int =
+        readIntensity(context, KEY_DOCK_BLUR_INTENSITY, LEGACY_DOCK_INTENSITY, 70)
 
     @JvmStatic
-    fun setDockIntensity(context: Context, value: Int) {
-        prefs(context).edit().putInt(KEY_DOCK_INTENSITY, value.coerceIn(0, 100)).apply()
+    fun setDockBlurIntensity(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_DOCK_BLUR_INTENSITY, value.coerceIn(0, 100)).apply()
     }
 
-    /** 0 Off, 1 Solid, 2 Blur, 3 Crystal, 4 Frosty. Solid preserves Lawnchair defaults. */
     @JvmStatic
-    fun getFolderMode(context: Context): Int =
-        prefs(context).getInt(KEY_FOLDER_MODE, 1).coerceIn(0, 4)
+    fun getDockCrystalIntensity(context: Context): Int =
+        readIntensity(context, KEY_DOCK_CRYSTAL_INTENSITY, LEGACY_DOCK_INTENSITY, 55)
+
+    @JvmStatic
+    fun setDockCrystalIntensity(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_DOCK_CRYSTAL_INTENSITY, value.coerceIn(0, 100)).apply()
+    }
+
+    /** 0 Off, 1 Solid, 2 frosted Blur, 3 Crystal. */
+    @JvmStatic
+    fun getFolderMode(context: Context): Int {
+        val value = prefs(context).getInt(KEY_FOLDER_MODE, 1)
+        // Prototype mode 4 (Frosty) becomes the new One UI-style Blur.
+        return if (value == 4) 2 else value.coerceIn(0, 3)
+    }
 
     @JvmStatic
     fun setFolderMode(context: Context, value: Int) {
-        prefs(context).edit().putInt(KEY_FOLDER_MODE, value.coerceIn(0, 4)).apply()
+        prefs(context).edit().putInt(KEY_FOLDER_MODE, value.coerceIn(0, 3)).apply()
     }
 
     @JvmStatic
-    fun getFolderIntensity(context: Context): Int =
-        prefs(context).getInt(KEY_FOLDER_INTENSITY, 70).coerceIn(0, 100)
+    fun getFolderBlurIntensity(context: Context): Int =
+        readIntensity(context, KEY_FOLDER_BLUR_INTENSITY, LEGACY_FOLDER_INTENSITY, 70)
 
     @JvmStatic
+    fun setFolderBlurIntensity(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_FOLDER_BLUR_INTENSITY, value.coerceIn(0, 100)).apply()
+    }
+
+    @JvmStatic
+    fun getFolderCrystalIntensity(context: Context): Int =
+        readIntensity(context, KEY_FOLDER_CRYSTAL_INTENSITY, LEGACY_FOLDER_INTENSITY, 55)
+
+    @JvmStatic
+    fun setFolderCrystalIntensity(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_FOLDER_CRYSTAL_INTENSITY, value.coerceIn(0, 100)).apply()
+    }
+
+    // Binary/source compatibility for the first prototype while the branch transitions.
+    @JvmStatic
+    @Deprecated("Blur is now the frosted One UI style")
+    fun isDockFrosty(context: Context): Boolean = prefs(context).getBoolean(LEGACY_DOCK_FROSTY, false)
+
+    @JvmStatic
+    @Deprecated("Blur is now the frosted One UI style")
+    fun setDockFrosty(context: Context, enabled: Boolean) {
+        prefs(context).edit().putBoolean(LEGACY_DOCK_FROSTY, enabled).apply()
+    }
+
+    @JvmStatic
+    @Deprecated("Use the style-specific intensity")
+    fun getDockIntensity(context: Context): Int = getDockBlurIntensity(context)
+
+    @JvmStatic
+    @Deprecated("Use the style-specific intensity")
+    fun setDockIntensity(context: Context, value: Int) {
+        setDockBlurIntensity(context, value)
+        setDockCrystalIntensity(context, value)
+    }
+
+    @JvmStatic
+    @Deprecated("Use the style-specific intensity")
+    fun getFolderIntensity(context: Context): Int = getFolderBlurIntensity(context)
+
+    @JvmStatic
+    @Deprecated("Use the style-specific intensity")
     fun setFolderIntensity(context: Context, value: Int) {
-        prefs(context).edit().putInt(KEY_FOLDER_INTENSITY, value.coerceIn(0, 100)).apply()
+        setFolderBlurIntensity(context, value)
+        setFolderCrystalIntensity(context, value)
     }
 }
