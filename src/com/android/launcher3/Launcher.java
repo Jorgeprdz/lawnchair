@@ -852,8 +852,11 @@ public class Launcher extends StatefulActivity<LauncherState>
 
         if (requestCode == REQUEST_BIND_APPWIDGET) {
             // This is called only if the user did not previously have permissions to bind widgets
-            final int appWidgetId = data != null ?
+            final int returnedWidgetId = data != null ?
                     data.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) : -1;
+            // A cancelled permission dialog can return no Intent. The pending request still
+            // owns the allocated ID, including when the destination is a widget stack.
+            final int appWidgetId = returnedWidgetId >= 0 ? returnedWidgetId : pendingAddWidgetId;
             if (resultCode == RESULT_CANCELED) {
                 completeTwoStageWidgetDrop(RESULT_CANCELED, appWidgetId, requestArgs);
                 mWorkspace.removeExtraEmptyScreenDelayed(
