@@ -81,7 +81,7 @@ object WidgetStackController {
         if (container < 0) return false
         val stackView = findStack(launcher, container)
         val stack = stackView?.tag as? WidgetStackInfo
-        if (stack == null || !fits(stack, provider)) {
+        if (stackView == null || stack == null || !fits(stack, provider)) {
             launcher.appWidgetHolder.deleteAppWidgetId(member.appWidgetId)
             Toast.makeText(launcher, R.string.widget_stack_incompatible, Toast.LENGTH_SHORT).show()
             return true
