@@ -1,6 +1,7 @@
 package app.lawnchair.ui.preferences.destinations
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,6 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,6 +49,8 @@ import app.lawnchair.ui.preferences.components.layout.PreferenceLayout
 import app.lawnchair.ui.preferences.components.layout.PreferenceTemplate
 import com.android.launcher3.InvariantDeviceProfile
 import com.android.launcher3.R
+import com.android.launcher3.widget.WidgetGridPreflight
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreenGridPreferences(
@@ -212,6 +219,8 @@ fun HomeScreenGridPreferences(
 
                     val navController = LocalNavController.current
                     val context = LocalContext.current
+                    val scope = rememberCoroutineScope()
+                    var checkingGrid by remember { mutableStateOf(false) }
                     val applyOverrides = {
                         prefs.batchEdit {
                             columnsAdapter.onChange(columns.intValue)
@@ -235,11 +244,28 @@ fun HomeScreenGridPreferences(
                             .padding(horizontal = 16.dp),
                     ) {
                         Button(
-                            onClick = { applyOverrides() },
+                            onClick = {
+                                val selectedColumns = columns.intValue
+                                val selectedRows = rows.intValue
+                                checkingGrid = true
+                                scope.launch {
+                                    try {
+                                        val allowed = (selectedColumns == originalColumns && selectedRows == originalRows) ||
+                                            WidgetGridPreflight.canApply(context, selectedColumns, selectedRows)
+                                        if (allowed && selectedColumns == columns.intValue && selectedRows == rows.intValue) {
+                                            applyOverrides()
+                                        } else {
+                                            Toast.makeText(context, R.string.widget_grid_incompatible, Toast.LENGTH_LONG).show()
+                                        }
+                                    } finally {
+                                        checkingGrid = false
+                                    }
+                                }
+                            },
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .fillMaxWidth(),
-                            enabled = isChanged,
+                            enabled = isChanged && !checkingGrid,
                             shapes = ButtonDefaults.shapes(),
                         ) {
                             Text(text = stringResource(id = R.string.action_apply))
