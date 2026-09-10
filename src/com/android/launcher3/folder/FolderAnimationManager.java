@@ -365,7 +365,7 @@ public class FolderAnimationManager implements FolderAnimationCreator {
         if (mFolderIcon.isLargeFolder()) {
             List<com.android.launcher3.model.data.ItemInfo> preview = mFolderIcon.getPreviewItemsOnPage(page);
             List<View> result = new java.util.ArrayList<>();
-            for (View view : mFolder.getIconsInReadingOrder()) {
+            for (View view : mFolder.getItemsOnPage(page)) {
                 if (preview.contains(view.getTag())) result.add(view);
             }
             return result;
@@ -385,7 +385,7 @@ public class FolderAnimationManager implements FolderAnimationCreator {
                 isOnFirstPage ? 0 : mFolder.mContent.getCurrentPage());
         final int numItemsInPreview = itemsInPreview.size();
         final int numItemsInFirstPagePreview = isOnFirstPage
-                ? numItemsInPreview : MAX_NUM_ITEMS_IN_PREVIEW;
+                ? numItemsInPreview : mFolderIcon.getPreviewCapacity();
 
         TimeInterpolator previewItemInterpolator = getPreviewItemInterpolator();
 
