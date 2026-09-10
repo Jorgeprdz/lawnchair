@@ -217,12 +217,14 @@ public class QsbContainerView extends FrameLayout {
         }
 
         private View createQsbInternal(ViewGroup container) {
+            if (isInPreviewMode()) return getDefaultView(container, false);
             mWidgetInfo = getSearchWidgetProvider();
             if (mWidgetInfo == null) {
                 // Provider removal cleans only this QSB's IDs, never another widget host.
                 if (!isInPreviewMode()) clearWidgetIds();
                 return getDefaultView(container, false /* show setup icon */);
             }
+            if (getPendingWidgetId() >= 0) return getDefaultView(container, true);
             Bundle opts = createBindOptions();
             Context context = getContext();
             AppWidgetManager widgetManager = AppWidgetManager.getInstance(context);
@@ -311,6 +313,7 @@ public class QsbContainerView extends FrameLayout {
             }
             // Some providers return RESULT_OK without an Intent. The allocated ID is authoritative.
             int id = getPendingWidgetId();
+            if (id < 0) return;
             AppWidgetProviderInfo bound = id < 0 ? null
                     : AppWidgetManager.getInstance(getContext()).getAppWidgetInfo(id);
             mWidgetInfo = getSearchWidgetProvider();

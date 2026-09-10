@@ -147,6 +147,10 @@ public class Hotseat extends FrameLayout implements Insettable {
             hotseatMode = LawnchairHotseat.INSTANCE;
             com.patrykmichalik.opto.core.PreferenceExtensionsKt.setBlocking(preferenceManager2.getHotseatMode(), hotseatMode);
         }
+        if (hotseatMode != app.lawnchair.hotseat.PixelSearchHotseat.INSTANCE
+                && context instanceof Launcher) {
+            app.lawnchair.qsb.PixelSearchQsbFragment.release(context);
+        }
         int layoutId = hotseatMode.getLayoutResourceId();
 
         mIconsContainer = new FrameLayout(context);
@@ -172,7 +176,8 @@ public class Hotseat extends FrameLayout implements Insettable {
         mIconsContainer.addView(mPageIndicator);
         mPagedView.setPageIndicator(mPageIndicator);
 
-        if (Flags.enableQsbOnHotseat()) {
+        if (Flags.enableQsbOnHotseat()
+                && hotseatMode != app.lawnchair.hotseat.PixelSearchHotseat.INSTANCE) {
             mQsb = LayoutInflater.from(context).inflate(R.layout.qsb_container_hotseat, this,
                     false);
         } else {

@@ -80,7 +80,7 @@ fun DockSearchPreference(
                         adapter = hotseatModeAdapter,
                     )
                 }
-                ExpandAndShrink(visible = hotseatModeAdapter.state.value != DisabledHotseat) {
+                ExpandAndShrink(visible = isLawnchairHotseat) {
                     Column {
                         DockSearchBarPreview(
                             provider = hotseatQsbProviderAdapter,
