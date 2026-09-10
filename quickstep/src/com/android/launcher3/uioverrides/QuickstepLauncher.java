@@ -549,6 +549,7 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         }
         shortcuts.add(WIDGETS);
         shortcuts.add(INSTALL);
+        shortcuts.add(SystemShortcut.WORKSPACE_SIZE);
         if (Flags.enableLongPressRemoveShortcut()
                 && (container == CONTAINER_HOTSEAT || container == CONTAINER_DESKTOP
                 || /* Folder */ container > 0)) {
