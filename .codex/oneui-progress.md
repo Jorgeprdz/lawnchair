@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 0ddd82470638c76cd0b2c74fea1e2ce53dfb55a6
+HEAD (audited before checkpoint): 7bb4ad76d5ff7bff27716bee582b164dbd097713
 Base 16-dev: 155ccd1ee49e29e839ca603072777a9b7ef1e52c — unchanged; no merge.
 Global: 73% — equal-weight estimate across seven modules, not acceptance completion.
 
@@ -44,7 +44,7 @@ Next:
 Bugfixes:
 - 0ddd824: GNC surface layout/valid bounds before handoff; no translation springs on real workspace icon.
 - Restore visibility on surface loss/finish/3s callback timeout; isolate stale finish callbacks per contract.
-- Native surface test covers completion/lost callback/late callback; CI34448143425 style issues corrected.
+- 7bb4ad7 invalidates old finish before new surface layout. CI34448502562 all3/emulator;34448364496 fast.
 - Samsung physical gesture reproduction still pending; do not claim fixed solely from code.
 
 Architecture decisions:
@@ -96,5 +96,5 @@ Screenshots:
 
 Blockers:
 - ADB serial emulator-5554 is actual Samsung SM-S931B/API36 (ro.kernel.qemu=0); read-only access works.
-- Phone has app.lawnchair.nightly; Finder resolves; actual Pixel provider rk.android.app.pixelsearch/.SearchWidget.
+- Phone default HOME app.lawnchair.nightly 16.Dev.(#5074); Finder resolves; Pixel provider .SearchWidget exists.
 - No phone installation/settings changes yet; final installation authorized. CI emulator remains separate.
