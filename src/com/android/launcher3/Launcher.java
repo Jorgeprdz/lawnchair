@@ -265,6 +265,7 @@ import com.android.launcher3.widget.PendingAddWidgetInfo;
 import com.android.launcher3.widget.PendingAppWidgetHostView;
 import com.android.launcher3.widget.WidgetAddFlowHandler;
 import com.android.launcher3.widget.WidgetManagerHelper;
+import com.android.launcher3.widget.WidgetStackView;
 import com.android.launcher3.widget.custom.CustomWidgetManager;
 import com.android.launcher3.widget.model.WidgetsListBaseEntry;
 import com.android.launcher3.widget.picker.WidgetsFullSheet;
@@ -2254,6 +2255,9 @@ public class Launcher extends StatefulActivity<LauncherState>
             }
             if (enableWorkspaceInflation() && view instanceof LauncherAppWidgetHostView lv) {
                 view = getAppWidgetHolder().attachViewToHostAndGetAttachedView(lv);
+            }
+            if (enableWorkspaceInflation() && view instanceof WidgetStackView stackView) {
+                stackView.attachWidgetsToHost(getAppWidgetHolder());
             }
             workspace.addInScreenFromBind(view, item);
             if (boundAnim != null) {
