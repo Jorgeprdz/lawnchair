@@ -25,19 +25,24 @@ class PixelSearchQsbFragment : QsbContainerView.QsbFragment() {
         super.onInit(savedInstanceState)
     }
 
-    override fun isQsbEnabled(): Boolean =
-        PreferenceManager2.getInstance(context).hotseatMode.firstCached() == PixelSearchHotseat
+    override fun isQsbEnabled(): Boolean = PreferenceManager2.getInstance(context).hotseatMode.firstCached() == PixelSearchHotseat
 
     override fun onWidgetCreated(host: com.android.launcher3.qsb.QsbWidgetHostView) {
         host.addOnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
             val width = right - left
             val height = bottom - top
             if (width > 0 && height > 0 &&
-                (width != oldRight - oldLeft || height != oldBottom - oldTop)) {
+                (width != oldRight - oldLeft || height != oldBottom - oldTop)
+            ) {
                 val density = host.resources.displayMetrics.density
                 try {
-                    host.updateAppWidgetSize(null, (width / density).toInt(), (height / density).toInt(),
-                        (width / density).toInt(), (height / density).toInt())
+                    host.updateAppWidgetSize(
+                        null,
+                        (width / density).toInt(),
+                        (height / density).toInt(),
+                        (width / density).toInt(),
+                        (height / density).toInt(),
+                    )
                 } catch (_: RuntimeException) {
                     // Keep the real host; the provider can recover on the next binding/layout.
                 }
@@ -49,9 +54,11 @@ class PixelSearchQsbFragment : QsbContainerView.QsbFragment() {
         AppWidgetManager.getInstance(context)
             .getInstalledProvidersForPackage(PixelSearch.packageName, android.os.Process.myUserHandle())
             .filter { it.provider.packageName == PixelSearch.packageName }
-            .sortedWith(compareByDescending<AppWidgetProviderInfo> {
-                it.widgetCategory and AppWidgetProviderInfo.WIDGET_CATEGORY_SEARCHBOX != 0
-            }.thenBy { it.minHeight }.thenBy { it.provider.flattenToString() })
+            .sortedWith(
+                compareByDescending<AppWidgetProviderInfo> {
+                    it.widgetCategory and AppWidgetProviderInfo.WIDGET_CATEGORY_SEARCHBOX != 0
+                }.thenBy { it.minHeight }.thenBy { it.provider.flattenToString() },
+            )
             .firstOrNull()
     } catch (_: RuntimeException) {
         null
