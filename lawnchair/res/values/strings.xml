@@ -1076,4 +1076,6 @@
     <string name="widget_stack_add">Add widget</string>
     <string name="widget_stack_remove">Remove</string>
     <string name="widget_stack_move">Move stack</string>
+    <string name="widget_stack_create">Create widget stack</string>
+    <string name="widget_stack_create_failed">Could not create the widget stack. Try again.</string>
 </resources>

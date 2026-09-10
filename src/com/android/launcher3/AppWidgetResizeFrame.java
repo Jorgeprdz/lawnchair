@@ -89,6 +89,7 @@ public class AppWidgetResizeFrame extends AbstractFloatingView implements View.O
     private CellLayout mCellLayout;
     private DragLayer mDragLayer;
     private ImageButton mReconfigureButton;
+    private ImageButton mCreateStackButton;
 
     private final int mBackgroundPadding;
     private final int mTouchTargetWidth;
@@ -301,6 +302,17 @@ public class AppWidgetResizeFrame extends AbstractFloatingView implements View.O
         }
 
         LauncherAppWidgetInfo widgetInfoOnView = (LauncherAppWidgetInfo) mWidgetView.getTag();
+        mCreateStackButton = findViewById(R.id.widget_create_stack_button);
+        boolean canCreateStack = widgetInfoOnView.container
+                == LauncherSettings.Favorites.CONTAINER_DESKTOP
+                && widgetInfoOnView.itemType == LauncherSettings.Favorites.ITEM_TYPE_APPWIDGET;
+        mCreateStackButton.setVisibility(canCreateStack ? VISIBLE : GONE);
+        mCreateStackButton.setOnClickListener(v -> {
+            mCreateStackButton.setEnabled(false);
+            close(false);
+            com.android.launcher3.widget.WidgetStackController.create(
+                    Launcher.getLauncher(getContext()), mWidgetView);
+        });
         // Only show resize handles for the directions in which resizing is possible.
 
         // on font / display change, the dp/px size of a cell changes, which means, existing spans
@@ -757,6 +769,11 @@ public class AppWidgetResizeFrame extends AbstractFloatingView implements View.O
     private boolean isTouchOnReconfigureButton(MotionEvent ev) {
         int xFrame = (int) ev.getX() - getLeft();
         int yFrame = (int) ev.getY() - getTop();
+        if (mCreateStackButton.getVisibility() == VISIBLE) {
+            mCreateStackButton.getHitRect(sTmpRect);
+            if (sTmpRect.contains(xFrame, yFrame)) return true;
+        }
+        if (mReconfigureButton.getVisibility() != VISIBLE) return false;
         mReconfigureButton.getHitRect(sTmpRect);
         return sTmpRect.contains(xFrame, yFrame);
     }

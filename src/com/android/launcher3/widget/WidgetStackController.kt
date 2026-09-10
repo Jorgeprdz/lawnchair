@@ -21,6 +21,27 @@ import com.android.launcher3.model.data.WidgetStackInfo
 
 /** Routes stack requests through the launcher's existing widget binding and host. */
 object WidgetStackController {
+    /** Converts the existing widget row atomically, then reuses its actual host view. */
+    @JvmStatic
+    fun create(launcher: Launcher, widgetView: LauncherAppWidgetHostView) {
+        val member = widgetView.tag as? LauncherAppWidgetInfo ?: return
+        if (!widgetView.isAttachedToWindow ||
+            !com.android.launcher3.touch.ItemLongClickListener.canStartDrag(launcher)) return
+        launcher.modelWriter.createWidgetStack(member, { stack ->
+            if (launcher.isDestroyed || !widgetView.isAttachedToWindow) {
+                launcher.model.forceReload()
+            } else {
+                launcher.removeItem(widgetView, member, false, "converted to widget stack")
+                val stackView = WidgetStackView(launcher)
+                stackView.bind(stack, launcher.modelWriter, listOf(widgetView))
+                launcher.workspace.addInScreen(stackView, stack)
+                app.lawnchair.widgetstack.WidgetStackEditor.show(launcher, stackView)
+            }
+        }, {
+            Toast.makeText(launcher, R.string.widget_stack_create_failed, Toast.LENGTH_SHORT).show()
+        })
+    }
+
     @JvmStatic
     fun findStack(launcher: Launcher, id: Int): WidgetStackView? =
         launcher.workspace.mapOverItems { item, view ->

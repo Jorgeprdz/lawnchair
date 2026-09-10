@@ -4,10 +4,10 @@ Branch:
 feature/oneui-enhancements
 
 HEAD (code audited before this checkpoint):
-50bfffb530e1a9ba50e9ad4c6e0999988900aab5
+294f23b3adc48656be51cf143c940a16cab72b3c
 
 Global:
-26% (rounded equal-weight estimate across seven modules; not acceptance completion)
+28% (rounded equal-weight estimate across seven modules; not acceptance completion)
 
 Modules:
 - M1 Large Folders: 0% — no committed implementation
@@ -15,7 +15,7 @@ Modules:
 - M3 One UI Finder: 90% — complete CI passed; Samsung/missing-component device checks pending
 - M4 Dock Glass: 0% — not started
 - M5 Widget Grid Snap: 70% — safe pre-reorder constraints and proportional migration; CI/device checks pending
-- M6 Widget Stacks: 25% — model/load/view, atomic create/delete and migration foundations; UI/resize/runtime pending
+- M6 Widget Stacks: 35% — creation action, native picker/editor connected; CI/resize/lifecycle validation pending
 - M7 Max Icons / Max Folders: 0% — required annex; individual workspace-only 1x1/2x2 items
 
 Completed:
@@ -33,16 +33,16 @@ Completed:
 - M6 nested loading and rank normalization: 59c25cf; broken providers retained.
 - M6 PagedView/PageIndicatorDots/real host views and async host attachment: 3aa9890.
 - M6 atomic create/delete: 7f2734c; migration copies members and remaps active row: df78685.
-- M6 view context compiler fix: 8909ad2; no creation/editor entry exposed yet.
+- M6 context fix: 8909ad2; selector 50bfffb/editor 294f23b; creation uses native widget resize frame.
 
 Current:
-- M6 sheet editor: drag/a11y reorder, active selection, remove, native picker add, move; creation entry next.
+- M6 creation action wraps one widget atomically and opens editor; monitor CI and lifecycle/resize.
 
 Next:
 - Inspect any remote compile failure and fix; instrumented tests need a configured runner.
 - M5: cover strictly-taller shortcut and legacy Java migration proportional behavior.
 - M5: audit impossible provider minima/removal paths to prevent widget disappearance.
-- M6: connect creation entry; picker target uses existing PendingRequestArgs container.
+- M6: validate picker recreation/drag routes, model callback membership and cancellation.
 - M6: editor/remove/reorder/add, resize, restore/provider updates and integration tests pending.
 
 Architecture decisions:
