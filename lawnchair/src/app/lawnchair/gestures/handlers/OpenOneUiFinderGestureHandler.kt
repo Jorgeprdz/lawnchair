@@ -17,14 +17,16 @@ class OpenOneUiFinderGestureHandler(context: Context) : GestureHandler(context) 
             .addCategory(Intent.CATEGORY_LAUNCHER)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-        val packageManager = launcher.packageManager
-        val resolved = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        if (resolved == null) {
-            Toast.makeText(launcher, R.string.lawnchair_action_failed, Toast.LENGTH_SHORT).show()
-            return
-        }
-
         try {
+            val resolved = launcher.packageManager.resolveActivity(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY,
+            )
+            if (resolved == null) {
+                Toast.makeText(launcher, R.string.lawnchair_action_failed, Toast.LENGTH_SHORT).show()
+                return
+            }
+
             launcher.startActivity(intent)
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(launcher, R.string.lawnchair_action_failed, Toast.LENGTH_SHORT).show()
