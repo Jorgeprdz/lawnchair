@@ -31,7 +31,7 @@ mapfile -t test_apks < <(find oneui-apks -path '*/androidTest/lawnWithQuickstepG
 [ "${#app_apks[@]}" -eq 1 ]
 [ "${#test_apks[@]}" -eq 1 ]
 adb install -r "${app_apks[0]}"
-adb install -r "${test_apks[0]}"
+adb install -r -t "${test_apks[0]}"
 adb shell cmd package set-home-activity app.lawnchair.debug/app.lawnchair.LawnchairLauncher > oneui-emulator-results/home-role.txt 2>&1 || true
 adb logcat -c
 adb shell am instrument -w -r app.lawnchair.debug.test/androidx.test.runner.AndroidJUnitRunner | tee oneui-emulator-results/instrumentation.txt

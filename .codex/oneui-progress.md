@@ -1,7 +1,7 @@
 # Lawnchair OneUI Progress
 
 Branch: feature/oneui-enhancements
-HEAD (audited before checkpoint): 2e6eba22fa560229f9f3e5b7f84aa8e61d66a882
+HEAD (audited before checkpoint): d474519a7de590d088fea8f3b247b4f684ecd580
 Global: 29% — equal-weight estimate across seven modules; not acceptance completion.
 
 Modules:
@@ -29,12 +29,12 @@ Completed:
 
 Current:
 - Both Java/Kotlin migration routes share proportional widget/stack scaling; taller grids use solver when widgets exist.
-- M6 widget bounds a7949e2, reused-host transforms f84b4c7, Android member removal 2e6eba2 committed.
+- M6 geometry/removal CI green; gesture ownership fe95ffa; Android host test c233c0d; remote emulator enabled.
 
 Next:
 - M5/M6: validate unified migration routes; impossible restore-grid failure paths still pending.
 - M6: verify all-member sizing, gesture arbitration, deletion/undo, reorder and ID cleanup.
-- M6: instrumented/runtime tests pending; build.gradle currently has no Android test runner.
+- M6: run new Android host regression suite; extend real-provider/editor/paging acceptance coverage.
 - Then implement M1+M7 together, M4, M2; preserve valid M3/M5 work.
 
 Architecture decisions:
@@ -74,8 +74,9 @@ Validation:
 - All 3 APKs/style passed: d73d45d/34423066055, a78a0c9/34423420226, 59c25cf/34423937406.
 - All 3 APKs/style passed: df78685/34424966519, d6c793c/34426161207, 1960ee0/34427352339.
 - 8828a43/34428638218 and 297149a/34428862164: all 3 APKs/style passed; final-status queued.
-- Latest 2e6eba2 CI run 34429976188 in progress; geometry/removal fixes not yet compile-validated.
-- Keep useful push CI; cancel duplicate/obsolete runs. NightlyRelease/GithubDebug/PlayDebug matrix.
+- f84b4c7/34429849107 and 2e6eba2/34429976188: all 3 APKs/style/final-status passed.
+- CI compiles GithubDebug AndroidTest APK; optional dispatch oneui-emulator runs API35 and archives logcat.
+- Preliminary host tests are not real-provider acceptance; artifact Lawnchair-OneUI-Emulator-Smoke.
 
 Final emulator/screenshots requirements (after all modules and successful CI):
 - Use remote emulator if available; install actual APK, launch without crash, set home when permitted.
