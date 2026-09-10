@@ -99,6 +99,9 @@ class WidgetStackView(context: Context) : FrameLayout(context), DraggableView, R
     /** Reused hosts must not retain transforms from a standalone workspace binding. */
     private fun preparePageHost(view: View) {
         if (view is NavigableAppWidgetHostView) {
+            // Workspace move/resize/remove actions belong to the stack, not an inner host.
+            // Widget descendants retain their own accessibility and normal interactions.
+            view.accessibilityDelegate = null
             view.setScaleToFit(1f)
             view.translateDelegate.setTranslation(
                 MultiTranslateDelegate.INDEX_WIDGET_CENTERING, 0f, 0f,
