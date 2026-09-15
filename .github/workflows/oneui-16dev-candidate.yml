@@ -1,0 +1,130 @@
+name: OneUI 16-dev candidate
+
+on:
+  push:
+    branches:
+      - update/16-dev-20260915
+    paths:
+      - '.github/workflows/oneui-16dev-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_SHA: f8164291da70339b515b41e4230e4c24da9d8557
+  ONEUI_BASE_SHA: 1a5e02c524179875c2784e9c871abf660a5b1608
+
+jobs:
+  candidate:
+    name: Merge, build and verify candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout OneUI base without submodules
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.ONEUI_BASE_SHA }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Fetch exact Lawnchair upstream
+        run: |
+          set -euo pipefail
+          git remote add lawnchair-upstream https://github.com/LawnchairLauncher/lawnchair.git || true
+          git fetch --no-tags lawnchair-upstream "$UPSTREAM_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$UPSTREAM_SHA"
+
+      - name: Integrate exact upstream while preserving OneUI conflicts
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git merge --no-edit --no-ff -X ours "$UPSTREAM_SHA" -m "chore: candidate Lawnchair 16-dev f816429 preserving OneUI"
+          test -z "$(git ls-files -u)"
+          git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD
+          git merge-base --is-ancestor "$ONEUI_BASE_SHA" HEAD
+          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!*.md'
+
+      - name: Synchronize merged submodules
+        run: |
+          set -euo pipefail
+          git submodule sync --recursive
+          git submodule update --init --recursive --jobs 4
+          git submodule status --recursive
+
+      - name: OneUI preservation gates
+        run: |
+          set -euo pipefail
+          test -f .github/workflows/oneui-build.yml
+          grep -q 'app.lawnchair.oneui' .github/workflows/oneui-build.yml
+          grep -q 'ONEUI_KEYSTORE_B64' .github/workflows/oneui-build.yml
+          grep -q 'apksigner' .github/workflows/oneui-build.yml
+          echo '--- whitespace diagnostic (non-blocking) ---'
+          git diff --check "$ONEUI_BASE_SHA"..HEAD || true
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Restore stable signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ONEUI_KEYSTORE_B64 || secrets.ONEUI_KEYSTORE || secrets.STABLE_KEYSTORE_B64 || secrets.STABLE_KEYSTORE || secrets.KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD || secrets.ONEUI_KEYSTORE_PASSWORD || secrets.STABLE_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS || secrets.STABLE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONEUI_KEY_PASSWORD || secrets.STABLE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${KEYSTORE_B64:-}"
+          test -n "${STORE_PASSWORD:-}"
+          test -n "${KEY_ALIAS:-}"
+          test -n "${KEY_PASSWORD:-}"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/oneui-stable.jks"
+          cat > keystore.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
+          EOF
+          keytool -list -v -keystore "$GITHUB_WORKSPACE/oneui-stable.jks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E 'SHA256:|Owner:|Issuer:' || true
+
+      - name: Configure separate OneUI identity
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('build.gradle')
+          s=p.read_text()
+          a="applicationId 'app.lawnchair'"
+          b="applicationId 'app.lawnchair.oneui'"
+          if a not in s: raise SystemExit('Github flavor applicationId not found')
+          s=s.replace(a,b,1)
+          a='resValue("string", "derived_app_name", "Lawnchair (Debug)")'
+          b='resValue("string", "derived_app_name", "Lawnchair OneUI")'
+          if a not in s: raise SystemExit('Debug app name not found')
+          p.write_text(s.replace(a,b,1))
+          PY
+
+      - name: Compile OneUI candidate
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug --stacktrace
+
+      - name: Verify APK identity and certificate
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          test -n "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          "$AAPT" dump badging "$APK" | tee /tmp/badging.txt
+          grep "package: name='app.lawnchair.oneui.debug'" /tmp/badging.txt
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee /tmp/signing.txt
+          grep -q 'Verified using v' /tmp/signing.txt
+
+      - name: Upload verified candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-16dev-f816429-verified-candidate
+          path: build/outputs/apk/**/*.apk
+          if-no-files-found: error
