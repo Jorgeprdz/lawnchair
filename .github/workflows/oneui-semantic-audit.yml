@@ -46,76 +46,63 @@ jobs:
           git submodule sync --recursive
           git submodule update --init --recursive --jobs 4
 
-      - name: Audit M1 Large Folders
+      - name: Audit all OneUI modules with per-check diagnostics
+        id: semantic
+        shell: bash
         run: |
-          set -euo pipefail
-          git grep -q 'FLAG_LARGE_FOLDER'
-          git grep -qi 'large.folder'
-          git grep -q 'FolderIcon'
-          echo 'M1 LARGE FOLDERS = PASS'
+          set +e
+          FAIL=0
+          check() { local mod="$1" label="$2"; shift 2; if "$@" >/dev/null 2>&1; then printf '  PASS  %s\n' "$label"; else printf '  FAIL  %s\n' "$label"; FAIL=1; fi; }
+          section() { printf '\n===== %s =====\n' "$1"; }
 
-      - name: Audit M2 Pixel Search
-        run: |
-          set -euo pipefail
-          git grep -q 'rk.android.app.pixelsearch'
-          git grep -q 'PixelSearchQsbFragment'
-          git grep -q 'pixel_search'
-          echo 'M2 PIXEL SEARCH = PASS'
+          section 'M1 LARGE FOLDERS'
+          check M1 FLAG_LARGE_FOLDER git grep -q FLAG_LARGE_FOLDER
+          check M1 large_folder_refs bash -c "git grep -qi 'large.folder'"
+          check M1 FolderIcon git grep -q FolderIcon
 
-      - name: Audit M3 One UI Finder
-        run: |
-          set -euo pipefail
-          git grep -q 'com.sec.android.app.launcher'
-          git grep -qi 'finder'
-          echo 'M3 ONE UI FINDER = PASS'
+          section 'M2 PIXEL SEARCH'
+          check M2 pixel_package git grep -q rk.android.app.pixelsearch
+          check M2 PixelSearchQsbFragment git grep -q PixelSearchQsbFragment
+          check M2 pixel_search_pref git grep -q pixel_search
 
-      - name: Audit M4 Dock and Folder Glass
-        run: |
-          set -euo pipefail
-          test -f src/com/android/launcher3/graphics/OneUiGlassPreferences.java
-          test -f src/com/android/launcher3/graphics/OneUiGlassSurface.java
-          git grep -q 'MODE_BLUR' -- src/com/android/launcher3/graphics
-          git grep -q 'MODE_CRYSTAL' -- src/com/android/launcher3/graphics
-          git grep -qi 'frost' -- src/com/android/launcher3/graphics
-          git grep -q 'dock_blur_intensity'
-          git grep -q 'dock_crystal_intensity'
-          git grep -q 'folder_blur_intensity'
-          git grep -q 'folder_crystal_intensity'
-          echo 'M4 FROSTY/CRYSTAL DOCK+FOLDER = PASS'
+          section 'M3 ONE UI FINDER'
+          check M3 samsung_launcher git grep -q com.sec.android.app.launcher
+          check M3 finder_refs bash -c "git grep -qi finder"
 
-      - name: Audit M5 Widget Grid Snap
-        run: |
-          set -euo pipefail
-          git grep -q 'WidgetGridPreflight'
-          git grep -q 'WidgetGridMigrationGuard'
-          git grep -qi 'grid.*migration'
-          echo 'M5 WIDGET GRID SNAP = PASS'
+          section 'M4 DOCK/FOLDER GLASS'
+          check M4 OneUiGlassPreferences test -f src/com/android/launcher3/graphics/OneUiGlassPreferences.java
+          check M4 OneUiGlassSurface test -f src/com/android/launcher3/graphics/OneUiGlassSurface.java
+          check M4 MODE_BLUR git grep -q MODE_BLUR -- src/com/android/launcher3/graphics
+          check M4 MODE_CRYSTAL git grep -q MODE_CRYSTAL -- src/com/android/launcher3/graphics
+          check M4 frosty_refs bash -c "git grep -qi frost -- src/com/android/launcher3/graphics"
+          for token in dock_blur_intensity dock_crystal_intensity folder_blur_intensity folder_crystal_intensity; do
+            check M4 "$token" git grep -q "$token"
+          done
+          echo '--- M4 actual glass/intensity symbols ---'
+          git grep -niE 'frost|crystal|blur.*intens|intens.*blur|glass.*intens|intens.*glass' -- src lawnchair 2>/dev/null | head -120 || true
 
-      - name: Audit M6 Widget Stacks
-        run: |
-          set -euo pipefail
-          git grep -q 'WidgetStackInfo'
-          git grep -q 'WidgetStackView'
-          git grep -q 'WidgetStackController'
-          git grep -q 'WidgetStackEditor'
-          echo 'M6 WIDGET STACKS = PASS'
+          section 'M5 WIDGET GRID SNAP'
+          check M5 WidgetGridPreflight git grep -q WidgetGridPreflight
+          check M5 WidgetGridMigrationGuard git grep -q WidgetGridMigrationGuard
+          check M5 grid_migration bash -c "git grep -qiE 'grid.*migration|migration.*grid'"
 
-      - name: Audit M7 Max Icons and Folders
-        run: |
-          set -euo pipefail
-          git grep -q 'FLAG_MAX_ICON'
-          git grep -q 'WORKSPACE_SIZE'
-          git grep -q 'FLAG_LARGE_FOLDER'
-          echo 'M7 MAX ICONS/FOLDERS = PASS'
+          section 'M6 WIDGET STACKS'
+          for token in WidgetStackInfo WidgetStackView WidgetStackController WidgetStackEditor; do check M6 "$token" git grep -q "$token"; done
 
-      - name: Audit OneUI identity and signing workflow
-        run: |
-          set -euo pipefail
-          test -f .github/workflows/oneui-build.yml
-          git grep -q 'app.lawnchair.oneui' -- .github/workflows/oneui-build.yml
-          git grep -q 'ONEUI_KEYSTORE_B64' -- .github/workflows/oneui-build.yml
-          git grep -q 'apksigner' -- .github/workflows/oneui-build.yml
-          echo 'IDENTITY/SIGNING CONTRACT = PASS'
+          section 'M7 MAX ICONS/FOLDERS'
+          check M7 FLAG_MAX_ICON git grep -q FLAG_MAX_ICON
+          check M7 WORKSPACE_SIZE git grep -q WORKSPACE_SIZE
+          check M7 FLAG_LARGE_FOLDER git grep -q FLAG_LARGE_FOLDER
+
+          section 'IDENTITY/SIGNING CONTRACT'
+          check ID oneui_build test -f .github/workflows/oneui-build.yml
+          check ID application_id git grep -q app.lawnchair.oneui -- .github/workflows/oneui-build.yml
+          check ID stable_keystore git grep -q ONEUI_KEYSTORE_B64 -- .github/workflows/oneui-build.yml
+          check ID apksigner git grep -q apksigner -- .github/workflows/oneui-build.yml
+
+          echo "semantic_fail=$FAIL" >> "$GITHUB_OUTPUT"
+          echo "SEMANTIC_CHECKS_COMPLETE fail=$FAIL"
+          exit 0
 
       - name: Report upstream overlap with OneUI implementation
         run: |
@@ -136,19 +123,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Compile reconstructed candidate
+        id: build
+        continue-on-error: true
         run: ./gradlew assembleLawnWithQuickstepGithubDebug --stacktrace
 
       - name: Final audit verdict
+        if: always()
         run: |
-          set -euo pipefail
           echo '=========================================='
+          echo " Semantic checks fail flag: ${{ steps.semantic.outputs.semantic_fail }}"
+          echo " Build outcome: ${{ steps.build.outcome }}"
+          echo '=========================================='
+          test "${{ steps.semantic.outputs.semantic_fail }}" = "0"
+          test "${{ steps.build.outcome }}" = "success"
           echo ' ONEUI 16-DEV SEMANTIC AUDIT = PASS'
-          echo ' M1 Large Folders       PASS'
-          echo ' M2 Pixel Search        PASS'
-          echo ' M3 One UI Finder       PASS'
-          echo ' M4 Dock/Folder Glass   PASS'
-          echo ' M5 Widget Grid Snap    PASS'
-          echo ' M6 Widget Stacks       PASS'
-          echo ' M7 Max Icons/Folders   PASS'
-          echo ' Build                  PASS'
-          echo '=========================================='
