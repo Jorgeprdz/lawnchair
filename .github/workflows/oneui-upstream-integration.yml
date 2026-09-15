@@ -1,0 +1,140 @@
+name: OneUI guarded upstream integration
+
+on:
+  push:
+    branches:
+      - update/16-dev-20260915
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  UPSTREAM_SHA: f8164291da70339b515b41e4230e4c24da9d8557
+  BASE_ONEUI_SHA: 1a5e02c524179875c2784e9c871abf660a5b1608
+
+jobs:
+  integrate-build-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+          token: ${{ github.token }}
+
+      - name: Record protected OneUI state
+        run: |
+          set -euo pipefail
+          cp .github/workflows/oneui-build.yml /tmp/oneui-build.yml
+          sha256sum /tmp/oneui-build.yml | tee /tmp/oneui-build.sha256
+          git rev-parse HEAD | tee /tmp/start.sha
+
+      - name: Merge Lawnchair 16-dev conservatively
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/LawnchairLauncher/lawnchair.git || true
+          git fetch upstream 16-dev --tags
+          git cat-file -e "$UPSTREAM_SHA^{commit}"
+          if git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD; then
+            echo 'Target upstream already integrated.'
+          else
+            git merge --no-edit --no-ff -X ours "$UPSTREAM_SHA" -m "chore: integrate Lawnchair 16-dev f816429 preserving OneUI"
+          fi
+
+      - name: Enforce signing workflow preservation
+        run: |
+          set -euo pipefail
+          cmp -s .github/workflows/oneui-build.yml /tmp/oneui-build.yml || {
+            echo 'oneui-build.yml changed during upstream merge; restoring known-good signing workflow.'
+            cp /tmp/oneui-build.yml .github/workflows/oneui-build.yml
+            git add .github/workflows/oneui-build.yml
+            git commit -m 'ci: preserve OneUI stable signing workflow'
+          }
+          grep -F 'app.lawnchair.oneui' .github/workflows/oneui-build.yml
+          grep -F 'ONEUI_KEYSTORE_B64' .github/workflows/oneui-build.yml
+          grep -F 'apksigner' .github/workflows/oneui-build.yml
+
+      - name: Check merge cleanliness
+        run: |
+          set -euo pipefail
+          test -z "$(git diff --name-only --diff-filter=U)"
+          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!*.md'
+          git diff --check HEAD^
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Restore stable signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ONEUI_KEYSTORE_B64 || secrets.ONEUI_KEYSTORE || secrets.STABLE_KEYSTORE_B64 || secrets.STABLE_KEYSTORE || secrets.KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD || secrets.ONEUI_KEYSTORE_PASSWORD || secrets.STABLE_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS || secrets.STABLE_KEY_ALIAS || secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ONEUI_KEY_PASSWORD || secrets.STABLE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${KEYSTORE_B64:-}" && test -n "${STORE_PASSWORD:-}" && test -n "${KEY_ALIAS:-}" && test -n "${KEY_PASSWORD:-}"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/oneui-stable.jks"
+          cat > keystore.properties <<EOF
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
+          EOF
+
+      - name: Prepare OneUI package identity
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('build.gradle')
+          s=p.read_text()
+          old="applicationId 'app.lawnchair'"
+          if old not in s:
+              raise SystemExit('Expected Lawnchair Github applicationId missing after merge')
+          s=s.replace(old,"applicationId 'app.lawnchair.oneui'",1)
+          old_name='resValue("string", "derived_app_name", "Lawnchair (Debug)")'
+          if old_name not in s:
+              raise SystemExit('Expected debug app name missing after merge')
+          s=s.replace(old_name,'resValue("string", "derived_app_name", "Lawnchair OneUI")',1)
+          p.write_text(s)
+          PY
+
+      - name: Build updated OneUI APK
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug
+
+      - name: Verify package and stable signing certificate
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          test -n "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
+          "$APKSIGNER" verify --print-certs "$APK" | tee signing-certificate.txt
+          keytool -list -v -keystore "$GITHUB_WORKSPACE/oneui-stable.jks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | grep -E 'SHA256:|SHA-256:' | head -1 | tee keystore-certificate.txt || true
+        env:
+          STORE_PASSWORD: ${{ secrets.ONEUI_STORE_PASSWORD || secrets.ONEUI_KEYSTORE_PASSWORD || secrets.STABLE_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ONEUI_KEY_ALIAS || secrets.STABLE_KEY_ALIAS || secrets.KEY_ALIAS }}
+
+      - name: Upload candidate APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lawnchair-OneUI-16dev-f816429-candidate
+          path: |
+            build/outputs/apk/**/*.apk
+            signing-certificate.txt
+          if-no-files-found: error
+
+      - name: Push verified integration commit
+        if: success()
+        run: |
+          set -euo pipefail
+          git reset --hard HEAD
+          git push origin HEAD:update/16-dev-20260915
