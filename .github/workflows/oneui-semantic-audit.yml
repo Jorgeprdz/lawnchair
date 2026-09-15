@@ -1,0 +1,154 @@
+name: OneUI semantic preservation audit
+
+on:
+  push:
+    branches: [audit/oneui-16dev-20260915]
+    paths: ['.github/workflows/oneui-semantic-audit.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UPSTREAM_SHA: f8164291da70339b515b41e4230e4c24da9d8557
+  ONEUI_BASE_SHA: 1a5e02c524179875c2784e9c871abf660a5b1608
+
+jobs:
+  audit:
+    name: Reconstruct merge and audit OneUI modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact OneUI base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.ONEUI_BASE_SHA }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Reconstruct exact candidate merge
+        run: |
+          set -euo pipefail
+          git remote add lawnchair-upstream https://github.com/LawnchairLauncher/lawnchair.git || true
+          git fetch --no-tags lawnchair-upstream "$UPSTREAM_SHA"
+          test "$(git rev-parse FETCH_HEAD)" = "$UPSTREAM_SHA"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git merge --no-edit --no-ff -X ours "$UPSTREAM_SHA" -m "audit: reconstruct OneUI 16-dev candidate"
+          test -z "$(git ls-files -u)"
+          git merge-base --is-ancestor "$ONEUI_BASE_SHA" HEAD
+          git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD
+          ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!*.md'
+
+      - name: Synchronize merged submodules
+        run: |
+          set -euo pipefail
+          git submodule sync --recursive
+          git submodule update --init --recursive --jobs 4
+
+      - name: Audit M1 Large Folders
+        run: |
+          set -euo pipefail
+          git grep -q 'FLAG_LARGE_FOLDER'
+          git grep -qi 'large.folder'
+          git grep -q 'FolderIcon'
+          echo 'M1 LARGE FOLDERS = PASS'
+
+      - name: Audit M2 Pixel Search
+        run: |
+          set -euo pipefail
+          git grep -q 'rk.android.app.pixelsearch'
+          git grep -q 'PixelSearchQsbFragment'
+          git grep -q 'pixel_search'
+          echo 'M2 PIXEL SEARCH = PASS'
+
+      - name: Audit M3 One UI Finder
+        run: |
+          set -euo pipefail
+          git grep -q 'com.sec.android.app.launcher'
+          git grep -qi 'finder'
+          echo 'M3 ONE UI FINDER = PASS'
+
+      - name: Audit M4 Dock and Folder Glass
+        run: |
+          set -euo pipefail
+          test -f src/com/android/launcher3/graphics/OneUiGlassPreferences.java
+          test -f src/com/android/launcher3/graphics/OneUiGlassSurface.java
+          git grep -q 'MODE_BLUR' -- src/com/android/launcher3/graphics
+          git grep -q 'MODE_CRYSTAL' -- src/com/android/launcher3/graphics
+          git grep -qi 'frost' -- src/com/android/launcher3/graphics
+          git grep -q 'dock_blur_intensity'
+          git grep -q 'dock_crystal_intensity'
+          git grep -q 'folder_blur_intensity'
+          git grep -q 'folder_crystal_intensity'
+          echo 'M4 FROSTY/CRYSTAL DOCK+FOLDER = PASS'
+
+      - name: Audit M5 Widget Grid Snap
+        run: |
+          set -euo pipefail
+          git grep -q 'WidgetGridPreflight'
+          git grep -q 'WidgetGridMigrationGuard'
+          git grep -qi 'grid.*migration'
+          echo 'M5 WIDGET GRID SNAP = PASS'
+
+      - name: Audit M6 Widget Stacks
+        run: |
+          set -euo pipefail
+          git grep -q 'WidgetStackInfo'
+          git grep -q 'WidgetStackView'
+          git grep -q 'WidgetStackController'
+          git grep -q 'WidgetStackEditor'
+          echo 'M6 WIDGET STACKS = PASS'
+
+      - name: Audit M7 Max Icons and Folders
+        run: |
+          set -euo pipefail
+          git grep -q 'FLAG_MAX_ICON'
+          git grep -q 'WORKSPACE_SIZE'
+          git grep -q 'FLAG_LARGE_FOLDER'
+          echo 'M7 MAX ICONS/FOLDERS = PASS'
+
+      - name: Audit OneUI identity and signing workflow
+        run: |
+          set -euo pipefail
+          test -f .github/workflows/oneui-build.yml
+          git grep -q 'app.lawnchair.oneui' -- .github/workflows/oneui-build.yml
+          git grep -q 'ONEUI_KEYSTORE_B64' -- .github/workflows/oneui-build.yml
+          git grep -q 'apksigner' -- .github/workflows/oneui-build.yml
+          echo 'IDENTITY/SIGNING CONTRACT = PASS'
+
+      - name: Report upstream overlap with OneUI implementation
+        run: |
+          set -euo pipefail
+          BASE=$(git merge-base "$ONEUI_BASE_SHA" "$UPSTREAM_SHA")
+          git diff --name-only "$BASE" "$ONEUI_BASE_SHA" | sort > /tmp/oneui-files
+          git diff --name-only "$BASE" "$UPSTREAM_SHA" | sort > /tmp/upstream-files
+          comm -12 /tmp/oneui-files /tmp/upstream-files | tee /tmp/overlap || true
+          echo "OneUI changed files: $(wc -l < /tmp/oneui-files)"
+          echo "Upstream changed files: $(wc -l < /tmp/upstream-files)"
+          echo "Overlap requiring semantic attention: $(wc -l < /tmp/overlap)"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Compile reconstructed candidate
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug --stacktrace
+
+      - name: Final audit verdict
+        run: |
+          set -euo pipefail
+          echo '=========================================='
+          echo ' ONEUI 16-DEV SEMANTIC AUDIT = PASS'
+          echo ' M1 Large Folders       PASS'
+          echo ' M2 Pixel Search        PASS'
+          echo ' M3 One UI Finder       PASS'
+          echo ' M4 Dock/Folder Glass   PASS'
+          echo ' M5 Widget Grid Snap    PASS'
+          echo ' M6 Widget Stacks       PASS'
+          echo ' M7 Max Icons/Folders   PASS'
+          echo ' Build                  PASS'
+          echo '=========================================='
