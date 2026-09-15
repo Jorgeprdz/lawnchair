@@ -25,7 +25,6 @@ jobs:
           ref: ${{ env.ONEUI_BASE_SHA }}
           fetch-depth: 0
           submodules: false
-
       - name: Reconstruct exact candidate merge
         run: |
           set -euo pipefail
@@ -39,13 +38,11 @@ jobs:
           git merge-base --is-ancestor "$ONEUI_BASE_SHA" HEAD
           git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD
           ! git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- ':!*.md'
-
       - name: Synchronize merged submodules
         run: |
           set -euo pipefail
           git submodule sync --recursive
           git submodule update --init --recursive --jobs 4
-
       - name: Audit all OneUI modules with per-check diagnostics
         id: semantic
         shell: bash
@@ -54,56 +51,42 @@ jobs:
           FAIL=0
           check() { local mod="$1" label="$2"; shift 2; if "$@" >/dev/null 2>&1; then printf '  PASS  %s\n' "$label"; else printf '  FAIL  %s\n' "$label"; FAIL=1; fi; }
           section() { printf '\n===== %s =====\n' "$1"; }
-
           section 'M1 LARGE FOLDERS'
           check M1 FLAG_LARGE_FOLDER git grep -q FLAG_LARGE_FOLDER
           check M1 large_folder_refs bash -c "git grep -qi 'large.folder'"
           check M1 FolderIcon git grep -q FolderIcon
-
           section 'M2 PIXEL SEARCH'
           check M2 pixel_package git grep -q rk.android.app.pixelsearch
           check M2 PixelSearchQsbFragment git grep -q PixelSearchQsbFragment
           check M2 pixel_search_pref git grep -q pixel_search
-
           section 'M3 ONE UI FINDER'
           check M3 samsung_launcher git grep -q com.sec.android.app.launcher
           check M3 finder_refs bash -c "git grep -qi finder"
-
           section 'M4 DOCK/FOLDER GLASS'
-          check M4 OneUiGlassPreferences test -f src/com/android/launcher3/graphics/OneUiGlassPreferences.java
-          check M4 OneUiGlassSurface test -f src/com/android/launcher3/graphics/OneUiGlassSurface.java
-          check M4 MODE_BLUR git grep -q MODE_BLUR -- src/com/android/launcher3/graphics
-          check M4 MODE_CRYSTAL git grep -q MODE_CRYSTAL -- src/com/android/launcher3/graphics
-          check M4 frosty_refs bash -c "git grep -qi frost -- src/com/android/launcher3/graphics"
-          for token in dock_blur_intensity dock_crystal_intensity folder_blur_intensity folder_crystal_intensity; do
-            check M4 "$token" git grep -q "$token"
-          done
-          echo '--- M4 actual glass/intensity symbols ---'
-          git grep -niE 'frost|crystal|blur.*intens|intens.*blur|glass.*intens|intens.*glass' -- src lawnchair 2>/dev/null | head -120 || true
-
+          check M4 OneUiGlassPreferences test -f lawnchair/src/app/lawnchair/oneui/OneUiGlassPreferences.kt
+          check M4 DockGlassBackground test -f src/com/android/launcher3/graphics/DockGlassBackground.java
+          check M4 STYLE_BLUR git grep -q STYLE_BLUR -- lawnchair/src/app/lawnchair/oneui src/com/android/launcher3/graphics
+          check M4 STYLE_CRYSTAL git grep -q STYLE_CRYSTAL -- lawnchair/src/app/lawnchair/oneui src/com/android/launcher3/graphics
+          check M4 frosty_refs bash -c "git grep -qi frost -- lawnchair/src/app/lawnchair/oneui src/com/android/launcher3/graphics"
+          for token in dock_blur_intensity dock_crystal_intensity folder_blur_intensity folder_crystal_intensity; do check M4 "$token" git grep -q "$token"; done
           section 'M5 WIDGET GRID SNAP'
           check M5 WidgetGridPreflight git grep -q WidgetGridPreflight
           check M5 WidgetGridMigrationGuard git grep -q WidgetGridMigrationGuard
           check M5 grid_migration bash -c "git grep -qiE 'grid.*migration|migration.*grid'"
-
           section 'M6 WIDGET STACKS'
           for token in WidgetStackInfo WidgetStackView WidgetStackController WidgetStackEditor; do check M6 "$token" git grep -q "$token"; done
-
           section 'M7 MAX ICONS/FOLDERS'
           check M7 FLAG_MAX_ICON git grep -q FLAG_MAX_ICON
           check M7 WORKSPACE_SIZE git grep -q WORKSPACE_SIZE
           check M7 FLAG_LARGE_FOLDER git grep -q FLAG_LARGE_FOLDER
-
           section 'IDENTITY/SIGNING CONTRACT'
           check ID oneui_build test -f .github/workflows/oneui-build.yml
           check ID application_id git grep -q app.lawnchair.oneui -- .github/workflows/oneui-build.yml
           check ID stable_keystore git grep -q ONEUI_KEYSTORE_B64 -- .github/workflows/oneui-build.yml
           check ID apksigner git grep -q apksigner -- .github/workflows/oneui-build.yml
-
           echo "semantic_fail=$FAIL" >> "$GITHUB_OUTPUT"
           echo "SEMANTIC_CHECKS_COMPLETE fail=$FAIL"
           exit 0
-
       - name: Report upstream overlap with OneUI implementation
         run: |
           set -euo pipefail
@@ -114,19 +97,15 @@ jobs:
           echo "OneUI changed files: $(wc -l < /tmp/oneui-files)"
           echo "Upstream changed files: $(wc -l < /tmp/upstream-files)"
           echo "Overlap requiring semantic attention: $(wc -l < /tmp/overlap)"
-
       - uses: actions/setup-java@v6
         with:
           distribution: zulu
           java-version: 21
-
       - uses: gradle/actions/setup-gradle@v6
-
       - name: Compile reconstructed candidate
         id: build
         continue-on-error: true
         run: ./gradlew assembleLawnWithQuickstepGithubDebug --stacktrace
-
       - name: Final audit verdict
         if: always()
         run: |
