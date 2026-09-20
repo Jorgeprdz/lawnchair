@@ -289,6 +289,10 @@ android {
     }
 
     sourceSets {
+        test {
+            java.srcDirs = ['tests/crystal/src']
+        }
+
         androidTest {
             java.srcDirs = ['tests/oneui/src']
             kotlin.directories.add('tests/oneui/src')
@@ -386,6 +390,9 @@ composeCompiler {
 addFrameworkJar('framework-16.jar')
 
 dependencies {
+    testImplementation libs.junit
+    testImplementation libs.google.truth
+
     androidTestImplementation libs.androidx.test.runner
     androidTestImplementation libs.androidx.test.rules
     androidTestImplementation libs.androidx.junit
