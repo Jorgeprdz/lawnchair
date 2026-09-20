@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.view.View;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -47,8 +48,7 @@ public class DockBackgroundTest {
                         assertEquals(expected, (int) PreferenceCacheExtensionsKt.firstCached(preference));
                         assertEquals(bounds[0], launcher.getHotseat().getWidth());
                         assertEquals(bounds[1], launcher.getHotseat().getHeight());
-                        if (expected == 0) assertNull(launcher.getHotseat().getBackground());
-                        else assertNotNull(launcher.getHotseat().getBackground());
+                        assertDockMaterial(launcher.getHotseat(), expected);
                     });
                     OneUiScreenshots.capture(screenshots[mode]);
                 }
@@ -56,11 +56,29 @@ public class DockBackgroundTest {
                 ready(scenario);
                 scenario.onActivity(launcher -> {
                     assertEquals(3, (int) PreferenceCacheExtensionsKt.firstCached(preference));
-                    assertNotNull(launcher.getHotseat().getBackground());
+                    assertDockMaterial(launcher.getHotseat(), 3);
                 });
             } finally {
                 instrumentation.runOnMainSync(() -> PreferenceExtensionsKt.setBlocking(preference, original));
             }
+        }
+    }
+
+    private static void assertDockMaterial(Hotseat hotseat, int mode) {
+        View glassSurface = hotseat.getChildAt(0);
+        if (mode == 0) {
+            assertNull(hotseat.getBackground());
+            assertNull(glassSurface.getBackground());
+            assertEquals(View.GONE, glassSurface.getVisibility());
+        } else if (mode == 1) {
+            assertNotNull(hotseat.getBackground());
+            assertEquals(View.GONE, glassSurface.getVisibility());
+        } else {
+            // Blur and Crystal belong to the passive child below icons/QSB. Keeping the
+            // Hotseat itself clear prevents icons from entering the refracted source texture.
+            assertNull(hotseat.getBackground());
+            assertNotNull(glassSurface.getBackground());
+            assertEquals(View.VISIBLE, glassSurface.getVisibility());
         }
     }
 
