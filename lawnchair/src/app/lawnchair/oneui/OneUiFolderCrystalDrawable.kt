@@ -56,8 +56,8 @@ class OneUiFolderCrystalDrawable(
     private var colorFilterValue: ColorFilter? = null
 
     init {
-        shape = RECTANGLE
-        cornerRadius = folderRadius
+        setShape(GradientDrawable.RECTANGLE)
+        setCornerRadius(folderRadius)
         setColor(initialColor)
     }
 
@@ -99,10 +99,10 @@ class OneUiFolderCrystalDrawable(
             return
         }
 
-        val bounds = bounds
-        if (bounds.isEmpty) return
+        val currentBounds = bounds
+        if (currentBounds.isEmpty) return
 
-        val glass = ensureDelegate(mode, bounds)
+        val glass = ensureDelegate(mode, currentBounds)
         if (glass != null) {
             glass.draw(canvas)
             return
@@ -110,7 +110,7 @@ class OneUiFolderCrystalDrawable(
 
         // Hostless fallback: still visibly Crystal, but intentionally avoids pretending to have
         // reliable backdrop sampling for folder previews or unattached render paths.
-        drawStaticCrystalFallback(canvas, bounds, mode)
+        drawStaticCrystalFallback(canvas, currentBounds, mode)
     }
 
     private fun ensureDelegate(mode: Int, bounds: Rect): Drawable? {
