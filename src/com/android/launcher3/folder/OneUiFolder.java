@@ -12,9 +12,10 @@ import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 
 import com.android.launcher3.R;
-import com.android.launcher3.graphics.DockGlassBackground;
+import com.android.launcher3.graphics.OneUiGlassBackground;
 
 import app.lawnchair.oneui.OneUiGlassPreferences;
+import app.lawnchair.oneui.OneUiGlassStyle;
 import app.lawnchair.util.LawnchairUtilsKt;
 
 /** Open Folder wrapper adding the same One UI glass surface used by the dock. */
@@ -40,14 +41,14 @@ public class OneUiFolder extends Folder {
         int solidAlpha = LawnchairUtilsKt.getFolderBackgroundAlpha(getContext());
         solid.setAlpha(mode == 1 ? solidAlpha : 0);
 
-        if (mode >= DockGlassBackground.STYLE_BLUR) {
+        if (OneUiGlassStyle.isGlass(mode)) {
             int baseColor = LawnchairUtilsKt.resolveFolderBackgroundColor(getContext());
             int glassColor = Color.argb(solidAlpha,
                     Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
             if (mGlass == null || glassColor != mLastGlassColor) {
                 if (mGlass != null) mGlass.setVisible(false, false);
                 float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
-                mGlass = DockGlassBackground.createFolder(this, glassColor, corners);
+                mGlass = OneUiGlassBackground.createFolder(this, glassColor, corners);
                 mLastGlassColor = glassColor;
             }
             mGlass.setBounds(0, 0, getWidth(), getHeight());
