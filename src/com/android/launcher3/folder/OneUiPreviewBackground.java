@@ -68,6 +68,11 @@ public class OneUiPreviewBackground extends PreviewBackground {
             return;
         }
 
+        if (mHost instanceof OneUiFolderIcon icon && icon.isNativeGlassActive()) {
+            drawShadow(canvas);
+            return;
+        }
+
         int color = getBgColor();
         if (mGlass == null || color != mLastColor) {
             if (mGlass != null) mGlass.setVisible(false, false);

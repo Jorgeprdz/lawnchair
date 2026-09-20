@@ -27,6 +27,7 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
@@ -47,6 +48,7 @@ import androidx.annotation.Nullable;
 import com.android.launcher3.accessibility.DragAndDropAccessibilityDelegate;
 import com.android.launcher3.celllayout.CellLayoutLayoutParams;
 import com.android.launcher3.graphics.OneUiGlassBackground;
+import com.android.launcher3.graphics.SamsungGlassBlur;
 import com.android.launcher3.pageindicators.PageIndicatorDots;
 import com.android.launcher3.util.HorizontalInsettableView;
 import com.android.launcher3.util.MultiPropertyFactory;
@@ -113,12 +115,22 @@ public class Hotseat extends FrameLayout implements Insettable {
     private final MultiPropertyFactory mIconsTranslationXFactory;
 
     private final View mQsb;
+    private final View mGlassSurface;
     private final FrameLayout mIconsContainer;
     private final HotseatPagedView mPagedView;
     private final PageIndicatorDots mPageIndicator;
     private final int mPageIndicatorHeight;
 
     private final ActivityContext mActivity;
+
+    private int mGlassInsetLeft;
+    private int mGlassInsetTop;
+    private int mGlassInsetRight;
+    private int mGlassInsetBottom;
+    private float mGlassCornerRadius;
+    private int mGlassColor;
+    private int mGlassStyle = OneUiGlassStyle.OFF;
+    private int mGlassIntensity = Integer.MIN_VALUE;
 
     PreferenceManager2 preferenceManager2;
     PreferenceManager preferenceManager;
@@ -134,6 +146,13 @@ public class Hotseat extends FrameLayout implements Insettable {
     public Hotseat(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mActivity = ActivityContext.lookupContext(context);
+
+        mGlassSurface = new View(context);
+        mGlassSurface.setClickable(false);
+        mGlassSurface.setFocusable(false);
+        mGlassSurface.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        mGlassSurface.setVisibility(GONE);
+        addView(mGlassSurface, new LayoutParams(1, 1));
 
         preferenceManager2 = PreferenceManager2.getInstance(context);
         preferenceManager = PreferenceManager.getInstance(context);
@@ -243,6 +262,9 @@ public class Hotseat extends FrameLayout implements Insettable {
             mBlurWindowManager.removeCrossWindowBlurEnabledListener(mBlurEnabledListener);
             mBlurWindowManager = null;
         }
+        SamsungGlassBlur.clear(mGlassSurface);
+        mGlassSurface.setBackground(null);
+        mGlassSurface.setVisibility(GONE);
         if (getBackground() != null) getBackground().setVisible(false, false);
         setBackground(null);
         super.onDetachedFromWindow();
@@ -252,15 +274,18 @@ public class Hotseat extends FrameLayout implements Insettable {
         if (getBackground() != null) getBackground().setVisible(false, false);
         int mode = getBackgroundMode();
         if (mode == OneUiGlassStyle.OFF) {
+            disableGlassSurface();
             setBackground(null);
             return;
         }
 
-        var bgColor = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatBackgroundColor());
+        var bgColor = PreferenceCacheExtensionsKt.firstCached(
+                preferenceManager2.getHotseatBackgroundColor());
         var transparency = preferenceManager.getHotseatBGAlpha().get();
         var alphaValue = (transparency * 255) / 100;
         var baseColor = bgColor.getColorPreferenceEntry().getLightColor().invoke(getContext());
-        var finalColor = Color.argb(alphaValue, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
+        var finalColor = Color.argb(alphaValue, Color.red(baseColor), Color.green(baseColor),
+                Color.blue(baseColor));
         int insetHorizontalLeft = preferenceManager.getHotseatBGHorizontalInsetLeft().get();
         int insetHorizontalRight = preferenceManager.getHotseatBGHorizontalInsetRight().get();
         int insetVerticalTop = preferenceManager.getHotseatBGVerticalInsetTop().get();
@@ -271,15 +296,76 @@ public class Hotseat extends FrameLayout implements Insettable {
                 TypedValue.COMPLEX_UNIT_DIP,
                 cornerRadiusDp,
                 getResources().getDisplayMetrics());
+
+        if (OneUiGlassStyle.isGlass(mode)) {
+            setBackground(null);
+            mGlassInsetLeft = insetHorizontalLeft;
+            mGlassInsetRight = insetHorizontalRight;
+            mGlassInsetTop = insetVerticalTop;
+            mGlassInsetBottom = insetVerticalBottom;
+            mGlassCornerRadius = cornerRadius;
+            mGlassColor = finalColor;
+            mGlassStyle = mode;
+            updateGlassSurface();
+            requestLayout();
+            return;
+        }
+
+        disableGlassSurface();
         GradientDrawable background = new GradientDrawable();
         background.setColor(finalColor);
         background.setCornerRadius(cornerRadius);
-        android.graphics.drawable.Drawable surface = OneUiGlassStyle.isGlass(mode)
-                ? OneUiGlassBackground.createDock(this, mode, finalColor, cornerRadius)
-                : background;
-        InsetDrawable bg = new InsetDrawable(surface,
+        InsetDrawable bg = new InsetDrawable(background,
                 insetHorizontalLeft, insetVerticalTop, insetHorizontalRight, insetVerticalBottom);
         setBackground(bg);
+    }
+
+    private void updateGlassSurface() {
+        if (!OneUiGlassStyle.isGlass(mGlassStyle)) {
+            disableGlassSurface();
+            return;
+        }
+        int intensity = OneUiGlassPreferences.getDockIntensity(getContext(), mGlassStyle);
+        boolean nativeBlur = SamsungGlassBlur.apply(
+                mGlassSurface, mGlassStyle, intensity, mGlassColor, mGlassCornerRadius);
+        mGlassSurface.setBackground(nativeBlur
+                ? OneUiGlassBackground.createDockOverlay(
+                        mGlassSurface, mGlassStyle, mGlassColor, mGlassCornerRadius)
+                : OneUiGlassBackground.createDock(
+                        mGlassSurface, mGlassStyle, mGlassColor, mGlassCornerRadius));
+        mGlassSurface.setVisibility(VISIBLE);
+        mGlassIntensity = intensity;
+    }
+
+    private void refreshGlassSurfaceIfNeeded() {
+        if (!OneUiGlassStyle.isGlass(mGlassStyle) || mGlassSurface.getVisibility() != VISIBLE) {
+            return;
+        }
+        int intensity = OneUiGlassPreferences.getDockIntensity(getContext(), mGlassStyle);
+        if (intensity != mGlassIntensity) updateGlassSurface();
+    }
+
+    private void disableGlassSurface() {
+        SamsungGlassBlur.clear(mGlassSurface);
+        mGlassSurface.setBackground(null);
+        mGlassSurface.setVisibility(GONE);
+        mGlassStyle = OneUiGlassStyle.OFF;
+        mGlassIntensity = Integer.MIN_VALUE;
+    }
+
+    private void layoutGlassSurface(int width, int height) {
+        if (mGlassSurface.getVisibility() != VISIBLE) return;
+        int left = Math.max(0, mGlassInsetLeft);
+        int top = Math.max(0, mGlassInsetTop);
+        int right = Math.max(left, width - Math.max(0, mGlassInsetRight));
+        int bottom = Math.max(top, height - Math.max(0, mGlassInsetBottom));
+        mGlassSurface.layout(left, top, right, bottom);
+    }
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        refreshGlassSurfaceIfNeeded();
+        super.dispatchDraw(canvas);
     }
 
     /** Provides translation X for hotseat icons for the channel. */
@@ -567,6 +653,8 @@ public class Hotseat extends FrameLayout implements Insettable {
         int paddingRight = getPaddingRight();
         int paddingTop = getPaddingTop();
         int paddingBottom = getPaddingBottom();
+
+        layoutGlassSurface(width, height);
 
         DeviceProfile dp = mActivity.getDeviceProfile();
         boolean showIndicator = mPagedView.isPagingEnabled() && !dp.isVerticalBarLayout();

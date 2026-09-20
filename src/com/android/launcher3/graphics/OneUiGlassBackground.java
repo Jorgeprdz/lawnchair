@@ -41,16 +41,27 @@ public final class OneUiGlassBackground {
     /** Dock entry point. The selected material is explicit and shared with settings. */
     public static Drawable createDock(View host, int style, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
-                color, cornerRadius, true);
+                color, cornerRadius, true, true);
+    }
+
+    public static Drawable createDockOverlay(View host, int style, int color, float cornerRadius) {
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
+                color, cornerRadius, true, false);
     }
 
     /** Folder entry point; style and intensity are resolved live from shared preferences. */
     public static Drawable createFolder(View host, int color, float cornerRadius) {
-        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius, false);
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+                false, true);
+    }
+
+    public static Drawable createFolderOverlay(View host, int color, float cornerRadius) {
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+                false, false);
     }
 
     private static Drawable buildSurface(View host, int style, int color,
-            float cornerRadius, int intensityPercent) {
+            float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
         final int intensity = clamp(intensityPercent, 0, 100);
         if (style < OneUiGlassStyle.BLUR || intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
@@ -69,8 +80,9 @@ public final class OneUiGlassBackground {
         } else {
             blurDp = Math.round(18f + 46f * strength);
         }
-        Drawable blur = createPlatformBlur(host, Math.max(1, Math.round(blurDp * density)),
-                cornerRadius);
+        Drawable blur = allowPlatformBlur
+                ? createPlatformBlur(host, Math.max(1, Math.round(blurDp * density)), cornerRadius)
+                : null;
 
         final int sourceAlpha = Color.alpha(color);
         final int tintRgb;
@@ -92,7 +104,7 @@ public final class OneUiGlassBackground {
         }
 
         int tintAlpha = Math.round(sourceAlpha * tintScale);
-        if (blur == null) tintAlpha = Math.max(tintAlpha, fallbackFloor);
+        if (allowPlatformBlur && blur == null) tintAlpha = Math.max(tintAlpha, fallbackFloor);
         tintAlpha = clamp(tintAlpha, 0, 255);
         GradientDrawable tint = rounded(cornerRadius, Color.argb(
                 tintAlpha, Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));
@@ -104,36 +116,34 @@ public final class OneUiGlassBackground {
         if (style == OneUiGlassStyle.CRYSTAL) {
             GradientDrawable sheen = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                     new int[] {
-                            alphaColor(Color.WHITE, Math.round(14f + 28f * strength)),
-                            alphaColor(Color.WHITE, Math.round(3f + 7f * strength)),
+                            alphaColor(Color.WHITE, Math.round(20f + 34f * strength)),
+                            alphaColor(Color.WHITE, Math.round(5f + 9f * strength)),
                             Color.TRANSPARENT,
-                            alphaColor(Color.BLACK, Math.round(4f + 8f * strength)),
+                            alphaColor(Color.BLACK, Math.round(5f + 9f * strength)),
                     });
             sheen.setCornerRadius(cornerRadius);
-            sheen.setStroke(Math.max(1, Math.round(density)),
-                    alphaColor(Color.WHITE, Math.round(30f + 42f * strength)));
-            return new LayerDrawable(new Drawable[] {base, sheen});
+            sheen.setStroke(Math.max(1, Math.round(1.2f * density)),
+                    alphaColor(Color.WHITE, Math.round(42f + 48f * strength)));
+
+            GradientDrawable specular = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[] {
+                            alphaColor(Color.WHITE, Math.round(28f + 40f * strength)),
+                            Color.TRANSPARENT,
+                            Color.TRANSPARENT,
+                            alphaColor(Color.WHITE, Math.round(5f + 10f * strength)),
+                    });
+            specular.setCornerRadius(cornerRadius);
+            return new LayerDrawable(new Drawable[] {base, sheen, specular});
         }
 
         if (style == OneUiGlassStyle.FROSTY) {
-            int top = alphaColor(Color.WHITE, Math.round(24f + 30f * strength));
-            int middle = alphaColor(Color.WHITE, Math.round(7f + 12f * strength));
-            int bottom = alphaColor(Color.BLACK, Math.round(8f + 14f * strength));
-            GradientDrawable haze = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                    new int[] {top, middle, bottom});
-            haze.setCornerRadius(cornerRadius);
+            int milk = dark
+                    ? alphaColor(Color.rgb(210, 214, 220), Math.round(14f + 24f * strength))
+                    : alphaColor(Color.WHITE, Math.round(34f + 62f * strength));
+            GradientDrawable haze = rounded(cornerRadius, milk);
             haze.setStroke(Math.max(1, Math.round(density)),
-                    alphaColor(Color.WHITE, Math.round(34f + 34f * strength)));
-
-            GradientDrawable bloom = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                    new int[] {
-                            alphaColor(Color.WHITE, Math.round(24f + 30f * strength)),
-                            Color.TRANSPARENT,
-                            alphaColor(dark ? Color.BLACK : Color.WHITE,
-                                    Math.round(7f + 12f * strength)),
-                    });
-            bloom.setCornerRadius(cornerRadius);
-            return new LayerDrawable(new Drawable[] {base, haze, bloom});
+                    alphaColor(Color.WHITE, Math.round(12f + 18f * strength)));
+            return new LayerDrawable(new Drawable[] {base, haze});
         }
 
         int hazeRgb = dark ? Color.rgb(38, 39, 42) : Color.WHITE;
@@ -215,6 +225,7 @@ public final class OneUiGlassBackground {
         private final int mColor;
         private final float mCornerRadius;
         private final boolean mDockControlled;
+        private final boolean mAllowPlatformBlur;
 
         private Drawable mDelegate;
         private int mLastStyle = Integer.MIN_VALUE;
@@ -224,12 +235,13 @@ public final class OneUiGlassBackground {
         private @Nullable ColorFilter mColorFilter;
 
         DynamicGlassDrawable(View host, int baseStyle, int color, float cornerRadius,
-                boolean dockControlled) {
+                boolean dockControlled, boolean allowPlatformBlur) {
             mHost = host;
             mBaseStyle = baseStyle;
             mColor = color;
             mCornerRadius = cornerRadius;
             mDockControlled = dockControlled;
+            mAllowPlatformBlur = allowPlatformBlur;
         }
 
         private int resolveStyle() {
@@ -247,12 +259,13 @@ public final class OneUiGlassBackground {
         private void ensureDelegate() {
             int style = resolveStyle();
             int intensity = resolveIntensity(style);
-            boolean blurAvailable = canUsePlatformBlur(mHost);
+            boolean blurAvailable = mAllowPlatformBlur && canUsePlatformBlur(mHost);
             if (mDelegate != null && style == mLastStyle && intensity == mLastIntensity
                     && blurAvailable == mLastBlurAvailable) return;
 
             if (mDelegate != null) mDelegate.setVisible(false, false);
-            mDelegate = buildSurface(mHost, style, mColor, mCornerRadius, intensity);
+            mDelegate = buildSurface(mHost, style, mColor, mCornerRadius, intensity,
+                    mAllowPlatformBlur);
             mLastStyle = style;
             mLastIntensity = intensity;
             mLastBlurAvailable = blurAvailable;

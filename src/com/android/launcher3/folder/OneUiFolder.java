@@ -13,16 +13,18 @@ import android.util.AttributeSet;
 
 import com.android.launcher3.R;
 import com.android.launcher3.graphics.OneUiGlassBackground;
+import com.android.launcher3.graphics.SamsungGlassBlur;
 
 import app.lawnchair.oneui.OneUiGlassPreferences;
 import app.lawnchair.oneui.OneUiGlassStyle;
 import app.lawnchair.util.LawnchairUtilsKt;
 
-/** Open Folder wrapper adding the same One UI glass surface used by the dock. */
+/** Open Folder wrapper adding the same shared glass material used by the dock. */
 public class OneUiFolder extends Folder {
     private Path mOneUiClipPath;
     private Drawable mGlass;
     private int mLastGlassColor = Integer.MIN_VALUE;
+    private boolean mLastNativeBlur;
 
     public OneUiFolder(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -39,25 +41,44 @@ public class OneUiFolder extends Folder {
         int mode = OneUiGlassPreferences.getFolderMode(getContext());
         Drawable solid = super.getBackground();
         int solidAlpha = LawnchairUtilsKt.getFolderBackgroundAlpha(getContext());
-        solid.setAlpha(mode == 1 ? solidAlpha : 0);
+        solid.setAlpha(mode == OneUiGlassStyle.SOLID ? solidAlpha : 0);
 
         if (OneUiGlassStyle.isGlass(mode)) {
             int baseColor = LawnchairUtilsKt.resolveFolderBackgroundColor(getContext());
             int glassColor = Color.argb(solidAlpha,
                     Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
-            if (mGlass == null || glassColor != mLastGlassColor) {
+            float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
+            int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
+            boolean nativeBlur = SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
+
+            if (mGlass == null || glassColor != mLastGlassColor
+                    || nativeBlur != mLastNativeBlur) {
                 if (mGlass != null) mGlass.setVisible(false, false);
-                float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
-                mGlass = OneUiGlassBackground.createFolder(this, glassColor, corners);
+                mGlass = nativeBlur
+                        ? OneUiGlassBackground.createFolderOverlay(this, glassColor, corners)
+                        : OneUiGlassBackground.createFolder(this, glassColor, corners);
                 mLastGlassColor = glassColor;
+                mLastNativeBlur = nativeBlur;
             }
             mGlass.setBounds(0, 0, getWidth(), getHeight());
             int save = canvas.save();
             if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
             mGlass.draw(canvas);
             canvas.restoreToCount(save);
+        } else {
+            SamsungGlassBlur.clear(this);
+            if (mGlass != null) mGlass.setVisible(false, false);
+            mGlass = null;
+            mLastGlassColor = Integer.MIN_VALUE;
+            mLastNativeBlur = false;
         }
 
         super.dispatchDraw(canvas);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        SamsungGlassBlur.clear(this);
+        super.onDetachedFromWindow();
     }
 }

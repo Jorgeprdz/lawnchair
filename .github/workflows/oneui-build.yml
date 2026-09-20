@@ -85,7 +85,8 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
 
           "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
-          "$APKSIGNER" verify --print-certs "$APK"
+          "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/oneui-cert.txt
+          grep -Fi 'b19449e782c304983e6a1686bae0089f25c62d33e8ed1be10931f12eb7a82eca' /tmp/oneui-cert.txt
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v7
