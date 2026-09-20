@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.lawnchair.oneui.OneUiGlassPreferences
+import app.lawnchair.oneui.OneUiGlassStyle
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.preferenceManager
@@ -69,14 +69,14 @@ fun DockPreferences(modifier: Modifier = Modifier) {
     val prefs = preferenceManager()
     val prefs2 = preferenceManager2()
     val context = LocalContext.current
-    var dockFrosty by remember {
-        mutableStateOf(OneUiGlassPreferences.isDockFrosty(context))
-    }
     var dockBlurIntensity by remember {
         mutableIntStateOf(OneUiGlassPreferences.getDockBlurIntensity(context))
     }
     var dockCrystalIntensity by remember {
         mutableIntStateOf(OneUiGlassPreferences.getDockCrystalIntensity(context))
+    }
+    var dockFrostyIntensity by remember {
+        mutableIntStateOf(OneUiGlassPreferences.getDockFrostyIntensity(context))
     }
 
     PreferenceLayout(
@@ -86,9 +86,15 @@ fun DockPreferences(modifier: Modifier = Modifier) {
     ) {
         val hotseatBgAdapter = prefs.hotseatBG.getAdapter()
         val backgroundMode = prefs2.hotseatBackgroundMode.getAdapter()
-        val baseMode = backgroundMode.state.value.takeIf { it in 0..3 }
-            ?: if (hotseatBgAdapter.state.value) 1 else 0
-        val selectedMode = if (baseMode == 3 && dockFrosty) 4 else baseMode
+        val nativeMode = backgroundMode.state.value.takeIf {
+            it in OneUiGlassStyle.OFF..OneUiGlassStyle.FROSTY
+        } ?: if (hotseatBgAdapter.state.value) OneUiGlassStyle.SOLID else OneUiGlassStyle.OFF
+        val selectedMode = OneUiGlassPreferences.resolveDockStyle(context, nativeMode)
+        val selectedIntensity = when (selectedMode) {
+            OneUiGlassStyle.CRYSTAL -> dockCrystalIntensity
+            OneUiGlassStyle.FROSTY -> dockFrostyIntensity
+            else -> dockBlurIntensity
+        }
 
         MainSwitchPreference(adapter = prefs2.isHotseatEnabled.getAdapter(), label = stringResource(id = R.string.show_hotseat_title)) {
             DockPreferencesPreview()
@@ -96,37 +102,29 @@ fun DockPreferences(modifier: Modifier = Modifier) {
                 ListPreference(
                     value = selectedMode,
                     onValueChange = { mode ->
-                        val frosty = mode == 4
-                        OneUiGlassPreferences.setDockFrosty(context, frosty)
-                        dockFrosty = frosty
-                        backgroundMode.onChange(if (frosty) 3 else mode)
+                        OneUiGlassPreferences.clearLegacyDockStyle(context)
+                        backgroundMode.onChange(mode)
                     },
                     entries = listOf(
-                        ListPreferenceEntry(0) { stringResource(R.string.dock_background_off) },
-                        ListPreferenceEntry(1) { stringResource(R.string.dock_background_solid) },
-                        ListPreferenceEntry(2) { stringResource(R.string.dock_background_blur) },
-                        ListPreferenceEntry(3) { stringResource(R.string.dock_background_crystal) },
-                        ListPreferenceEntry(4) { stringResource(R.string.dock_background_frosty) },
+                        ListPreferenceEntry(OneUiGlassStyle.OFF) { stringResource(R.string.dock_background_off) },
+                        ListPreferenceEntry(OneUiGlassStyle.SOLID) { stringResource(R.string.dock_background_solid) },
+                        ListPreferenceEntry(OneUiGlassStyle.BLUR) { stringResource(R.string.dock_background_blur) },
+                        ListPreferenceEntry(OneUiGlassStyle.CRYSTAL) { stringResource(R.string.dock_background_crystal) },
+                        ListPreferenceEntry(OneUiGlassStyle.FROSTY) { stringResource(R.string.dock_background_frosty) },
                     ),
                     label = stringResource(id = R.string.hotseat_background),
                 )
-                ExpandAndShrink(visible = selectedMode == 2 || selectedMode == 4) {
+                ExpandAndShrink(visible = OneUiGlassStyle.isGlass(selectedMode)) {
                     OneUiGlassIntensityPreference(
                         label = stringResource(R.string.glass_effect_intensity),
-                        value = dockBlurIntensity,
+                        value = selectedIntensity,
                         onValueChange = { value ->
-                            OneUiGlassPreferences.setDockBlurIntensity(context, value)
-                            dockBlurIntensity = value
-                        },
-                    )
-                }
-                ExpandAndShrink(visible = selectedMode == 3) {
-                    OneUiGlassIntensityPreference(
-                        label = stringResource(R.string.glass_effect_intensity),
-                        value = dockCrystalIntensity,
-                        onValueChange = { value ->
-                            OneUiGlassPreferences.setDockCrystalIntensity(context, value)
-                            dockCrystalIntensity = value
+                            OneUiGlassPreferences.setDockIntensity(context, selectedMode, value)
+                            when (selectedMode) {
+                                OneUiGlassStyle.CRYSTAL -> dockCrystalIntensity = value
+                                OneUiGlassStyle.FROSTY -> dockFrostyIntensity = value
+                                else -> dockBlurIntensity = value
+                            }
                         },
                     )
                 }
