@@ -3,20 +3,29 @@ package com.android.launcher3.graphics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Shader;
+import android.os.SystemClock;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
+import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.launcher3.Launcher;
 import com.android.launcher3.graphics.WallpaperBackdropSource.LoadRequest;
 import com.android.launcher3.graphics.WallpaperBackdropSource.LoadResult;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,34 +33,85 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class OneUiCrystalRendererDeviceTest {
     @Test
-    public void maximumCrystalVisiblyDisplacesARecognizableWallpaperEdge() {
-        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        GradientSource source = new GradientSource();
-        OneUiWallpaperBackdropRepository repository =
-                new OneUiWallpaperBackdropRepository(source, Runnable::run, Runnable::run);
-        repository.start();
+    public void maximumCrystalVisiblyDisplacesARecognizableWallpaperEdge() throws Exception {
+        var instrumentation = InstrumentationRegistry.getInstrumentation();
+        Context context = instrumentation.getTargetContext();
+        Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                .setComponent(new ComponentName(
+                        context.getPackageName(), "app.lawnchair.LawnchairLauncher"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        AtomicReference<View> hostReference = new AtomicReference<>();
+        AtomicReference<OneUiWallpaperBackdropRepository> repositoryReference =
+                new AtomicReference<>();
+        int[] hostLocation = new int[2];
 
-        View host = new View(context);
-        OneUiCrystalRenderer renderer = OneUiCrystalRenderer.createForTesting(
-                host, OneUiCrystalSurfaceRole.DOCK, Color.WHITE, 64f, 100, repository);
-        // Keeping the surface away from the display edges makes the wallpaper mapping exactly 1:1.
-        renderer.setBounds(100, 100, 1000, 320);
-        Bitmap target = Bitmap.createBitmap(1080, 500, Bitmap.Config.ARGB_8888);
-        renderer.draw(new Canvas(target));
+        try (ActivityScenario<Launcher> scenario = ActivityScenario.launch(launch)) {
+            scenario.onActivity(launcher -> {
+                GradientSource source = new GradientSource();
+                OneUiWallpaperBackdropRepository repository =
+                        new OneUiWallpaperBackdropRepository(source, Runnable::run, Runnable::run);
+                repository.start();
+                View host = new View(launcher);
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(900, 220);
+                launcher.addContentView(host, params);
+                host.setX(100f);
+                host.setY(500f);
+                host.setElevation(100f);
+                host.setBackground(OneUiCrystalRenderer.createForTesting(
+                        host, OneUiCrystalSurfaceRole.DOCK, Color.WHITE, 64f, 0, repository));
+                hostReference.set(host);
+                repositoryReference.set(repository);
+            });
+            instrumentation.waitForIdleSync();
+            SystemClock.sleep(500);
+            scenario.onActivity(launcher -> {
+                View host = hostReference.get();
+                assertEquals(900, host.getWidth());
+                assertEquals(220, host.getHeight());
+                assertTrue(host.isShown());
+                host.getLocationOnScreen(hostLocation);
+                assertEquals(100, hostLocation[0]);
+                assertEquals(500, hostLocation[1]);
+            });
 
-        int edgeX = 104;
-        int centerX = 550;
-        int sampleY = 210;
-        float edgeSourceX = inferSourceXFromGreen(target.getPixel(edgeX, sampleY));
-        float centerSourceX = inferSourceXFromGreen(target.getPixel(centerX, sampleY));
+            Bitmap baseline = instrumentation.getUiAutomation().takeScreenshot();
+            scenario.onActivity(launcher -> hostReference.get().setBackground(
+                    OneUiCrystalRenderer.createForTesting(
+                            hostReference.get(), OneUiCrystalSurfaceRole.DOCK,
+                            Color.WHITE, 64f, 100, repositoryReference.get())));
+            instrumentation.waitForIdleSync();
+            SystemClock.sleep(250);
+            Bitmap maximum = instrumentation.getUiAutomation().takeScreenshot();
+            int edgeX = hostLocation[0] + 896;
+            int centerX = hostLocation[0] + 450;
+            int sampleY = hostLocation[1] + 110;
+            float baselineEdgeSourceX = inferSourceXFromGreen(
+                    baseline.getPixel(edgeX, sampleY), 0.045f);
+            float maximumEdgeSourceX = inferSourceXFromGreen(
+                    maximum.getPixel(edgeX, sampleY), 0.11f);
+            float baselineCenterSourceX = inferSourceXFromGreen(
+                    baseline.getPixel(centerX, sampleY), 0.045f);
+            float maximumCenterSourceX = inferSourceXFromGreen(
+                    maximum.getPixel(centerX, sampleY), 0.11f);
 
-        assertTrue("Maximum Crystal must visibly bend a recognizable wallpaper feature",
-                edgeX - edgeSourceX >= 30f);
-        assertTrue("The readable center must remain spatially stable",
-                Math.abs(centerSourceX - centerX) <= 8f);
+            assertTrue("Maximum Crystal must visibly bend a recognizable wallpaper feature; edge="
+                            + Integer.toHexString(maximum.getPixel(edgeX, sampleY))
+                            + ", baselineSourceX=" + baselineEdgeSourceX
+                            + ", maximumSourceX=" + maximumEdgeSourceX,
+                    maximumEdgeSourceX - baselineEdgeSourceX >= 30f);
+            assertTrue("The readable center must remain spatially stable; baselineSourceX="
+                            + baselineCenterSourceX
+                            + ", maximumSourceX=" + maximumCenterSourceX,
+                    Math.abs(maximumCenterSourceX - baselineCenterSourceX) <= 8f);
+            baseline.recycle();
+            maximum.recycle();
 
-        repository.close();
-        target.recycle();
+            scenario.onActivity(launcher ->
+                    ((ViewGroup) hostReference.get().getParent()).removeView(hostReference.get()));
+        } finally {
+            OneUiWallpaperBackdropRepository repository = repositoryReference.get();
+            if (repository != null) repository.close();
+        }
     }
 
     @Test
@@ -183,9 +243,8 @@ public class OneUiCrystalRendererDeviceTest {
         }
     }
 
-    private static float inferSourceXFromGreen(int color) {
-        // At 100% with a white tint, the shader emits 89% wallpaper green plus 11% white.
-        float untinted = ((Color.green(color) / 255f) - 0.11f) / 0.89f;
+    private static float inferSourceXFromGreen(int color, float tintAlpha) {
+        float untinted = ((Color.green(color) / 255f) - tintAlpha) / (1f - tintAlpha);
         return untinted * 1079f;
     }
 }
