@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import app.lawnchair.oneui.OneUiGlassPreferences
+import app.lawnchair.oneui.OneUiGlassStyle
 import app.lawnchair.oneui.OneUiLargeFolderShape
 import app.lawnchair.preferences.getAdapter
 import app.lawnchair.preferences.preferenceManager
@@ -58,8 +59,14 @@ fun FolderPreferences(
         var folderMode by remember {
             mutableIntStateOf(OneUiGlassPreferences.getFolderMode(context))
         }
-        var folderIntensity by remember {
-            mutableIntStateOf(OneUiGlassPreferences.getFolderIntensity(context))
+        var folderBlurIntensity by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getFolderBlurIntensity(context))
+        }
+        var folderCrystalIntensity by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getFolderCrystalIntensity(context))
+        }
+        var folderFrostyIntensity by remember {
+            mutableIntStateOf(OneUiGlassPreferences.getFolderFrostyIntensity(context))
         }
         var largeFolderShape by remember {
             mutableIntStateOf(OneUiGlassPreferences.getLargeFolderShape(context))
@@ -101,21 +108,30 @@ fun FolderPreferences(
                     folderMode = mode
                 },
                 entries = listOf(
-                    ListPreferenceEntry(0) { stringResource(R.string.dock_background_off) },
-                    ListPreferenceEntry(1) { stringResource(R.string.dock_background_solid) },
-                    ListPreferenceEntry(2) { stringResource(R.string.dock_background_blur) },
-                    ListPreferenceEntry(3) { stringResource(R.string.dock_background_crystal) },
-                    ListPreferenceEntry(4) { stringResource(R.string.dock_background_frosty) },
+                    ListPreferenceEntry(OneUiGlassStyle.OFF) { stringResource(R.string.dock_background_off) },
+                    ListPreferenceEntry(OneUiGlassStyle.SOLID) { stringResource(R.string.dock_background_solid) },
+                    ListPreferenceEntry(OneUiGlassStyle.BLUR) { stringResource(R.string.dock_background_blur) },
+                    ListPreferenceEntry(OneUiGlassStyle.CRYSTAL) { stringResource(R.string.dock_background_crystal) },
+                    ListPreferenceEntry(OneUiGlassStyle.FROSTY) { stringResource(R.string.dock_background_frosty) },
                 ),
                 label = stringResource(R.string.folder_background_style),
             )
-            ExpandAndShrink(visible = folderMode >= 2) {
+            ExpandAndShrink(visible = OneUiGlassStyle.isGlass(folderMode)) {
+                val selectedIntensity = when (folderMode) {
+                    OneUiGlassStyle.CRYSTAL -> folderCrystalIntensity
+                    OneUiGlassStyle.FROSTY -> folderFrostyIntensity
+                    else -> folderBlurIntensity
+                }
                 OneUiGlassIntensityPreference(
                     label = stringResource(R.string.glass_effect_intensity),
-                    value = folderIntensity,
+                    value = selectedIntensity,
                     onValueChange = { value ->
-                        OneUiGlassPreferences.setFolderIntensity(context, value)
-                        folderIntensity = value
+                        OneUiGlassPreferences.setFolderIntensity(context, folderMode, value)
+                        when (folderMode) {
+                            OneUiGlassStyle.CRYSTAL -> folderCrystalIntensity = value
+                            OneUiGlassStyle.FROSTY -> folderFrostyIntensity = value
+                            else -> folderBlurIntensity = value
+                        }
                     },
                 )
             }
