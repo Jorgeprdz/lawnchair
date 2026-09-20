@@ -46,6 +46,7 @@ import androidx.annotation.Nullable;
 
 import com.android.launcher3.accessibility.DragAndDropAccessibilityDelegate;
 import com.android.launcher3.celllayout.CellLayoutLayoutParams;
+import com.android.launcher3.graphics.OneUiGlassBackground;
 import com.android.launcher3.pageindicators.PageIndicatorDots;
 import com.android.launcher3.util.HorizontalInsettableView;
 import com.android.launcher3.util.MultiPropertyFactory;
@@ -62,6 +63,8 @@ import app.lawnchair.hotseat.DisabledHotseat;
 import app.lawnchair.hotseat.HotseatMode;
 import app.lawnchair.hotseat.HotseatPagedView;
 import app.lawnchair.hotseat.LawnchairHotseat;
+import app.lawnchair.oneui.OneUiGlassPreferences;
+import app.lawnchair.oneui.OneUiGlassStyle;
 import app.lawnchair.preferences.PreferenceManager;
 import app.lawnchair.preferences2.PreferenceCacheExtensionsKt;
 import app.lawnchair.preferences2.PreferenceManager2;
@@ -207,8 +210,14 @@ public class Hotseat extends FrameLayout implements Insettable {
     }
 
     private int getBackgroundMode() {
-        int mode = PreferenceCacheExtensionsKt.firstCached(preferenceManager2.getHotseatBackgroundMode());
-        return mode >= 0 && mode <= 3 ? mode : (preferenceManager.getHotseatBG().get() ? 1 : 0);
+        int mode = PreferenceCacheExtensionsKt.firstCached(
+                preferenceManager2.getHotseatBackgroundMode());
+        if (mode < OneUiGlassStyle.OFF || mode > OneUiGlassStyle.FROSTY) {
+            mode = preferenceManager.getHotseatBG().get()
+                    ? OneUiGlassStyle.SOLID
+                    : OneUiGlassStyle.OFF;
+        }
+        return OneUiGlassPreferences.resolveDockStyle(getContext(), mode);
     }
 
     private final java.util.function.Consumer<Boolean> mBlurEnabledListener =
@@ -218,7 +227,8 @@ public class Hotseat extends FrameLayout implements Insettable {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        if (android.os.Build.VERSION.SDK_INT >= 31 && getBackgroundMode() >= 2) {
+        if (android.os.Build.VERSION.SDK_INT >= 31
+                && OneUiGlassStyle.isGlass(getBackgroundMode())) {
             mBlurWindowManager = getContext().getSystemService(android.view.WindowManager.class);
             if (mBlurWindowManager != null) {
                 mBlurWindowManager.addCrossWindowBlurEnabledListener(mBlurEnabledListener);
@@ -241,7 +251,7 @@ public class Hotseat extends FrameLayout implements Insettable {
     private void setUpBackground() {
         if (getBackground() != null) getBackground().setVisible(false, false);
         int mode = getBackgroundMode();
-        if (mode == 0) {
+        if (mode == OneUiGlassStyle.OFF) {
             setBackground(null);
             return;
         }
@@ -264,9 +274,8 @@ public class Hotseat extends FrameLayout implements Insettable {
         GradientDrawable background = new GradientDrawable();
         background.setColor(finalColor);
         background.setCornerRadius(cornerRadius);
-        android.graphics.drawable.Drawable surface = mode >= 2
-                ? com.android.launcher3.graphics.DockGlassBackground.create(
-                        this, mode == 3, finalColor, cornerRadius)
+        android.graphics.drawable.Drawable surface = OneUiGlassStyle.isGlass(mode)
+                ? OneUiGlassBackground.createDock(this, mode, finalColor, cornerRadius)
                 : background;
         InsetDrawable bg = new InsetDrawable(surface,
                 insetHorizontalLeft, insetVerticalTop, insetHorizontalRight, insetVerticalBottom);
