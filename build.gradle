@@ -392,6 +392,7 @@ addFrameworkJar('framework-16.jar')
 dependencies {
     testImplementation libs.junit
     testImplementation libs.google.truth
+    testImplementation libs.mockito.robolectric
 
     androidTestImplementation libs.androidx.test.runner
     androidTestImplementation libs.androidx.test.rules
