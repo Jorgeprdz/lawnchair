@@ -63,7 +63,13 @@ public final class OneUiGlassBackground {
     private static Drawable buildSurface(View host, int style, int color,
             float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
         final int intensity = clamp(intensityPercent, 0, 100);
-        if (style < OneUiGlassStyle.BLUR || intensity == 0) {
+        if (style < OneUiGlassStyle.BLUR) {
+            return new ColorDrawable(Color.TRANSPARENT);
+        }
+        if (style == OneUiGlassStyle.CRYSTAL) {
+            return OneUiCrystalRenderer.create(host, color, cornerRadius, intensity);
+        }
+        if (intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
         }
 
