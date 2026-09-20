@@ -242,6 +242,15 @@ Device validation on the S25 must:
 5. Confirm no recursive imagery and no continuous horizontal highlight.
 6. Record metrics and images against the exact GitHub Actions commit SHA.
 
+After that SHA passes GitHub Actions, download its newly produced GitHub debug artifact, verify
+that its application ID and signing identity remain compatible with the installed OneUI debug
+build, and copy the verified APK to:
+
+`/storage/emulated/0/Download/Lawnchair-OneUI-Crystal-Wallpaper-Cache.apk`
+
+Record the copied file's byte size and SHA-256 digest. Do not reuse or rename an APK from an older
+workflow run.
+
 ## Delivery and Acceptance
 
 Implementation is accepted only when:
@@ -256,3 +265,6 @@ Implementation is accepted only when:
 - steady-state draw performs no heavyweight graphics allocation;
 - no black frame, recursive feedback, or full-width highlight appears;
 - device performance is measured and documented rather than inferred from unit tests.
+- the exact validated APK is present at
+  `/storage/emulated/0/Download/Lawnchair-OneUI-Crystal-Wallpaper-Cache.apk`, with its size and
+  SHA-256 recorded.
