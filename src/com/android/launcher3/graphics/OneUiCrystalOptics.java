@@ -80,7 +80,7 @@ public final class OneUiCrystalOptics {
         float amount = clamp(intensityPercent / 100f, 0f, 1f);
         float safeDensity = Math.max(0.1f, density);
         return new Values(
-                lerp(0.65f, 5.5f, amount) * safeDensity,
+                lerp(3f, 15f, amount) * safeDensity,
                 lerp(5f, 13f, amount) * safeDensity,
                 lerp(3f, 9f, amount) * safeDensity,
                 lerp(0.12f, 1.15f, amount) * safeDensity,
