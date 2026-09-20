@@ -25,6 +25,7 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.view.View;
+import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -41,6 +42,8 @@ import androidx.annotation.Nullable;
 final class OneUiCrystalRenderer extends Drawable {
     private static final int API_RUNTIME_SHADER = 33;
     private static final int MAX_CAPTURE_SIZE = 2048;
+    private static final long MAX_CAPTURE_PIXELS = 2_500_000L;
+    private static final String LAUNCHER_PREVIEW_VIEW = "app.lawnchair.views.LauncherPreviewView";
 
     private static final ThreadLocal<Boolean> sCapturingBackdrop =
             new ThreadLocal<Boolean>() {
@@ -161,7 +164,14 @@ final class OneUiCrystalRenderer extends Drawable {
         float slider = Math.max(0f, Math.min(100f, intensityPercent)) / 100f;
         // Crystal selected at 0% still remains a visible optical material.
         mStrength = 0.24f + 0.76f * slider;
-        float density = Math.max(1f, mHost.getResources().getDisplayMetrics().density);
+        float density = 1f;
+        try {
+            if (mHost != null) {
+                density = Math.max(1f, mHost.getResources().getDisplayMetrics().density);
+            }
+        } catch (RuntimeException | LinkageError ignored) {
+            density = 1f;
+        }
         mBlurPx = (2.5f + 9.5f * mStrength) * density;
         mRefractionPx = (3.0f + 15.0f * mStrength) * density;
         mDepthPx = (3.0f + 13.0f * mStrength) * density;
@@ -171,40 +181,61 @@ final class OneUiCrystalRenderer extends Drawable {
 
     @Override
     public void draw(@NonNull Canvas canvas) {
+        try {
+            drawSafely(canvas);
+        } catch (ThreadDeath death) {
+            throw death;
+        } catch (Throwable ignored) {
+            try {
+                drawStaticFallback(canvas, getBounds());
+            } catch (ThreadDeath death) {
+                throw death;
+            } catch (Throwable ignoredAgain) {
+                // Never let Crystal close Launcher; an empty draw is safer than a crash.
+            }
+        }
+    }
+
+    private void drawSafely(@NonNull Canvas canvas) {
         if (Boolean.TRUE.equals(sCapturingBackdrop.get())) {
             return;
         }
 
         Rect bounds = getBounds();
-        if (bounds.isEmpty()) {
+        if (bounds == null || bounds.isEmpty()) {
             return;
         }
 
-        if (captureBackdrop(bounds) && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER) {
+        boolean captured = captureBackdrop(bounds);
+        if (captured && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER && mBackdropShader != null) {
             try {
                 Api33Impl.drawShader(this, canvas, bounds);
                 return;
-            } catch (RuntimeException | LinkageError ignored) {
-                // Fall through to the captured-backdrop renderer below.
+            } catch (ThreadDeath death) {
+                throw death;
+            } catch (Throwable ignored) {
+                // Fall through to the captured-backdrop/static renderer below.
             }
         }
 
-        drawCapturedFallback(canvas, bounds);
+        if (captured) {
+            drawCapturedFallback(canvas, bounds);
+        } else {
+            drawStaticFallback(canvas, bounds);
+        }
     }
 
     private boolean captureBackdrop(Rect bounds) {
-        if (mHost == null || !mHost.isAttachedToWindow()) {
+        if (!isHostSafeForCapture(bounds)) {
             return false;
         }
 
         View root = mHost.getRootView();
-        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) {
-            return false;
-        }
-
         int width = bounds.width() + mCapturePad * 2;
         int height = bounds.height() + mCapturePad * 2;
-        if (width <= 0 || height <= 0 || width > MAX_CAPTURE_SIZE || height > MAX_CAPTURE_SIZE) {
+        long pixels = (long) width * (long) height;
+        if (width <= 0 || height <= 0 || width > MAX_CAPTURE_SIZE || height > MAX_CAPTURE_SIZE
+                || pixels > MAX_CAPTURE_PIXELS) {
             return false;
         }
 
@@ -233,9 +264,40 @@ final class OneUiCrystalRenderer extends Drawable {
                 sCapturingBackdrop.set(false);
             }
             return true;
-        } catch (RuntimeException | LinkageError ignored) {
+        } catch (OutOfMemoryError oom) {
+            recycleBackdrop();
+            return false;
+        } catch (ThreadDeath death) {
+            throw death;
+        } catch (Throwable ignored) {
             return false;
         }
+    }
+
+    private boolean isHostSafeForCapture(Rect bounds) {
+        if (mHost == null || bounds == null || bounds.isEmpty()) {
+            return false;
+        }
+        if (!mHost.isAttachedToWindow() || mHost.getWindowToken() == null) {
+            return false;
+        }
+        if (isInsideLauncherPreview()) {
+            return false;
+        }
+        View root = mHost.getRootView();
+        return root != null && root.getWidth() > 0 && root.getHeight() > 0;
+    }
+
+    private boolean isInsideLauncherPreview() {
+        View view = mHost;
+        for (int depth = 0; view != null && depth < 16; depth++) {
+            if (LAUNCHER_PREVIEW_VIEW.equals(view.getClass().getName())) {
+                return true;
+            }
+            ViewParent parent = view.getParent();
+            view = parent instanceof View ? (View) parent : null;
+        }
+        return false;
     }
 
     private void drawWallpaperUnderlay(View root, Canvas canvas, int captureLeft, int captureTop) {
@@ -252,53 +314,72 @@ final class OneUiCrystalRenderer extends Drawable {
             mWallpaper.setBounds(0, 0, root.getWidth(), root.getHeight());
             mWallpaper.draw(canvas);
             canvas.restoreToCount(save);
-        } catch (RuntimeException | LinkageError ignored) {
+        } catch (ThreadDeath death) {
+            throw death;
+        } catch (Throwable ignored) {
             // Live wallpapers or restricted wallpaper access simply fall back to the root capture.
         }
     }
 
     private void drawCapturedFallback(Canvas canvas, Rect bounds) {
-        mRect.set(bounds);
-        mClipPath.reset();
-        mClipPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
+        try {
+            mRect.set(bounds);
+            mClipPath.reset();
+            mClipPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
 
-        int save = canvas.save();
-        canvas.clipPath(mClipPath);
+            int save = canvas.save();
+            canvas.clipPath(mClipPath);
 
-        if (mBackdrop != null && !mBackdrop.isRecycled()) {
-            mSrc.set(mCapturePad, mCapturePad,
-                    Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
-                    Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
-            mDst.set(bounds);
-            mDst.inset(-mRefractionPx * 0.10f, -mRefractionPx * 0.10f);
-            canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
+            if (mBackdrop != null && !mBackdrop.isRecycled()) {
+                mSrc.set(mCapturePad, mCapturePad,
+                        Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
+                        Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
+                mDst.set(bounds);
+                mDst.inset(-mRefractionPx * 0.10f, -mRefractionPx * 0.10f);
+                canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
+            }
+
+            drawSoberOverlays(canvas, bounds);
+            canvas.restoreToCount(save);
+        } catch (ThreadDeath death) {
+            throw death;
+        } catch (Throwable ignored) {
+            drawStaticFallback(canvas, bounds);
         }
-
-        drawOpticalOverlays(canvas, bounds);
-        canvas.restoreToCount(save);
     }
 
-    private void drawOpticalOverlays(Canvas canvas, Rect bounds) {
-        float tintAlpha = (0.06f + 0.11f * mStrength) * Color.alpha(mColor) / 255f;
+    private void drawStaticFallback(Canvas canvas, Rect bounds) {
+        if (bounds == null || bounds.isEmpty()) {
+            return;
+        }
+        mRect.set(bounds);
+        drawSoberOverlays(canvas, bounds);
+    }
+
+    private void drawSoberOverlays(Canvas canvas, Rect bounds) {
+        mRect.set(bounds);
+        float tintAlpha = 0.09f + 0.08f * mStrength;
+        int fillAlpha = Math.round(Math.max(72, Color.alpha(mColor)) * tintAlpha);
+
         mOverlayPaint.setShader(null);
-        mOverlayPaint.setColor(applyAlpha(mColor, Math.round(255f * tintAlpha)));
+        mOverlayPaint.setColor(applyAlpha(mColor, fillAlpha));
         mOverlayPaint.setStyle(Paint.Style.FILL);
         mOverlayPaint.setColorFilter(mColorFilter);
         canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mOverlayPaint);
 
         mOverlayPaint.setColorFilter(null);
         mOverlayPaint.setStyle(Paint.Style.STROKE);
-        mOverlayPaint.setStrokeWidth(Math.max(1f, mDepthPx * 0.12f));
-        mOverlayPaint.setColor(Color.argb(Math.round(60f + 82f * mStrength), 255, 255, 255));
+        mOverlayPaint.setStrokeWidth(Math.max(1f, mDepthPx * 0.08f));
+        mOverlayPaint.setColor(Color.argb(Math.round(34f + 34f * mStrength), 255, 255, 255));
         canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mOverlayPaint);
 
+        float highlightHeight = Math.max(1f, bounds.height() * 0.08f);
+        RectF highlight = new RectF(bounds.left + 2f, bounds.top + 2f,
+                bounds.right - 2f, bounds.top + highlightHeight);
         mOverlayPaint.setStyle(Paint.Style.FILL);
-        mOverlayPaint.setColor(Color.argb(Math.round(18f + 48f * mStrength), 255, 255, 255));
-        RectF shine = new RectF(bounds.left + bounds.width() * 0.08f,
-                bounds.top + bounds.height() * 0.06f,
-                bounds.right - bounds.width() * 0.20f,
-                bounds.top + bounds.height() * 0.34f);
-        canvas.drawOval(shine, mOverlayPaint);
+        mOverlayPaint.setColor(Color.argb(Math.round(10f + 22f * mStrength), 255, 255, 255));
+        canvas.drawRoundRect(highlight, Math.min(mCornerRadius, highlightHeight),
+                Math.min(mCornerRadius, highlightHeight), mOverlayPaint);
 
         mOverlayPaint.setColorFilter(mColorFilter);
     }
@@ -310,7 +391,11 @@ final class OneUiCrystalRenderer extends Drawable {
 
     private void recycleBackdrop() {
         if (mBackdrop != null) {
-            mBackdrop.recycle();
+            try {
+                mBackdrop.recycle();
+            } catch (RuntimeException ignored) {
+                // Ignore recycle races; the next draw will use the static fallback.
+            }
             mBackdrop = null;
             mBackdropShader = null;
         }
@@ -349,6 +434,9 @@ final class OneUiCrystalRenderer extends Drawable {
         private Api33Impl() { }
 
         static void drawShader(OneUiCrystalRenderer renderer, Canvas canvas, Rect bounds) {
+            if (renderer.mBackdropShader == null) {
+                throw new IllegalStateException("Crystal backdrop shader is missing");
+            }
             android.graphics.RuntimeShader shader =
                     new android.graphics.RuntimeShader(CRYSTAL_SHADER);
             shader.setInputShader("backdrop", renderer.mBackdropShader);
