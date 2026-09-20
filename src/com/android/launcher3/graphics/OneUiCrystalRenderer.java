@@ -1,409 +1,293 @@
 /*
- * Copyright (C) 2026 Lawnchair
+ * Copyright (C) 2026 The Lawnchair Project
  * Licensed under the Apache License, Version 2.0 (the "License");
- *
- * Crystal optical renderer adapted from the architecture of
- * QWEA0/Liquid-Glass-Android at commit 73e22530f4f6d1d525d7d76ca83efe07dd816eee.
- * The implementation keeps Lawnchair's own shapes and contains no proprietary
- * assets or external resources.
  */
 package com.android.launcher3.graphics;
 
-import android.app.WallpaperManager;
-import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
-import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.view.View;
-import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-/**
- * Real Crystal material for One UI surfaces.
- *
- * <p>The rendering pipeline mirrors the Liquid-Glass-Android approach: capture a backdrop around
- * the surface, feed it into a GPU shader, apply a rounded-rect SDF lens, refract/displace the
- * sample coordinates, blur the displaced backdrop, add chromatic dispersion, bevel lighting and a
- * specular highlight. API < 33 keeps a real captured backdrop fallback instead of reverting to a
- * pure translucent tint.</p>
- */
+import com.android.launcher3.Launcher;
+import com.android.launcher3.graphics.OneUiWallpaperBackdropRepository.Mapping;
+import com.android.launcher3.graphics.WallpaperBackdropTransform.Input;
+import com.android.launcher3.graphics.WallpaperBackdropTransform.Result;
+import com.android.launcher3.views.ActivityContext;
+
+/** Draws Crystal exclusively from immutable, launcher-scoped wallpaper snapshots. */
 final class OneUiCrystalRenderer extends Drawable {
     private static final int API_RUNTIME_SHADER = 33;
-    private static final int MAX_CAPTURE_SIZE = 2048;
-    private static final long MAX_CAPTURE_PIXELS = 2_500_000L;
-    private static final String LAUNCHER_PREVIEW_VIEW = "app.lawnchair.views.LauncherPreviewView";
-
-    private static final ThreadLocal<Boolean> sCapturingBackdrop =
-            new ThreadLocal<Boolean>() {
-                @Override
-                protected Boolean initialValue() {
-                    return false;
-                }
-            };
 
     private static final String CRYSTAL_SHADER =
             "uniform shader backdrop;\n"
                     + "uniform float2 size;\n"
                     + "uniform float2 origin;\n"
-                    + "uniform float capturePad;\n"
                     + "uniform float radius;\n"
                     + "uniform float blurPx;\n"
                     + "uniform float refractionPx;\n"
-                    + "uniform float depth;\n"
-                    + "uniform float specular;\n"
+                    + "uniform float edgeBandPx;\n"
+                    + "uniform float dispersionPx;\n"
+                    + "uniform float rimAlpha;\n"
                     + "uniform float4 tint;\n"
-                    + "\n"
                     + "float sdRoundRect(float2 p, float2 halfSize, float r) {\n"
-                    + "    float2 q = abs(p) - halfSize + r;\n"
-                    + "    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;\n"
+                    + "  float2 q = abs(p) - halfSize + r;\n"
+                    + "  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;\n"
                     + "}\n"
-                    + "\n"
-                    + "half4 blurBackdrop(float2 p, float r) {\n"
-                    + "    float2 dx = float2(max(1.0, r), 0.0);\n"
-                    + "    float2 dy = float2(0.0, max(1.0, r));\n"
-                    + "    half4 c = backdrop.eval(p) * 0.28;\n"
-                    + "    c += backdrop.eval(p + dx) * 0.10;\n"
-                    + "    c += backdrop.eval(p - dx) * 0.10;\n"
-                    + "    c += backdrop.eval(p + dy) * 0.10;\n"
-                    + "    c += backdrop.eval(p - dy) * 0.10;\n"
-                    + "    c += backdrop.eval(p + dx + dy) * 0.08;\n"
-                    + "    c += backdrop.eval(p + dx - dy) * 0.08;\n"
-                    + "    c += backdrop.eval(p - dx + dy) * 0.08;\n"
-                    + "    c += backdrop.eval(p - dx - dy) * 0.08;\n"
-                    + "    return c;\n"
+                    + "half4 sampleBlur(float2 p, float r) {\n"
+                    + "  float2 dx = float2(max(0.75, r), 0.0);\n"
+                    + "  float2 dy = float2(0.0, max(0.75, r));\n"
+                    + "  half4 c = backdrop.eval(p) * 0.36;\n"
+                    + "  c += backdrop.eval(p + dx) * 0.16;\n"
+                    + "  c += backdrop.eval(p - dx) * 0.16;\n"
+                    + "  c += backdrop.eval(p + dy) * 0.16;\n"
+                    + "  c += backdrop.eval(p - dy) * 0.16;\n"
+                    + "  return c;\n"
                     + "}\n"
-                    + "\n"
                     + "half4 main(float2 coord) {\n"
-                    + "    float2 local = coord - origin;\n"
-                    + "    float2 center = size * 0.5;\n"
-                    + "    float corner = min(radius, min(center.x, center.y));\n"
-                    + "    float2 p = local - center;\n"
-                    + "    float sd = sdRoundRect(p, center, corner);\n"
-                    + "    float2 norm = p / max(center, float2(1.0, 1.0));\n"
-                    + "    float len = length(norm);\n"
-                    + "    float2 normal = normalize(norm + float2(0.001, 0.001));\n"
-                    + "    float rim = 1.0 - smoothstep(-depth * 2.8, -1.0, sd);\n"
-                    + "    float lens = pow(max(0.0, 1.0 - len), 1.35);\n"
-                    + "    float2 tangent = float2(-normal.y, normal.x);\n"
-                    + "    float2 warp = normal * refractionPx * (0.24 + 0.76 * rim);\n"
-                    + "    warp += tangent * refractionPx * 0.10 * lens;\n"
-                    + "    float2 baseCoord = local + float2(capturePad, capturePad) + warp;\n"
-                    + "\n"
-                    + "    half4 soft = blurBackdrop(baseCoord, blurPx);\n"
-                    + "    half4 red = blurBackdrop(baseCoord + float2(refractionPx * 0.30, 0.0), blurPx);\n"
-                    + "    half4 blue = blurBackdrop(baseCoord - float2(refractionPx * 0.24, 0.0), blurPx);\n"
-                    + "    half4 dispersed = half4(red.r, soft.g, blue.b, soft.a);\n"
-                    + "    half4 tintColor = half4(tint.r, tint.g, tint.b, tint.a);\n"
-                    + "    half4 glass = mix(soft, dispersed, 0.48);\n"
-                    + "    glass = mix(glass, tintColor, tint.a);\n"
-                    + "\n"
-                    + "    float topGlow = (1.0 - smoothstep(0.0, 0.52, local.y / max(1.0, size.y)))\n"
-                    + "            * (0.34 + 0.66 * lens);\n"
-                    + "    float light = max(0.0, dot(-normal, normalize(float2(-0.55, -0.82))));\n"
-                    + "    float bevel = rim * (0.20 + 0.80 * light) * specular;\n"
-                    + "    float lowerShadow = rim * smoothstep(0.48, 1.0, local.y / max(1.0, size.y))\n"
-                    + "            * depth * 0.020;\n"
-                    + "    float diagonal = pow(max(0.0, 1.0 - length((local - size * float2(0.22, 0.18))\n"
-                    + "            / max(size * float2(0.82, 0.55), float2(1.0, 1.0)))), 3.0);\n"
-                    + "\n"
-                    + "    glass.rgb += half3(topGlow * 0.10 + bevel * 0.30 + diagonal * specular * 0.16);\n"
-                    + "    glass.rgb -= half3(lowerShadow);\n"
-                    + "    glass.a = 1.0;\n"
-                    + "    return glass;\n"
+                    + "  float2 local = coord - origin;\n"
+                    + "  float2 halfSize = size * 0.5;\n"
+                    + "  float2 p = local - halfSize;\n"
+                    + "  float corner = min(radius, min(halfSize.x, halfSize.y));\n"
+                    + "  float sd = sdRoundRect(p, halfSize, corner);\n"
+                    + "  float edge = 1.0 - smoothstep(0.0, edgeBandPx, max(0.0, -sd));\n"
+                    + "  float2 normal = normalize(p / max(halfSize, float2(1.0)) + float2(0.0001));\n"
+                    + "  float displacement = refractionPx * (0.20 + 0.80 * edge);\n"
+                    + "  float2 warped = coord + normal * displacement;\n"
+                    + "  half4 center = sampleBlur(warped, blurPx);\n"
+                    + "  half4 red = sampleBlur(warped + normal * dispersionPx, blurPx);\n"
+                    + "  half4 blue = sampleBlur(warped - normal * dispersionPx, blurPx);\n"
+                    + "  half4 glass = mix(center, half4(red.r, center.g, blue.b, center.a), edge * 0.42);\n"
+                    + "  glass = mix(glass, half4(tint.rgb, glass.a), tint.a);\n"
+                    + "  float light = max(0.0, dot(-normal, normalize(float2(-0.55, -0.84))));\n"
+                    + "  float contour = (1.0 - smoothstep(0.0, 1.35, abs(sd))) * edge;\n"
+                    + "  glass.rgb += half3(contour * light * rimAlpha);\n"
+                    + "  glass.rgb -= half3(contour * (1.0 - light) * 0.035);\n"
+                    + "  glass.a = 1.0;\n"
+                    + "  return glass;\n"
                     + "}";
 
     private final View mHost;
+    private final OneUiCrystalSurfaceRole mRole;
     private final int mColor;
     private final float mCornerRadius;
+    private final OneUiCrystalOptics.Values mOptics;
     private final Paint mShaderPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mFallbackPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF mRect = new RectF();
-    private final Rect mSrc = new Rect();
-    private final RectF mDst = new RectF();
     private final Path mClipPath = new Path();
+    private final Matrix mBitmapMatrix = new Matrix();
+    private final RectF mSurfaceRect = new RectF();
+    private final RectF mSampleRect = new RectF();
+    private final RectF mExpandedRect = new RectF();
     private final int[] mHostLocation = new int[2];
-    private final int[] mRootLocation = new int[2];
+    private final Runnable mRepositoryListener = this::invalidateSelf;
 
-    private Bitmap mBackdrop;
-    private BitmapShader mBackdropShader;
-    private Drawable mWallpaper;
-    private int mCapturePad;
+    @Nullable private final OneUiWallpaperBackdropRepository mExplicitRepository;
+    @Nullable private OneUiWallpaperBackdropRepository mObservedRepository;
+    @Nullable private BitmapShader mBitmapShader;
+    @Nullable private Api33State mApi33State;
+    private long mBoundGeneration = Long.MIN_VALUE;
+    private int mBoundWidth = -1;
+    private int mBoundHeight = -1;
+    private int mLastScreenLeft = Integer.MIN_VALUE;
+    private int mLastScreenTop = Integer.MIN_VALUE;
+    private float mLastHorizontalOffset = Float.NaN;
+    private float mLastVerticalOffset = Float.NaN;
+    private int mShaderBuildCount;
+    private int mBitmapShaderBuildCount;
     private int mAlpha = 255;
-    private float mStrength;
-    private float mBlurPx;
-    private float mRefractionPx;
-    private float mDepthPx;
-    private float mSpecular;
     private @Nullable ColorFilter mColorFilter;
 
-    static Drawable create(View host, int color, float cornerRadius, int intensityPercent) {
-        return new OneUiCrystalRenderer(host, color, cornerRadius, intensityPercent);
+    static Drawable create(View host, OneUiCrystalSurfaceRole role, int color,
+            float cornerRadius, int intensityPercent) {
+        return new OneUiCrystalRenderer(host, role, color, cornerRadius, intensityPercent, null);
     }
 
-    private OneUiCrystalRenderer(View host, int color, float cornerRadius, int intensityPercent) {
+    static OneUiCrystalRenderer createForTesting(View host, OneUiCrystalSurfaceRole role, int color,
+            float cornerRadius, int intensityPercent,
+            OneUiWallpaperBackdropRepository repository) {
+        return new OneUiCrystalRenderer(
+                host, role, color, cornerRadius, intensityPercent, repository);
+    }
+
+    private OneUiCrystalRenderer(View host, OneUiCrystalSurfaceRole role, int color,
+            float cornerRadius, int intensityPercent,
+            @Nullable OneUiWallpaperBackdropRepository repository) {
         mHost = host;
+        mRole = role;
         mColor = color;
         mCornerRadius = cornerRadius;
-        setIntensity(intensityPercent);
-    }
-
-    private void setIntensity(int intensityPercent) {
-        float slider = Math.max(0f, Math.min(100f, intensityPercent)) / 100f;
-        // Crystal selected at 0% still remains a visible optical material.
-        mStrength = 0.24f + 0.76f * slider;
-        float density = 1f;
-        try {
-            if (mHost != null) {
-                density = Math.max(1f, mHost.getResources().getDisplayMetrics().density);
-            }
-        } catch (RuntimeException | LinkageError ignored) {
-            density = 1f;
-        }
-        mBlurPx = (2.5f + 9.5f * mStrength) * density;
-        mRefractionPx = (3.0f + 15.0f * mStrength) * density;
-        mDepthPx = (3.0f + 13.0f * mStrength) * density;
-        mSpecular = 0.30f + 0.70f * mStrength;
-        mCapturePad = Math.round((20f + 28f * mStrength) * density + mRefractionPx + mBlurPx);
+        mExplicitRepository = repository;
+        float density = Math.max(0.1f, host.getResources().getDisplayMetrics().density);
+        mOptics = OneUiCrystalOptics.forIntensity(intensityPercent, density);
+        mFallbackPaint.setColor(coldFallbackColor(color));
     }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        try {
-            drawSafely(canvas);
-        } catch (ThreadDeath death) {
-            throw death;
-        } catch (Throwable ignored) {
-            try {
-                drawStaticFallback(canvas, getBounds());
-            } catch (ThreadDeath death) {
-                throw death;
-            } catch (Throwable ignoredAgain) {
-                // Never let Crystal close Launcher; an empty draw is safer than a crash.
-            }
-        }
-    }
-
-    private void drawSafely(@NonNull Canvas canvas) {
-        if (Boolean.TRUE.equals(sCapturingBackdrop.get())) {
-            return;
-        }
-
         Rect bounds = getBounds();
-        if (bounds == null || bounds.isEmpty()) {
-            return;
-        }
-
-        boolean captured = captureBackdrop(bounds);
-        if (captured && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER && mBackdropShader != null) {
-            try {
-                Api33Impl.drawShader(this, canvas, bounds);
-                return;
-            } catch (ThreadDeath death) {
-                throw death;
-            } catch (Throwable ignored) {
-                // Fall through to the captured-backdrop/static renderer below.
-            }
-        }
-
-        if (captured) {
-            drawCapturedFallback(canvas, bounds);
-        } else {
-            drawStaticFallback(canvas, bounds);
-        }
-    }
-
-    private boolean captureBackdrop(Rect bounds) {
-        if (!isHostSafeForCapture(bounds)) {
-            return false;
-        }
-
-        View root = mHost.getRootView();
-        int width = bounds.width() + mCapturePad * 2;
-        int height = bounds.height() + mCapturePad * 2;
-        long pixels = (long) width * (long) height;
-        if (width <= 0 || height <= 0 || width > MAX_CAPTURE_SIZE || height > MAX_CAPTURE_SIZE
-                || pixels > MAX_CAPTURE_PIXELS) {
-            return false;
-        }
-
+        if (bounds.isEmpty()) return;
         try {
-            if (mBackdrop == null || mBackdrop.getWidth() != width || mBackdrop.getHeight() != height) {
-                recycleBackdrop();
-                mBackdrop = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                mBackdropShader = new BitmapShader(mBackdrop, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-            }
-
-            mHost.getLocationInWindow(mHostLocation);
-            root.getLocationInWindow(mRootLocation);
-
-            int captureLeft = mHostLocation[0] - mRootLocation[0] + bounds.left - mCapturePad;
-            int captureTop = mHostLocation[1] - mRootLocation[1] + bounds.top - mCapturePad;
-
-            Canvas captureCanvas = new Canvas(mBackdrop);
-            captureCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-            drawWallpaperUnderlay(root, captureCanvas, captureLeft, captureTop);
-
-            sCapturingBackdrop.set(true);
-            try {
-                captureCanvas.translate(-captureLeft, -captureTop);
-                root.draw(captureCanvas);
-            } finally {
-                sCapturingBackdrop.set(false);
-            }
-            return true;
-        } catch (OutOfMemoryError oom) {
-            recycleBackdrop();
-            return false;
-        } catch (ThreadDeath death) {
-            throw death;
-        } catch (Throwable ignored) {
-            return false;
-        }
-    }
-
-    private boolean isHostSafeForCapture(Rect bounds) {
-        if (mHost == null || bounds == null || bounds.isEmpty()) {
-            return false;
-        }
-        if (!mHost.isAttachedToWindow() || mHost.getWindowToken() == null) {
-            return false;
-        }
-        if (isInsideLauncherPreview()) {
-            return false;
-        }
-        View root = mHost.getRootView();
-        return root != null && root.getWidth() > 0 && root.getHeight() > 0;
-    }
-
-    private boolean isInsideLauncherPreview() {
-        View view = mHost;
-        for (int depth = 0; view != null && depth < 16; depth++) {
-            if (LAUNCHER_PREVIEW_VIEW.equals(view.getClass().getName())) {
-                return true;
-            }
-            ViewParent parent = view.getParent();
-            view = parent instanceof View ? (View) parent : null;
-        }
-        return false;
-    }
-
-    private void drawWallpaperUnderlay(View root, Canvas canvas, int captureLeft, int captureTop) {
-        try {
-            if (mWallpaper == null) {
-                mWallpaper = WallpaperManager.getInstance(mHost.getContext()).getDrawable();
-            }
-            if (mWallpaper == null) {
+            OneUiWallpaperBackdropRepository repository = resolveRepository();
+            WallpaperBackdropSnapshot snapshot = repository == null
+                    ? null : repository.currentSnapshot();
+            if (snapshot == null || snapshot.bitmap().isRecycled()
+                    || !bindSnapshotAndGeometry(repository, snapshot, bounds)) {
+                drawFallback(canvas, bounds);
                 return;
             }
-
-            int save = canvas.save();
-            canvas.translate(-captureLeft, -captureTop);
-            mWallpaper.setBounds(0, 0, root.getWidth(), root.getHeight());
-            mWallpaper.draw(canvas);
-            canvas.restoreToCount(save);
-        } catch (ThreadDeath death) {
-            throw death;
-        } catch (Throwable ignored) {
-            // Live wallpapers or restricted wallpaper access simply fall back to the root capture.
-        }
-    }
-
-    private void drawCapturedFallback(Canvas canvas, Rect bounds) {
-        try {
-            mRect.set(bounds);
-            mClipPath.reset();
-            mClipPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
-
-            int save = canvas.save();
-            canvas.clipPath(mClipPath);
-
-            if (mBackdrop != null && !mBackdrop.isRecycled()) {
-                mSrc.set(mCapturePad, mCapturePad,
-                        Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
-                        Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
-                mDst.set(bounds);
-                mDst.inset(-mRefractionPx * 0.10f, -mRefractionPx * 0.10f);
-                canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
+            if (Build.VERSION.SDK_INT >= API_RUNTIME_SHADER && mApi33State != null) {
+                mApi33State.draw(this, canvas, bounds);
+            } else {
+                drawBitmapFallback(canvas, bounds);
             }
-
-            drawSoberOverlays(canvas, bounds);
-            canvas.restoreToCount(save);
         } catch (ThreadDeath death) {
             throw death;
-        } catch (Throwable ignored) {
-            drawStaticFallback(canvas, bounds);
+        } catch (Throwable unavailable) {
+            drawFallback(canvas, bounds);
         }
     }
 
-    private void drawStaticFallback(Canvas canvas, Rect bounds) {
-        if (bounds == null || bounds.isEmpty()) {
+    private boolean bindSnapshotAndGeometry(
+            OneUiWallpaperBackdropRepository repository,
+            WallpaperBackdropSnapshot snapshot,
+            Rect bounds) {
+        if (mBoundGeneration != snapshot.wallpaperGeneration() || mBitmapShader == null) {
+            mBitmapShader = new BitmapShader(
+                    snapshot.bitmap(), Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+            mBitmapShaderBuildCount++;
+            mApi33State = Build.VERSION.SDK_INT >= API_RUNTIME_SHADER
+                    ? Api33State.create(mBitmapShader) : null;
+            if (mApi33State != null) mShaderBuildCount++;
+            mBoundGeneration = snapshot.wallpaperGeneration();
+            resetGeometryKey();
+        }
+
+        Mapping mapping = repository.currentMapping();
+        mHost.getLocationOnScreen(mHostLocation);
+        int screenLeft = mHostLocation[0] + bounds.left;
+        int screenTop = mHostLocation[1] + bounds.top;
+        boolean geometryChanged = mBoundWidth != bounds.width()
+                || mBoundHeight != bounds.height()
+                || mLastScreenLeft != screenLeft
+                || mLastScreenTop != screenTop
+                || Float.compare(mLastHorizontalOffset, mapping.horizontalOffset()) != 0
+                || Float.compare(mLastVerticalOffset, mapping.verticalOffset()) != 0;
+        if (!geometryChanged) return true;
+
+        float opticalPadding = mOptics.refractionPx() * mRole.refractionScale()
+                + mOptics.blurRadiusPx();
+        Result sample = WallpaperBackdropTransform.map(new Input(
+                snapshot.sourceWidth(), snapshot.sourceHeight(),
+                snapshot.decodedWidth(), snapshot.decodedHeight(),
+                mapping.displayWidth(), mapping.displayHeight(),
+                screenLeft, screenTop, bounds.width(), bounds.height(),
+                mapping.horizontalOffset(), mapping.verticalOffset(), opticalPadding,
+                mHost.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL));
+        if (!sample.isValid()) return false;
+
+        mSampleRect.set(sample.left(), sample.top(), sample.right(), sample.bottom());
+        mExpandedRect.set(bounds);
+        mExpandedRect.inset(-opticalPadding, -opticalPadding);
+        mBitmapMatrix.setRectToRect(mSampleRect, mExpandedRect, Matrix.ScaleToFit.FILL);
+        mBitmapShader.setLocalMatrix(mBitmapMatrix);
+        mBoundWidth = bounds.width();
+        mBoundHeight = bounds.height();
+        mLastScreenLeft = screenLeft;
+        mLastScreenTop = screenTop;
+        mLastHorizontalOffset = mapping.horizontalOffset();
+        mLastVerticalOffset = mapping.verticalOffset();
+        return true;
+    }
+
+    @Nullable
+    private OneUiWallpaperBackdropRepository resolveRepository() {
+        OneUiWallpaperBackdropRepository repository = mExplicitRepository;
+        if (repository == null) {
+            ActivityContext context = ActivityContext.lookupContextNoThrow(mHost.getContext());
+            repository = context instanceof Launcher
+                    ? ((Launcher) context).getWallpaperBackdropRepository() : null;
+        }
+        if (repository != mObservedRepository) {
+            if (mObservedRepository != null) {
+                mObservedRepository.removeListener(mRepositoryListener);
+            }
+            mObservedRepository = repository;
+            if (repository != null) repository.addListener(mRepositoryListener);
+            mBoundGeneration = Long.MIN_VALUE;
+        }
+        return repository;
+    }
+
+    private void drawBitmapFallback(Canvas canvas, Rect bounds) {
+        if (mBitmapShader == null) {
+            drawFallback(canvas, bounds);
             return;
         }
-        mRect.set(bounds);
-        drawSoberOverlays(canvas, bounds);
+        mSurfaceRect.set(bounds);
+        mClipPath.reset();
+        mClipPath.addRoundRect(mSurfaceRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
+        int save = canvas.save();
+        canvas.clipPath(mClipPath);
+        mShaderPaint.setShader(mBitmapShader);
+        canvas.drawRoundRect(mSurfaceRect, mCornerRadius, mCornerRadius, mShaderPaint);
+        drawContour(canvas, bounds);
+        canvas.restoreToCount(save);
     }
 
-    private void drawSoberOverlays(Canvas canvas, Rect bounds) {
-        mRect.set(bounds);
-        float tintAlpha = 0.09f + 0.08f * mStrength;
-        int fillAlpha = Math.round(Math.max(72, Color.alpha(mColor)) * tintAlpha);
+    private void drawFallback(Canvas canvas, Rect bounds) {
+        mSurfaceRect.set(bounds);
+        canvas.drawRoundRect(mSurfaceRect, mCornerRadius, mCornerRadius, mFallbackPaint);
+        drawContour(canvas, bounds);
+    }
 
+    private void drawContour(Canvas canvas, Rect bounds) {
+        mSurfaceRect.set(bounds);
         mOverlayPaint.setShader(null);
-        mOverlayPaint.setColor(applyAlpha(mColor, fillAlpha));
-        mOverlayPaint.setStyle(Paint.Style.FILL);
-        mOverlayPaint.setColorFilter(mColorFilter);
-        canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mOverlayPaint);
-
-        mOverlayPaint.setColorFilter(null);
         mOverlayPaint.setStyle(Paint.Style.STROKE);
-        mOverlayPaint.setStrokeWidth(Math.max(1f, mDepthPx * 0.08f));
-        mOverlayPaint.setColor(Color.argb(Math.round(34f + 34f * mStrength), 255, 255, 255));
-        canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mOverlayPaint);
-
-        float highlightHeight = Math.max(1f, bounds.height() * 0.08f);
-        RectF highlight = new RectF(bounds.left + 2f, bounds.top + 2f,
-                bounds.right - 2f, bounds.top + highlightHeight);
-        mOverlayPaint.setStyle(Paint.Style.FILL);
-        mOverlayPaint.setColor(Color.argb(Math.round(10f + 22f * mStrength), 255, 255, 255));
-        canvas.drawRoundRect(highlight, Math.min(mCornerRadius, highlightHeight),
-                Math.min(mCornerRadius, highlightHeight), mOverlayPaint);
-
-        mOverlayPaint.setColorFilter(mColorFilter);
+        mOverlayPaint.setStrokeWidth(Math.max(1f, mOptics.edgeBandPx() * 0.12f));
+        mOverlayPaint.setColor(Color.argb(
+                Math.round(255f * mOptics.rimAlpha()), 238, 247, 255));
+        canvas.drawRoundRect(mSurfaceRect, mCornerRadius, mCornerRadius, mOverlayPaint);
     }
 
-    private static int applyAlpha(int color, int alpha) {
-        return Color.argb(Math.max(0, Math.min(255, alpha)),
-                Color.red(color), Color.green(color), Color.blue(color));
+    private static int coldFallbackColor(int source) {
+        int alpha = Math.max(54, Math.min(104, Color.alpha(source)));
+        return Color.argb(alpha,
+                Math.max(188, Color.red(source)),
+                Math.max(204, Color.green(source)),
+                Math.max(220, Color.blue(source)));
     }
 
-    private void recycleBackdrop() {
-        if (mBackdrop != null) {
-            try {
-                mBackdrop.recycle();
-            } catch (RuntimeException ignored) {
-                // Ignore recycle races; the next draw will use the static fallback.
-            }
-            mBackdrop = null;
-            mBackdropShader = null;
-        }
+    private void resetGeometryKey() {
+        mBoundWidth = -1;
+        mBoundHeight = -1;
+        mLastScreenLeft = Integer.MIN_VALUE;
+        mLastScreenTop = Integer.MIN_VALUE;
+        mLastHorizontalOffset = Float.NaN;
+        mLastVerticalOffset = Float.NaN;
     }
+
+    int getShaderBuildCountForTesting() { return mShaderBuildCount; }
+    int getBitmapShaderBuildCountForTesting() { return mBitmapShaderBuildCount; }
 
     @Override
     protected void onBoundsChange(Rect bounds) {
-        recycleBackdrop();
+        resetGeometryKey();
         invalidateSelf();
     }
 
@@ -426,42 +310,43 @@ final class OneUiCrystalRenderer extends Drawable {
     }
 
     @Override
-    public int getOpacity() {
-        return PixelFormat.TRANSLUCENT;
-    }
+    public int getOpacity() { return PixelFormat.TRANSLUCENT; }
 
-    private static final class Api33Impl {
-        private Api33Impl() { }
+    /** Keeps all API-33 verifier-visible shader state out of the base draw path. */
+    private static final class Api33State {
+        private final android.graphics.RuntimeShader mShader;
 
-        static void drawShader(OneUiCrystalRenderer renderer, Canvas canvas, Rect bounds) {
-            if (renderer.mBackdropShader == null) {
-                throw new IllegalStateException("Crystal backdrop shader is missing");
-            }
+        private Api33State(android.graphics.RuntimeShader shader) {
+            mShader = shader;
+        }
+
+        static Api33State create(BitmapShader backdrop) {
             android.graphics.RuntimeShader shader =
                     new android.graphics.RuntimeShader(CRYSTAL_SHADER);
-            shader.setInputShader("backdrop", renderer.mBackdropShader);
-            shader.setFloatUniform("size", bounds.width(), bounds.height());
-            shader.setFloatUniform("origin", bounds.left, bounds.top);
-            shader.setFloatUniform("capturePad", renderer.mCapturePad);
-            shader.setFloatUniform("radius", renderer.mCornerRadius);
-            shader.setFloatUniform("blurPx", renderer.mBlurPx);
-            shader.setFloatUniform("refractionPx", renderer.mRefractionPx);
-            shader.setFloatUniform("depth", renderer.mDepthPx);
-            shader.setFloatUniform("specular", renderer.mSpecular);
+            shader.setInputShader("backdrop", backdrop);
+            return new Api33State(shader);
+        }
 
-            float tintAlpha = (0.05f + 0.13f * renderer.mStrength) * Color.alpha(renderer.mColor) / 255f;
-            shader.setFloatUniform("tint",
-                    Color.red(renderer.mColor) / 255f,
-                    Color.green(renderer.mColor) / 255f,
-                    Color.blue(renderer.mColor) / 255f,
-                    tintAlpha);
-
-            renderer.mShaderPaint.setShader(shader);
+        void draw(OneUiCrystalRenderer renderer, Canvas canvas, Rect bounds) {
+            float roleScale = renderer.mRole.refractionScale();
+            mShader.setFloatUniform("size", bounds.width(), bounds.height());
+            mShader.setFloatUniform("origin", bounds.left, bounds.top);
+            mShader.setFloatUniform("radius", renderer.mCornerRadius);
+            mShader.setFloatUniform("blurPx", renderer.mOptics.blurRadiusPx());
+            mShader.setFloatUniform("refractionPx", renderer.mOptics.refractionPx() * roleScale);
+            mShader.setFloatUniform("edgeBandPx", renderer.mOptics.edgeBandPx());
+            mShader.setFloatUniform("dispersionPx", renderer.mOptics.dispersionPx() * roleScale);
+            mShader.setFloatUniform("rimAlpha", renderer.mOptics.rimAlpha());
+            mShader.setFloatUniform("tint",
+                    Math.max(0.82f, Color.red(renderer.mColor) / 255f),
+                    Math.max(0.88f, Color.green(renderer.mColor) / 255f),
+                    Math.max(0.94f, Color.blue(renderer.mColor) / 255f),
+                    renderer.mOptics.tintAlpha());
+            renderer.mShaderPaint.setShader(mShader);
             renderer.mShaderPaint.setAlpha(renderer.mAlpha);
-            renderer.mRect.set(bounds);
-            canvas.drawRoundRect(renderer.mRect, renderer.mCornerRadius,
+            renderer.mSurfaceRect.set(bounds);
+            canvas.drawRoundRect(renderer.mSurfaceRect, renderer.mCornerRadius,
                     renderer.mCornerRadius, renderer.mShaderPaint);
-            renderer.mShaderPaint.setShader(null);
         }
     }
 }

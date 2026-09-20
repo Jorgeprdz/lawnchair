@@ -41,33 +41,34 @@ public final class OneUiGlassBackground {
     /** Dock entry point. The selected material is explicit and shared with settings. */
     public static Drawable createDock(View host, int style, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
-                color, cornerRadius, true, true);
+                color, cornerRadius, true, true, OneUiCrystalSurfaceRole.DOCK);
     }
 
     public static Drawable createDockOverlay(View host, int style, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
-                color, cornerRadius, true, false);
+                color, cornerRadius, true, false, OneUiCrystalSurfaceRole.DOCK_OVERLAY);
     }
 
     /** Folder entry point; style and intensity are resolved live from shared preferences. */
     public static Drawable createFolder(View host, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
-                false, true);
+                false, true, OneUiCrystalSurfaceRole.FOLDER);
     }
 
     public static Drawable createFolderOverlay(View host, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
-                false, false);
+                false, false, OneUiCrystalSurfaceRole.FOLDER_OVERLAY);
     }
 
     private static Drawable buildSurface(View host, int style, int color,
-            float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
+            float cornerRadius, int intensityPercent, boolean allowPlatformBlur,
+            OneUiCrystalSurfaceRole role) {
         final int intensity = clamp(intensityPercent, 0, 100);
         if (style < OneUiGlassStyle.BLUR) {
             return new ColorDrawable(Color.TRANSPARENT);
         }
         if (style == OneUiGlassStyle.CRYSTAL) {
-            return OneUiCrystalRenderer.create(host, color, cornerRadius, intensity);
+            return OneUiCrystalRenderer.create(host, role, color, cornerRadius, intensity);
         }
         if (intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
@@ -232,6 +233,7 @@ public final class OneUiGlassBackground {
         private final float mCornerRadius;
         private final boolean mDockControlled;
         private final boolean mAllowPlatformBlur;
+        private final OneUiCrystalSurfaceRole mRole;
 
         private Drawable mDelegate;
         private int mLastStyle = Integer.MIN_VALUE;
@@ -241,13 +243,15 @@ public final class OneUiGlassBackground {
         private @Nullable ColorFilter mColorFilter;
 
         DynamicGlassDrawable(View host, int baseStyle, int color, float cornerRadius,
-                boolean dockControlled, boolean allowPlatformBlur) {
+                boolean dockControlled, boolean allowPlatformBlur,
+                OneUiCrystalSurfaceRole role) {
             mHost = host;
             mBaseStyle = baseStyle;
             mColor = color;
             mCornerRadius = cornerRadius;
             mDockControlled = dockControlled;
             mAllowPlatformBlur = allowPlatformBlur;
+            mRole = role;
         }
 
         private int resolveStyle() {
@@ -271,7 +275,7 @@ public final class OneUiGlassBackground {
 
             if (mDelegate != null) mDelegate.setVisible(false, false);
             mDelegate = buildSurface(mHost, style, mColor, mCornerRadius, intensity,
-                    mAllowPlatformBlur);
+                    mAllowPlatformBlur, mRole);
             mLastStyle = style;
             mLastIntensity = intensity;
             mLastBlurAvailable = blurAvailable;
