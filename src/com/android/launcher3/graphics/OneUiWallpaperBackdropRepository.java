@@ -28,6 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 /** Launcher-scoped owner of cached wallpaper generations and their change signals. */
 public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
@@ -76,6 +77,7 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
     private final WallpaperBackdropSource mSource;
     private final Executor mIoExecutor;
     private final Executor mMainExecutor;
+    private final Consumer<String> mEventLogger;
     private final WallpaperSnapshotStore<WallpaperBackdropSnapshot> mStore =
             new WallpaperSnapshotStore<>(WallpaperBackdropSnapshot::recycle);
     private final List<WeakReference<Runnable>> mListeners = new ArrayList<>();
@@ -97,7 +99,8 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
             WallpaperBackdropSource source,
             Executor ioExecutor,
             Executor mainExecutor) {
-        this(source, ioExecutor, mainExecutor, initialMapping(context));
+        this(source, ioExecutor, mainExecutor, initialMapping(context),
+                message -> Log.i(TAG, message));
         Context applicationContext = context.getApplicationContext();
         mWallpaperChangedReceiver = new SimpleBroadcastReceiver(
                 applicationContext, MAIN_EXECUTOR, intent -> onWallpaperChangedSignal());
@@ -108,17 +111,20 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
     OneUiWallpaperBackdropRepository(
             WallpaperBackdropSource source, Executor ioExecutor, Executor mainExecutor) {
         this(source, ioExecutor, mainExecutor,
-                new Mapping(1080, 2400, 0.5f, 0.5f, Configuration.ORIENTATION_PORTRAIT));
+                new Mapping(1080, 2400, 0.5f, 0.5f, Configuration.ORIENTATION_PORTRAIT),
+                message -> { });
     }
 
     private OneUiWallpaperBackdropRepository(
             WallpaperBackdropSource source,
             Executor ioExecutor,
             Executor mainExecutor,
-            Mapping initialMapping) {
+            Mapping initialMapping,
+            Consumer<String> eventLogger) {
         mSource = Objects.requireNonNull(source);
         mIoExecutor = Objects.requireNonNull(ioExecutor);
         mMainExecutor = Objects.requireNonNull(mainExecutor);
+        mEventLogger = Objects.requireNonNull(eventLogger);
         mMapping = initialMapping;
         mWallpaperChangedReceiver = null;
         mWallpaperManagerCompat = null;
@@ -238,7 +244,7 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
         mPendingIdentity = identity;
         mLiveWallpaper = identity.isLive();
         long generation = mStore.requestGeneration();
-        Log.i(TAG, "Requested generation " + generation + " (" + reason + ")");
+        mEventLogger.accept("Requested generation " + generation + " (" + reason + ")");
         scheduleLoadIfIdle();
     }
 
@@ -294,7 +300,7 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
         if (result.status() == LoadStatus.SUCCESS && candidate != null) {
             if (newest && identityMatches && mStore.publish(generation, candidate)) {
                 mLiveWallpaper = false;
-                Log.i(TAG, "Published generation " + generation);
+                mEventLogger.accept("Published generation " + generation);
                 notifyListeners();
             } else if (!newest) {
                 mStore.publish(generation, candidate);
@@ -307,7 +313,7 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
                 mLiveWallpaper = true;
             }
             mStore.fail(generation);
-            Log.i(TAG, "Generation " + generation + " retained previous snapshot: "
+            mEventLogger.accept("Generation " + generation + " retained previous snapshot: "
                     + result.status());
         }
 
