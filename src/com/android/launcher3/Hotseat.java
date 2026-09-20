@@ -654,7 +654,7 @@ public class Hotseat extends FrameLayout implements Insettable {
         int paddingTop = getPaddingTop();
         int paddingBottom = getPaddingBottom();
 
-        layoutGlassSurface(width, height);
+        layoutGlassSurface(widthSize, heightSize);
 
         DeviceProfile dp = mActivity.getDeviceProfile();
         boolean showIndicator = mPagedView.isPagingEnabled() && !dp.isVerticalBarLayout();
