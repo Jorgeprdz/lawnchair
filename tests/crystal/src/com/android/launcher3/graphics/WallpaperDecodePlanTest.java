@@ -30,4 +30,26 @@ public class WallpaperDecodePlanTest {
 
         assertThat(plan.sampleSize() & (plan.sampleSize() - 1)).isEqualTo(0);
     }
+
+    @Test
+    public void commonPhoneWallpapersRespectCombinedTwentyFourMiBBudget() {
+        assertWithinBudget(WallpaperDecodePlan.forBounds(
+                1080, 2400, 1080, 2400, 24L * 1024L * 1024L));
+        assertWithinBudget(WallpaperDecodePlan.forBounds(
+                1440, 3200, 1440, 3200, 24L * 1024L * 1024L));
+    }
+
+    @Test
+    public void impossibleBudgetReturnsInvalidWithoutOverflow() {
+        WallpaperDecodePlan plan = WallpaperDecodePlan.forBounds(
+                Integer.MAX_VALUE, Integer.MAX_VALUE, 1080, 2400, 7L);
+
+        assertThat(plan.isValid()).isFalse();
+    }
+
+    private static void assertWithinBudget(WallpaperDecodePlan plan) {
+        assertThat(plan.isValid()).isTrue();
+        long bytes = 2L * plan.width() * plan.height() * 4L;
+        assertThat(bytes).isAtMost(24L * 1024L * 1024L);
+    }
 }

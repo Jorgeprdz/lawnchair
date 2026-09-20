@@ -112,6 +112,69 @@ public class OneUiWallpaperBackdropRepositoryTest {
         assertThat(fixture.repository.currentSnapshot()).isSameInstanceAs(initial);
     }
 
+    @Test
+    public void sourceSecurityExceptionKeepsSnapshotAndAllowsNextReload() {
+        Fixture fixture = new Fixture();
+        WallpaperBackdropSnapshot initial = fixture.publishInitial();
+        fixture.source.enqueueThrowable(new SecurityException("permission revoked"));
+
+        fixture.repository.onWallpaperChangedSignal();
+        fixture.io.runNext();
+
+        assertThat(fixture.repository.currentSnapshot()).isSameInstanceAs(initial);
+        fixture.source.enqueueSuccess();
+        fixture.repository.onWallpaperChangedSignal();
+        assertThat(fixture.io.pendingCount()).isEqualTo(1);
+        fixture.io.runNext();
+        assertThat(fixture.repository.currentSnapshot()).isNotSameInstanceAs(initial);
+    }
+
+    @Test
+    public void sourceOutOfMemoryKeepsSnapshotAndAllowsNextReload() {
+        Fixture fixture = new Fixture();
+        WallpaperBackdropSnapshot initial = fixture.publishInitial();
+        fixture.source.enqueueThrowable(new OutOfMemoryError("decode allocation"));
+
+        fixture.repository.onWallpaperChangedSignal();
+        fixture.io.runNext();
+
+        assertThat(fixture.repository.currentSnapshot()).isSameInstanceAs(initial);
+        fixture.source.enqueueSuccess();
+        fixture.repository.onWallpaperChangedSignal();
+        assertThat(fixture.io.pendingCount()).isEqualTo(1);
+    }
+
+    @Test
+    public void orientationChangedWhileLoadQueuedPublishesLatestGeometry() {
+        Fixture fixture = new Fixture();
+        WallpaperBackdropSnapshot initial = fixture.publishInitial();
+        fixture.source.enqueueSuccess();
+
+        fixture.repository.onWallpaperChangedSignal();
+        fixture.repository.updateMapping(2400, 1080, 0.7f, 0.5f, 2);
+        fixture.io.runNext();
+
+        assertThat(fixture.repository.currentSnapshot()).isNotSameInstanceAs(initial);
+        assertThat(fixture.repository.currentSnapshot().orientation()).isEqualTo(2);
+        assertThat(fixture.repository.currentSnapshot().displayWidth()).isEqualTo(2400);
+        assertThat(fixture.repository.currentSnapshot().displayHeight()).isEqualTo(1080);
+    }
+
+    @Test
+    public void resumeTransitionsFromStaticToLiveWithoutDroppingStaticSnapshot() {
+        Fixture fixture = new Fixture();
+        WallpaperBackdropSnapshot initial = fixture.publishInitial();
+        fixture.source.identity = new WallpaperIdentity(
+                -1, "example.live/.Wallpaper", 0, 0);
+        fixture.source.enqueueFailure(LoadStatus.LIVE_WALLPAPER);
+
+        fixture.repository.onResume();
+        fixture.io.runNext();
+
+        assertThat(fixture.repository.isLiveWallpaper()).isTrue();
+        assertThat(fixture.repository.currentSnapshot()).isSameInstanceAs(initial);
+    }
+
     private static final class Fixture {
         final FakeSource source = new FakeSource();
         final QueuedExecutor io = new QueuedExecutor();
@@ -144,8 +207,8 @@ public class OneUiWallpaperBackdropRepositoryTest {
     }
 
     private static final class FakeSource implements WallpaperBackdropSource {
-        private final Queue<LoadStatus> results = new ArrayDeque<>();
-        private final WallpaperIdentity identity = new WallpaperIdentity(7, null, 0, 0);
+        private final Queue<Object> results = new ArrayDeque<>();
+        private WallpaperIdentity identity = new WallpaperIdentity(7, null, 0, 0);
         private int loadCount;
 
         void enqueueSuccess() {
@@ -156,6 +219,10 @@ public class OneUiWallpaperBackdropRepositoryTest {
             results.add(status);
         }
 
+        void enqueueThrowable(Throwable throwable) {
+            results.add(throwable);
+        }
+
         @Override
         public WallpaperIdentity readIdentity() {
             return identity;
@@ -164,7 +231,14 @@ public class OneUiWallpaperBackdropRepositoryTest {
         @Override
         public LoadResult load(LoadRequest request) {
             loadCount++;
-            LoadStatus status = results.remove();
+            Object next = results.remove();
+            if (next instanceof SecurityException) {
+                throw (SecurityException) next;
+            }
+            if (next instanceof OutOfMemoryError) {
+                throw (OutOfMemoryError) next;
+            }
+            LoadStatus status = (LoadStatus) next;
             if (status != LoadStatus.SUCCESS) {
                 return LoadResult.failure(status);
             }

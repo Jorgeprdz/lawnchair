@@ -43,6 +43,37 @@ public class WallpaperBackdropTransformTest {
         assertThat(result.right() - result.left()).isGreaterThan(1f);
     }
 
+    @Test
+    public void sourceSmallerThanDisplayStillProducesFiniteClampedCrop() {
+        Result result = WallpaperBackdropTransform.map(new Input(
+                540, 960, 540, 960, 1440, 3200,
+                80, 2860, 1280, 260, 0.5f, 0.5f, 64, false));
+
+        assertThat(result.isValid()).isTrue();
+        assertThat(result.left()).isAtLeast(0f);
+        assertThat(result.top()).isAtLeast(0f);
+        assertThat(result.right()).isAtMost(540f);
+        assertThat(result.bottom()).isAtMost(960f);
+    }
+
+    @Test
+    public void extremePanoramaOffsetsRemainAlignedAndWithinBitmap() {
+        Input startInput = new Input(
+                20000, 2000, 2500, 250, 1080, 2400,
+                40, 2100, 1000, 240, 0f, 0.5f, 80, false);
+        Input endInput = new Input(
+                20000, 2000, 2500, 250, 1080, 2400,
+                40, 2100, 1000, 240, 1f, 0.5f, 80, false);
+
+        Result start = WallpaperBackdropTransform.map(startInput);
+        Result end = WallpaperBackdropTransform.map(endInput);
+
+        assertThat(start.isValid()).isTrue();
+        assertThat(end.isValid()).isTrue();
+        assertThat(end.left()).isGreaterThan(start.left());
+        assertThat(end.right()).isAtMost(2500f);
+    }
+
     private static Input panoramicInput(float horizontalOffset, boolean rtl) {
         return new Input(
                 3240, 2400, 1620, 1200, 1080, 2400,
