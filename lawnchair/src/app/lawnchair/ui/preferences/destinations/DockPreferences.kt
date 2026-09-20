@@ -17,9 +17,16 @@
 package app.lawnchair.ui.preferences.destinations
 
 import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -264,11 +272,19 @@ fun GridSettings(prefs: PreferenceManager, prefs2: PreferenceManager2) {
 @Composable
 fun ColumnScope.DockPreferencesPreview(modifier: Modifier = Modifier) {
     if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
+        val context = LocalContext.current
         val prefs = preferenceManager()
         val prefs2 = preferenceManager2()
 
         val hotseatRows = prefs.hotseatRows
         val dockPages = prefs.dockPages
+        val hotseatBgAdapter = prefs.hotseatBG.getAdapter()
+        val hotseatBackgroundModeAdapter = prefs2.hotseatBackgroundMode.getAdapter()
+        val nativeMode = hotseatBackgroundModeAdapter.state.value.takeIf {
+            it in OneUiGlassStyle.OFF..OneUiGlassStyle.FROSTY
+        } ?: if (hotseatBgAdapter.state.value) OneUiGlassStyle.SOLID else OneUiGlassStyle.OFF
+        val selectedMode = OneUiGlassPreferences.resolveDockStyle(context, nativeMode)
+        val crystalPreviewSafe = selectedMode == OneUiGlassStyle.CRYSTAL
 
         val adapters = listOf(
             prefs2.hotseatMode.getAdapter(),
@@ -283,8 +299,8 @@ fun ColumnScope.DockPreferencesPreview(modifier: Modifier = Modifier) {
             prefs2.hotseatBottomFactor.getAdapter(),
             prefs2.strokeColorStyle.getAdapter(),
             prefs2.enableLabelInDock.getAdapter(),
-            prefs.hotseatBG.getAdapter(),
-            prefs2.hotseatBackgroundMode.getAdapter(),
+            hotseatBgAdapter,
+            hotseatBackgroundModeAdapter,
             prefs.hotseatBGHorizontalInsetLeft.getAdapter(),
             prefs.hotseatBGVerticalInsetTop.getAdapter(),
             prefs.hotseatBGHorizontalInsetRight.getAdapter(),
@@ -314,13 +330,33 @@ fun ColumnScope.DockPreferencesPreview(modifier: Modifier = Modifier) {
                         modifier = Modifier.fillMaxSize(),
                     )
                     key(adapters.map { it.state.value }.toTypedArray()) {
-                        DummyLauncherLayout(
-                            idp = createPreviewIdp { copy(numHotseatColumns = prefs.hotseatColumns.get()) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                        if (crystalPreviewSafe) {
+                            SafeCrystalDockPreview(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = 28.dp, vertical = 18.dp)
+                                    .fillMaxWidth()
+                                    .height(if (hotseatRows.getAdapter().state.value >= 2) 96.dp else 72.dp),
+                            )
+                        } else {
+                            DummyLauncherLayout(
+                                idp = createPreviewIdp { copy(numHotseatColumns = prefs.hotseatColumns.get()) },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SafeCrystalDockPreview(modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(28.dp)
+    Box(
+        modifier = modifier
+            .background(Color.White.copy(alpha = 0.16f), shape)
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.32f)), shape),
+    )
 }
