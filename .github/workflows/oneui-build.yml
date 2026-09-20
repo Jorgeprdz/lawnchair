@@ -3,7 +3,7 @@ name: OneUI separate build
 on:
   push:
     branches:
-      - feature/oneui-enhancements
+      - feature/oneui-next
   workflow_dispatch:
 
 env:
