@@ -7,6 +7,9 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Shader;
 import android.view.View;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -20,6 +23,37 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class OneUiCrystalRendererDeviceTest {
+    @Test
+    public void maximumCrystalVisiblyDisplacesARecognizableWallpaperEdge() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        GradientSource source = new GradientSource();
+        OneUiWallpaperBackdropRepository repository =
+                new OneUiWallpaperBackdropRepository(source, Runnable::run, Runnable::run);
+        repository.start();
+
+        View host = new View(context);
+        OneUiCrystalRenderer renderer = OneUiCrystalRenderer.createForTesting(
+                host, OneUiCrystalSurfaceRole.DOCK, Color.WHITE, 64f, 100, repository);
+        // Keeping the surface away from the display edges makes the wallpaper mapping exactly 1:1.
+        renderer.setBounds(100, 100, 1000, 320);
+        Bitmap target = Bitmap.createBitmap(1080, 500, Bitmap.Config.ARGB_8888);
+        renderer.draw(new Canvas(target));
+
+        int edgeX = 104;
+        int centerX = 550;
+        int sampleY = 210;
+        float edgeSourceX = inferSourceXFromGreen(target.getPixel(edgeX, sampleY));
+        float centerSourceX = inferSourceXFromGreen(target.getPixel(centerX, sampleY));
+
+        assertTrue("Maximum Crystal must visibly bend a recognizable wallpaper feature",
+                edgeX - edgeSourceX >= 30f);
+        assertTrue("The readable center must remain spatially stable",
+                Math.abs(centerSourceX - centerX) <= 8f);
+
+        repository.close();
+        target.recycle();
+    }
+
     @Test
     public void repeatedDrawsReuseHeavyResourcesUntilGenerationChanges() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -114,5 +148,44 @@ public class OneUiCrystalRendererDeviceTest {
                     request.displayHeight(),
                     request.generation()));
         }
+    }
+
+    /** A real immutable horizontal luminance ramp makes optical displacement measurable. */
+    private static final class GradientSource implements WallpaperBackdropSource {
+        private final WallpaperIdentity mIdentity = new WallpaperIdentity(1, null, 0, 1);
+
+        @Override
+        public WallpaperIdentity readIdentity() {
+            return mIdentity;
+        }
+
+        @Override
+        public LoadResult load(LoadRequest request) {
+            Bitmap mutable = Bitmap.createBitmap(1080, 2400, Bitmap.Config.ARGB_8888);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setShader(new LinearGradient(
+                    0f, 0f, 1079f, 0f, Color.BLACK, Color.WHITE, Shader.TileMode.CLAMP));
+            new Canvas(mutable).drawRect(0f, 0f, 1080f, 2400f, paint);
+            Bitmap immutable = mutable.copy(Bitmap.Config.ARGB_8888, false);
+            mutable.recycle();
+            return LoadResult.success(new WallpaperBackdropSnapshot(
+                    immutable,
+                    request.generation(),
+                    request.identity(),
+                    1080,
+                    2400,
+                    request.horizontalOffset(),
+                    request.verticalOffset(),
+                    request.orientation(),
+                    request.displayWidth(),
+                    request.displayHeight(),
+                    request.generation()));
+        }
+    }
+
+    private static float inferSourceXFromGreen(int color) {
+        // At 100% with a white tint, the shader emits 89% wallpaper green plus 11% white.
+        float untinted = ((Color.green(color) / 255f) - 0.11f) / 0.89f;
+        return untinted * 1079f;
     }
 }
