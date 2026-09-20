@@ -1619,6 +1619,15 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
     public void computeScroll() {
         super.computeScroll();
         mWallpaperOffset.syncWithScroll();
+        if (mLauncher.getWallpaperBackdropRepository() != null) {
+            DeviceProfile profile = mLauncher.getDeviceProfile();
+            mLauncher.getWallpaperBackdropRepository().updateMapping(
+                    profile.getDeviceProperties().getWidthPx(),
+                    profile.getDeviceProperties().getHeightPx(),
+                    getWallpaperOffsetForCenterPage(),
+                    0.5f,
+                    getResources().getConfiguration().orientation);
+        }
     }
 
     @Override

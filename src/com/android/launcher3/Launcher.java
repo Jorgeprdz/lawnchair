@@ -191,6 +191,8 @@ import com.android.launcher3.dragndrop.DragView;
 import com.android.launcher3.dragndrop.LauncherDragController;
 import com.android.launcher3.folder.Folder;
 import com.android.launcher3.folder.FolderIcon;
+import com.android.launcher3.graphics.AndroidWallpaperBackdropSource;
+import com.android.launcher3.graphics.OneUiWallpaperBackdropRepository;
 import com.android.launcher3.keyboard.ViewGroupFocusHelper;
 import com.android.launcher3.logger.LauncherAtom;
 import com.android.launcher3.logger.LauncherAtom.ContainerInfo;
@@ -233,6 +235,7 @@ import com.android.launcher3.util.BackPressHandler;
 import com.android.launcher3.util.CannedAnimationCoordinator;
 import com.android.launcher3.util.ComponentKey;
 import com.android.launcher3.util.ContextTracker;
+import com.android.launcher3.util.Executors;
 import com.android.launcher3.util.IntSet;
 import com.android.launcher3.util.ItemInflater;
 import com.android.launcher3.util.KeyboardShortcutsDelegate;
@@ -345,6 +348,9 @@ public class Launcher extends StatefulActivity<LauncherState>
     Workspace<?> mWorkspace;
     @Thunk
     DragLayer mDragLayer;
+
+    @Nullable
+    private OneUiWallpaperBackdropRepository mWallpaperBackdropRepository;
 
     private WidgetManagerHelper mAppWidgetManager;
     private LauncherWidgetHolder mAppWidgetHolder;
@@ -471,6 +477,12 @@ public class Launcher extends StatefulActivity<LauncherState>
                 appWidgetId -> getWorkspace().removeWidget(appWidgetId));
 
         setupViews();
+        mWallpaperBackdropRepository = new OneUiWallpaperBackdropRepository(
+                this,
+                new AndroidWallpaperBackdropSource(this),
+                Executors.THREAD_POOL_EXECUTOR,
+                Executors.MAIN_EXECUTOR);
+        mWallpaperBackdropRepository.start();
         updateDisallowBack();
 
         mAppWidgetHolder.startListening();
@@ -1260,6 +1272,9 @@ public class Launcher extends StatefulActivity<LauncherState>
     protected void onResume() {
         TraceHelper.INSTANCE.beginSection(ON_RESUME_EVT);
         super.onResume();
+        if (mWallpaperBackdropRepository != null) {
+            mWallpaperBackdropRepository.onResume();
+        }
 
         if (mDeferOverlayCallbacks) {
             scheduleDeferredCheck();
@@ -1815,6 +1830,10 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     @Override
     public void onDestroy() {
+        if (mWallpaperBackdropRepository != null) {
+            mWallpaperBackdropRepository.close();
+            mWallpaperBackdropRepository = null;
+        }
         super.onDestroy();
         ACTIVITY_TRACKER.onContextDestroyed(this);
 
@@ -2956,6 +2975,11 @@ public class Launcher extends StatefulActivity<LauncherState>
 
     public Workspace<?> getWorkspace() {
         return mWorkspace;
+    }
+
+    @Nullable
+    public OneUiWallpaperBackdropRepository getWallpaperBackdropRepository() {
+        return mWallpaperBackdropRepository;
     }
 
     public Hotseat getHotseat() {
