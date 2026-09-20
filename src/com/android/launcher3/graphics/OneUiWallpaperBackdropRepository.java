@@ -271,7 +271,7 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
                     LoadResult.failure(LoadStatus.UNAVAILABLE)));
             return;
         }
-        LoadResult result = mSource.load(new LoadRequest(
+        LoadResult result = loadSafely(new LoadRequest(
                 identity,
                 mapping.displayWidth(),
                 mapping.displayHeight(),
@@ -281,6 +281,18 @@ public final class OneUiWallpaperBackdropRepository implements AutoCloseable {
                 mapping.verticalOffset(),
                 mapping.orientation()));
         mMainExecutor.execute(() -> finishLoad(generation, identity, result));
+    }
+
+    private LoadResult loadSafely(LoadRequest request) {
+        try {
+            return mSource.load(request);
+        } catch (SecurityException exception) {
+            return LoadResult.failure(LoadStatus.ACCESS_DENIED);
+        } catch (OutOfMemoryError error) {
+            return LoadResult.failure(LoadStatus.OUT_OF_MEMORY);
+        } catch (RuntimeException exception) {
+            return LoadResult.failure(LoadStatus.UNAVAILABLE);
+        }
     }
 
     private void finishLoad(

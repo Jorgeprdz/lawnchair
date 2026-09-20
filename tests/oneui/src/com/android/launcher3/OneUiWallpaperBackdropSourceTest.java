@@ -19,6 +19,22 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class OneUiWallpaperBackdropSourceTest {
     @Test
+    public void liveWallpaperNeverReturnsLauncherPixelsAsFallback() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        AndroidWallpaperBackdropSource source = new AndroidWallpaperBackdropSource(context);
+        WallpaperIdentity identity = source.readIdentity();
+        Assume.assumeTrue("Device is using a static wallpaper", identity.isLive());
+
+        WallpaperBackdropSource.LoadResult result = source.load(
+                new WallpaperBackdropSource.LoadRequest(
+                        identity, 1080, 2400, 24L * 1024L * 1024L, 1));
+
+        assertEquals(LoadStatus.LIVE_WALLPAPER, result.status());
+        assertTrue("A live wallpaper must use the safe material, never a view-tree capture",
+                result.snapshot() == null);
+    }
+
+    @Test
     public void loadCurrentStaticWallpaperReturnsRealOpaquePixels() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         AndroidWallpaperBackdropSource source = new AndroidWallpaperBackdropSource(context);
