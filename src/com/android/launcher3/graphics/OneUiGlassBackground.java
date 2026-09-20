@@ -49,15 +49,51 @@ public final class OneUiGlassBackground {
                 color, cornerRadius, true, false, OneUiCrystalSurfaceRole.DOCK_OVERLAY);
     }
 
-    /** Folder entry point; style and intensity are resolved live from shared preferences. */
-    public static Drawable createFolder(View host, int color, float cornerRadius) {
+    /** Open-folder entry point; style and intensity are resolved live from shared preferences. */
+    public static Drawable createOpenFolder(View host, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
-                false, true, OneUiCrystalSurfaceRole.FOLDER);
+                false, true, OneUiCrystalSurfaceRole.OPEN_FOLDER);
     }
 
-    public static Drawable createFolderOverlay(View host, int color, float cornerRadius) {
+    public static Drawable createOpenFolderOverlay(View host, int color, float cornerRadius) {
         return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
-                false, false, OneUiCrystalSurfaceRole.FOLDER_OVERLAY);
+                false, false, OneUiCrystalSurfaceRole.OPEN_FOLDER_OVERLAY);
+    }
+
+    public static Drawable createFolderIcon(View host, int color, float cornerRadius) {
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+                false, true, OneUiCrystalSurfaceRole.FOLDER_ICON);
+    }
+
+    public static Drawable createFolderIconOverlay(View host, int color, float cornerRadius) {
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+                false, false, OneUiCrystalSurfaceRole.FOLDER_ICON_OVERLAY);
+    }
+
+    public static Drawable createFolderDrawable(View host, int color, float cornerRadius) {
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+                false, true, OneUiCrystalSurfaceRole.FOLDER_DRAWABLE);
+    }
+
+    public static boolean shouldApplySamsungBackdrop(View host, int style) {
+        return style != OneUiGlassStyle.CRYSTAL
+                || OneUiCrystalSourcePolicy.chooseForView(host, true)
+                == OneUiCrystalSourcePolicy.Decision.SAMSUNG_LIVE_BACKDROP;
+    }
+
+    public static void setAnimationRunning(@Nullable Drawable drawable, boolean running) {
+        if (drawable instanceof OneUiCrystalRenderer renderer) {
+            renderer.setAnimationRunning(running);
+        } else if (drawable instanceof DynamicGlassDrawable dynamic) {
+            dynamic.setAnimationRunning(running);
+        }
+    }
+
+    @Nullable
+    public static OneUiCrystalSurfaceRole getSurfaceRoleForTesting(Drawable drawable) {
+        if (drawable instanceof OneUiCrystalRenderer renderer) return renderer.surfaceRole();
+        if (drawable instanceof DynamicGlassDrawable dynamic) return dynamic.mRole;
+        return null;
     }
 
     private static Drawable buildSurface(View host, int style, int color,
@@ -239,6 +275,7 @@ public final class OneUiGlassBackground {
         private int mLastStyle = Integer.MIN_VALUE;
         private int mLastIntensity = Integer.MIN_VALUE;
         private boolean mLastBlurAvailable;
+        private boolean mAnimationRunning;
         private int mAlpha = 255;
         private @Nullable ColorFilter mColorFilter;
 
@@ -282,6 +319,12 @@ public final class OneUiGlassBackground {
             mDelegate.setBounds(getBounds());
             mDelegate.setAlpha(mAlpha);
             mDelegate.setColorFilter(mColorFilter);
+            OneUiGlassBackground.setAnimationRunning(mDelegate, mAnimationRunning);
+        }
+
+        void setAnimationRunning(boolean running) {
+            mAnimationRunning = running;
+            OneUiGlassBackground.setAnimationRunning(mDelegate, running);
         }
 
         @Override

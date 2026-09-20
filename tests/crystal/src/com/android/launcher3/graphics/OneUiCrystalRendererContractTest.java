@@ -18,8 +18,8 @@ public class OneUiCrystalRendererContractTest {
     public void dockUsesCapsuleOpticsWithoutChangingSnapshotSource() {
         assertThat(OneUiCrystalSurfaceRole.DOCK.usesCapsuleOptics()).isTrue();
         assertThat(OneUiCrystalSurfaceRole.DOCK.refractionScale())
-                .isGreaterThan(OneUiCrystalSurfaceRole.FOLDER.refractionScale());
+                .isGreaterThan(OneUiCrystalSurfaceRole.OPEN_FOLDER.refractionScale());
         assertThat(OneUiCrystalSurfaceRole.DOCK.backdropSource())
-                .isEqualTo(OneUiCrystalSurfaceRole.FOLDER.backdropSource());
+                .isEqualTo(OneUiCrystalSurfaceRole.OPEN_FOLDER.backdropSource());
     }
 }

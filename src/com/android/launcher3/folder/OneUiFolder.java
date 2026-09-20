@@ -25,6 +25,11 @@ public class OneUiFolder extends Folder {
     private Drawable mGlass;
     private int mLastGlassColor = Integer.MIN_VALUE;
     private boolean mLastNativeBlur;
+    private boolean mGlassAnimationRunning;
+    private final OnFolderStateChangedListener mGlassStateListener = state -> {
+        mGlassAnimationRunning = state == STATE_ANIMATING;
+        OneUiGlassBackground.setAnimationRunning(mGlass, mGlassAnimationRunning);
+    };
 
     public OneUiFolder(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -49,14 +54,18 @@ public class OneUiFolder extends Folder {
                     Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
             float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
             int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
-            boolean nativeBlur = SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
+            boolean allowNativeBlur = OneUiGlassBackground.shouldApplySamsungBackdrop(this, mode);
+            if (!allowNativeBlur) SamsungGlassBlur.clear(this);
+            boolean nativeBlur = allowNativeBlur
+                    && SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
 
             if (mGlass == null || glassColor != mLastGlassColor
                     || nativeBlur != mLastNativeBlur) {
                 if (mGlass != null) mGlass.setVisible(false, false);
                 mGlass = nativeBlur
-                        ? OneUiGlassBackground.createFolderOverlay(this, glassColor, corners)
-                        : OneUiGlassBackground.createFolder(this, glassColor, corners);
+                        ? OneUiGlassBackground.createOpenFolderOverlay(this, glassColor, corners)
+                        : OneUiGlassBackground.createOpenFolder(this, glassColor, corners);
+                OneUiGlassBackground.setAnimationRunning(mGlass, mGlassAnimationRunning);
                 mLastGlassColor = glassColor;
                 mLastNativeBlur = nativeBlur;
             }
@@ -77,7 +86,19 @@ public class OneUiFolder extends Folder {
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        removeOnFolderStateChangedListener(mGlassStateListener);
+        addOnFolderStateChangedListener(mGlassStateListener);
+        mGlassAnimationRunning = getState() == STATE_ANIMATING;
+        OneUiGlassBackground.setAnimationRunning(mGlass, mGlassAnimationRunning);
+    }
+
+    @Override
     protected void onDetachedFromWindow() {
+        mGlassAnimationRunning = false;
+        OneUiGlassBackground.setAnimationRunning(mGlass, false);
+        removeOnFolderStateChangedListener(mGlassStateListener);
         SamsungGlassBlur.clear(this);
         super.onDetachedFromWindow();
     }

@@ -121,7 +121,7 @@ class OneUiFolderCrystalDrawable(
         if (delegate == null || delegateMode != mode || delegateColor != color
             || delegateWidth != bounds.width() || delegateHeight != bounds.height()
         ) {
-            delegate = OneUiGlassBackground.createFolder(host, color, folderRadius).also {
+            delegate = OneUiGlassBackground.createFolderDrawable(host, color, folderRadius).also {
                 it.bounds = bounds
                 it.colorFilter = colorFilterValue
             }

@@ -79,7 +79,7 @@ public class OneUiPreviewBackground extends PreviewBackground {
             // The preview's real ShapeDelegate is authoritative. Use a square glass source that
             // fully covers the bounds, then clip it to that shape. Passing getRadius() here made
             // the glass source itself circular before clipping and caused the regression.
-            mGlass = OneUiGlassBackground.createFolder(mHost, color, 0f);
+            mGlass = OneUiGlassBackground.createFolderIcon(mHost, color, 0f);
             mLastColor = color;
         }
 

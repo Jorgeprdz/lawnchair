@@ -55,8 +55,35 @@ public class OneUiCrystalRendererDeviceTest {
         target.recycle();
     }
 
+    @Test
+    public void animationPinKeepsRetiredSnapshotUntilReleasedExactlyOnce() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        TestSource source = new TestSource();
+        OneUiWallpaperBackdropRepository repository =
+                new OneUiWallpaperBackdropRepository(source, Runnable::run, Runnable::run);
+        repository.start();
+        Bitmap first = source.mLastBitmap;
+
+        View host = new View(context);
+        OneUiCrystalRenderer renderer = OneUiCrystalRenderer.createForTesting(
+                host, OneUiCrystalSurfaceRole.OPEN_FOLDER, Color.WHITE, 64f, 70, repository);
+        OneUiGlassBackground.setAnimationRunning(renderer, true);
+        assertTrue(renderer.hasPinnedSnapshotForTesting());
+
+        source.advance();
+        repository.onWallpaperChangedSignal();
+        assertTrue("Retired generation must remain alive during animation", !first.isRecycled());
+
+        OneUiGlassBackground.setAnimationRunning(renderer, false);
+        assertTrue(first.isRecycled());
+        OneUiGlassBackground.setAnimationRunning(renderer, false);
+        assertTrue(!renderer.hasPinnedSnapshotForTesting());
+        repository.close();
+    }
+
     private static final class TestSource implements WallpaperBackdropSource {
         private int mWallpaperId = 1;
+        private Bitmap mLastBitmap;
 
         void advance() {
             mWallpaperId++;
@@ -73,6 +100,7 @@ public class OneUiCrystalRendererDeviceTest {
             mutable.eraseColor(request.generation() % 2 == 0 ? Color.BLUE : Color.GREEN);
             Bitmap immutable = mutable.copy(Bitmap.Config.ARGB_8888, false);
             mutable.recycle();
+            mLastBitmap = immutable;
             return LoadResult.success(new WallpaperBackdropSnapshot(
                     immutable,
                     request.generation(),

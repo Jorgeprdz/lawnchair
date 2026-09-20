@@ -8,10 +8,11 @@ package com.android.launcher3.graphics;
 public enum OneUiCrystalSurfaceRole {
     DOCK(true, 1.0f),
     DOCK_OVERLAY(true, 0.92f),
-    FOLDER(false, 0.72f),
-    FOLDER_OVERLAY(false, 0.64f),
+    OPEN_FOLDER(false, 0.72f),
+    OPEN_FOLDER_OVERLAY(false, 0.64f),
     FOLDER_ICON(false, 0.55f),
-    PREVIEW(false, 0.60f);
+    FOLDER_ICON_OVERLAY(false, 0.50f),
+    FOLDER_DRAWABLE(false, 0.60f);
 
     public enum BackdropSource { WALLPAPER_REPOSITORY }
 

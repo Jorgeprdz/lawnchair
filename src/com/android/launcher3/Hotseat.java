@@ -326,7 +326,10 @@ public class Hotseat extends FrameLayout implements Insettable {
             return;
         }
         int intensity = OneUiGlassPreferences.getDockIntensity(getContext(), mGlassStyle);
-        boolean nativeBlur = SamsungGlassBlur.apply(
+        boolean allowNativeBlur = OneUiGlassBackground.shouldApplySamsungBackdrop(
+                mGlassSurface, mGlassStyle);
+        if (!allowNativeBlur) SamsungGlassBlur.clear(mGlassSurface);
+        boolean nativeBlur = allowNativeBlur && SamsungGlassBlur.apply(
                 mGlassSurface, mGlassStyle, intensity, mGlassColor, mGlassCornerRadius);
         mGlassSurface.setBackground(nativeBlur
                 ? OneUiGlassBackground.createDockOverlay(

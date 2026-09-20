@@ -98,6 +98,7 @@ final class OneUiCrystalRenderer extends Drawable {
 
     @Nullable private final OneUiWallpaperBackdropRepository mExplicitRepository;
     @Nullable private OneUiWallpaperBackdropRepository mObservedRepository;
+    @Nullable private WallpaperSnapshotStore.SnapshotPin<WallpaperBackdropSnapshot> mAnimationPin;
     @Nullable private BitmapShader mBitmapShader;
     @Nullable private Api33State mApi33State;
     private long mBoundGeneration = Long.MIN_VALUE;
@@ -143,8 +144,9 @@ final class OneUiCrystalRenderer extends Drawable {
         if (bounds.isEmpty()) return;
         try {
             OneUiWallpaperBackdropRepository repository = resolveRepository();
-            WallpaperBackdropSnapshot snapshot = repository == null
-                    ? null : repository.currentSnapshot();
+            WallpaperBackdropSnapshot snapshot = mAnimationPin != null
+                    ? mAnimationPin.value()
+                    : repository == null ? null : repository.currentSnapshot();
             if (snapshot == null || snapshot.bitmap().isRecycled()
                     || !bindSnapshotAndGeometry(repository, snapshot, bounds)) {
                 drawFallback(canvas, bounds);
@@ -223,6 +225,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     ? ((Launcher) context).getWallpaperBackdropRepository() : null;
         }
         if (repository != mObservedRepository) {
+            releaseAnimationPin();
             if (mObservedRepository != null) {
                 mObservedRepository.removeListener(mRepositoryListener);
             }
@@ -231,6 +234,23 @@ final class OneUiCrystalRenderer extends Drawable {
             mBoundGeneration = Long.MIN_VALUE;
         }
         return repository;
+    }
+
+    void setAnimationRunning(boolean running) {
+        if (running) {
+            if (mAnimationPin != null) return;
+            OneUiWallpaperBackdropRepository repository = resolveRepository();
+            if (repository != null) mAnimationPin = repository.pinCurrentSnapshot();
+        } else {
+            releaseAnimationPin();
+        }
+        invalidateSelf();
+    }
+
+    private void releaseAnimationPin() {
+        if (mAnimationPin == null) return;
+        mAnimationPin.close();
+        mAnimationPin = null;
     }
 
     private void drawBitmapFallback(Canvas canvas, Rect bounds) {
@@ -284,6 +304,14 @@ final class OneUiCrystalRenderer extends Drawable {
 
     int getShaderBuildCountForTesting() { return mShaderBuildCount; }
     int getBitmapShaderBuildCountForTesting() { return mBitmapShaderBuildCount; }
+    boolean hasPinnedSnapshotForTesting() { return mAnimationPin != null; }
+    OneUiCrystalSurfaceRole surfaceRole() { return mRole; }
+
+    @Override
+    public boolean setVisible(boolean visible, boolean restart) {
+        if (!visible) releaseAnimationPin();
+        return super.setVisible(visible, restart);
+    }
 
     @Override
     protected void onBoundsChange(Rect bounds) {

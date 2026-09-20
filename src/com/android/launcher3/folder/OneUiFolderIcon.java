@@ -96,15 +96,18 @@ public class OneUiFolderIcon extends FolderIcon {
 
         int color = preview.getBgColor();
         int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
-        boolean nativeBlur = SamsungGlassBlur.apply(
+        boolean allowNativeBlur = OneUiGlassBackground.shouldApplySamsungBackdrop(
+                mGlassSurface, mode);
+        if (!allowNativeBlur) SamsungGlassBlur.clear(mGlassSurface);
+        boolean nativeBlur = allowNativeBlur && SamsungGlassBlur.apply(
                 mGlassSurface, mode, intensity, color, corner);
         mNativeGlassActive = nativeBlur;
 
         if (mode != mLastMode || intensity != mLastIntensity || color != mLastColor
                 || Math.abs(corner - mLastCorner) >= 0.5f || nativeBlur != mLastNative) {
             Drawable material = nativeBlur
-                    ? OneUiGlassBackground.createFolderOverlay(mGlassSurface, color, corner)
-                    : OneUiGlassBackground.createFolder(mGlassSurface, color, corner);
+                    ? OneUiGlassBackground.createFolderIconOverlay(mGlassSurface, color, corner)
+                    : OneUiGlassBackground.createFolderIcon(mGlassSurface, color, corner);
             mGlassSurface.setBackground(material);
             mLastMode = mode;
             mLastIntensity = intensity;
