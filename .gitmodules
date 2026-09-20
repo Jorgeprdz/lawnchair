@@ -2,3 +2,8 @@
 	path = platform_frameworks_libs_systemui
 	url = https://github.com/LawnchairLauncher/platform_frameworks_libs_systemui
     branch = 16-dev
+
+[submodule "third_party/Liquid-Glass-Android"]
+	path = third_party/Liquid-Glass-Android
+	url = https://github.com/QWEA0/Liquid-Glass-Android
+	branch = main
