@@ -7,6 +7,7 @@ import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.StateListDrawable
 import androidx.appcompat.content.res.AppCompatResources
+import app.lawnchair.oneui.OneUiFolderCrystalDrawable
 import app.lawnchair.theme.color.tokens.AllAppsTabColors
 import app.lawnchair.theme.color.tokens.ColorTokens
 import com.android.launcher3.R
@@ -51,8 +52,12 @@ object DrawableTokens {
         }
 
     @JvmField
-    val RoundRectFolder = ResourceDrawableToken<GradientDrawable>(R.drawable.round_rect_folder)
-        .setColor(ColorTokens.FolderBackgroundColor)
+    val RoundRectFolder = NewDrawable<GradientDrawable> { context, scheme, uiColorMode ->
+        OneUiFolderCrystalDrawable(
+            context = context,
+            initialColor = ColorTokens.FolderBackgroundColor.resolveColor(context, scheme, uiColorMode),
+        )
+    }
 
     @JvmField
     val RoundRectPrimary = ResourceDrawableToken<GradientDrawable>(R.drawable.round_rect_primary)
@@ -85,7 +90,11 @@ object DrawableTokens {
             context,
             R.drawable.bg_widgets_header,
         )
-        selected?.setTint(ColorTokens.WidgetListRowColor.resolveColor(context, scheme, uiColorMode))
+
+        // Prefer the user-selected tab color when set; otherwise the themed default.
+        val selectedColor = AllAppsTabColors.selectedBackground(context, scheme, uiColorMode)
+
+        selected?.setTint(selectedColor)
 
         list.addState(intArrayOf(-android.R.attr.state_selected), unselected)
         list.addState(intArrayOf(android.R.attr.state_selected), selected)
