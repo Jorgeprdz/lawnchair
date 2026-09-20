@@ -40,7 +40,6 @@ import androidx.annotation.Nullable;
  */
 final class OneUiCrystalRenderer extends Drawable {
     private static final int API_RUNTIME_SHADER = 33;
-    private static final int API_RENDER_EFFECT = 31;
     private static final int MAX_CAPTURE_SIZE = 2048;
 
     private static final ThreadLocal<Boolean> sCapturingBackdrop =
@@ -272,13 +271,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
             mDst.set(bounds);
             mDst.inset(-mRefractionPx * 0.10f, -mRefractionPx * 0.10f);
-            if (Build.VERSION.SDK_INT >= API_RENDER_EFFECT) {
-                Api31Impl.setBlur(mFallbackPaint, mBlurPx * 0.55f);
-            }
             canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
-            if (Build.VERSION.SDK_INT >= API_RENDER_EFFECT) {
-                Api31Impl.clearRenderEffect(mFallbackPaint);
-            }
         }
 
         drawOpticalOverlays(canvas, bounds);
@@ -350,19 +343,6 @@ final class OneUiCrystalRenderer extends Drawable {
     @Override
     public int getOpacity() {
         return PixelFormat.TRANSLUCENT;
-    }
-
-    private static final class Api31Impl {
-        private Api31Impl() { }
-
-        static void setBlur(Paint paint, float radius) {
-            paint.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(
-                    Math.max(1f, radius), Math.max(1f, radius), Shader.TileMode.CLAMP));
-        }
-
-        static void clearRenderEffect(Paint paint) {
-            paint.setRenderEffect(null);
-        }
     }
 
     private static final class Api33Impl {
