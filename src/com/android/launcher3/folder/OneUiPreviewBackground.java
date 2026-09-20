@@ -9,11 +9,12 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
-import com.android.launcher3.graphics.DockGlassBackground;
+import com.android.launcher3.graphics.OneUiGlassBackground;
 import com.android.launcher3.graphics.ShapeDelegate;
 import com.android.launcher3.views.ActivityContext;
 
 import app.lawnchair.oneui.OneUiGlassPreferences;
+import app.lawnchair.oneui.OneUiGlassStyle;
 
 /** Preview background that layers One UI glass without changing FolderIcon placement logic. */
 public class OneUiPreviewBackground extends PreviewBackground {
@@ -73,7 +74,7 @@ public class OneUiPreviewBackground extends PreviewBackground {
             // The preview's real ShapeDelegate is authoritative. Use a square glass source that
             // fully covers the bounds, then clip it to that shape. Passing getRadius() here made
             // the glass source itself circular before clipping and caused the regression.
-            mGlass = DockGlassBackground.createFolder(mHost, color, 0f);
+            mGlass = OneUiGlassBackground.createFolder(mHost, color, 0f);
             mLastColor = color;
         }
 
