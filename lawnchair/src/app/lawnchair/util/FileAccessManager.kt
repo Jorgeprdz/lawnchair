@@ -130,19 +130,15 @@ class FileAccessManager private constructor(private val context: Context) : Safe
 
     private fun getCurrentWallpaperAccessState(): FileAccessState {
         if (getCurrentAllFilesAccessState() == FileAccessState.Full) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (checkPermission(Manifest.permission.READ_MEDIA_IMAGES) && checkPermission(Manifest.permission.READ_MEDIA_VIDEO)) {
-                    return FileAccessState.Full
-                } else if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                    checkPermission(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
-                ) {
-                    // Partial access only. Wallpaper access requires full media access
-                    return FileAccessState.Denied
-                }
-            } else {
-                return FileAccessState.Full
-            }
+            return FileAccessState.Full
+        }
+
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkPermission(Manifest.permission.READ_MEDIA_IMAGES) &&
+            checkPermission(Manifest.permission.READ_MEDIA_VIDEO)
+        ) {
+            return FileAccessState.Full
         }
 
         return FileAccessState.Denied
@@ -183,7 +179,7 @@ class FileAccessManager private constructor(private val context: Context) : Safe
     }
 
     private fun getCurrentAllFilesAccessState(): FileAccessState {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (isPlayStoreFlavor()) {
                 // MANAGE_EXTERNAL_STORAGE is disabled for Play Store releases
                 return FileAccessState.Denied
@@ -194,7 +190,7 @@ class FileAccessManager private constructor(private val context: Context) : Safe
             }
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             if (checkPermission(Manifest.permission.READ_EXTERNAL_STORAGE)) {
                 return FileAccessState.Full
             }
