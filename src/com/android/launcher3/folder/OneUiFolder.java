@@ -5,6 +5,7 @@
 package com.android.launcher3.folder;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Path;
@@ -24,6 +25,7 @@ public class OneUiFolder extends Folder {
     private Path mOneUiClipPath;
     private Drawable mGlass;
     private int mLastGlassColor = Integer.MIN_VALUE;
+    private int mLastNightMode = Integer.MIN_VALUE;
     private boolean mLastNativeBlur;
 
     public OneUiFolder(Context context, AttributeSet attrs) {
@@ -49,15 +51,18 @@ public class OneUiFolder extends Folder {
                     Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
             float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
             int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
+            int nightMode = getResources().getConfiguration().uiMode
+                    & Configuration.UI_MODE_NIGHT_MASK;
             boolean nativeBlur = SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
 
             if (mGlass == null || glassColor != mLastGlassColor
-                    || nativeBlur != mLastNativeBlur) {
+                    || nightMode != mLastNightMode || nativeBlur != mLastNativeBlur) {
                 if (mGlass != null) mGlass.setVisible(false, false);
                 mGlass = nativeBlur
                         ? OneUiGlassBackground.createFolderOverlay(this, glassColor, corners)
                         : OneUiGlassBackground.createFolder(this, glassColor, corners);
                 mLastGlassColor = glassColor;
+                mLastNightMode = nightMode;
                 mLastNativeBlur = nativeBlur;
             }
             mGlass.setBounds(0, 0, getWidth(), getHeight());
@@ -70,6 +75,7 @@ public class OneUiFolder extends Folder {
             if (mGlass != null) mGlass.setVisible(false, false);
             mGlass = null;
             mLastGlassColor = Integer.MIN_VALUE;
+            mLastNightMode = Integer.MIN_VALUE;
             mLastNativeBlur = false;
         }
 

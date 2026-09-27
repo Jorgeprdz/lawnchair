@@ -5,6 +5,7 @@
 package com.android.launcher3.folder;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
@@ -24,6 +25,7 @@ public class OneUiFolderIcon extends FolderIcon {
     private int mLastMode = Integer.MIN_VALUE;
     private int mLastIntensity = Integer.MIN_VALUE;
     private int mLastColor = Integer.MIN_VALUE;
+    private int mLastNightMode = Integer.MIN_VALUE;
     private float mLastCorner = Float.NaN;
     private boolean mLastNative;
 
@@ -76,6 +78,7 @@ public class OneUiFolderIcon extends FolderIcon {
             mGlassSurface.setBackground(null);
             mGlassSurface.setVisibility(GONE);
             mLastMode = Integer.MIN_VALUE;
+            mLastNightMode = Integer.MIN_VALUE;
             return;
         }
 
@@ -96,12 +99,15 @@ public class OneUiFolderIcon extends FolderIcon {
 
         int color = preview.getBgColor();
         int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
+        int nightMode = getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK;
         boolean nativeBlur = SamsungGlassBlur.apply(
                 mGlassSurface, mode, intensity, color, corner);
         mNativeGlassActive = nativeBlur;
 
         if (mode != mLastMode || intensity != mLastIntensity || color != mLastColor
-                || Math.abs(corner - mLastCorner) >= 0.5f || nativeBlur != mLastNative) {
+                || nightMode != mLastNightMode || Math.abs(corner - mLastCorner) >= 0.5f
+                || nativeBlur != mLastNative) {
             Drawable material = nativeBlur
                     ? OneUiGlassBackground.createFolderOverlay(mGlassSurface, color, corner)
                     : OneUiGlassBackground.createFolder(mGlassSurface, color, corner);
@@ -109,6 +115,7 @@ public class OneUiFolderIcon extends FolderIcon {
             mLastMode = mode;
             mLastIntensity = intensity;
             mLastColor = color;
+            mLastNightMode = nightMode;
             mLastCorner = corner;
             mLastNative = nativeBlur;
         }
