@@ -21,6 +21,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -35,6 +36,7 @@ import java.lang.ref.WeakReference;
  * every frame. This does not capture app content or cross the launcher window boundary.
  */
 final class OneUiBackdropBlurDrawable extends Drawable {
+    private static final String TAG = "OneUiBackdropBlur";
     private static final int API_RUNTIME_SHADER = 33;
     private static final int MAX_CAPTURE_SIZE = 2048;
     private static final long MAX_CAPTURE_PIXELS = 1_600_000L;
@@ -92,6 +94,7 @@ final class OneUiBackdropBlurDrawable extends Drawable {
     private @Nullable ColorFilter mRecordedColorFilter;
     private boolean mWallpaperListenerRegistered;
     private boolean mAttachListenerRegistered;
+    private boolean mLoggedCaptureResult;
 
     static Drawable create(View host, int style, float cornerRadius, int blurRadiusPx) {
         return new OneUiBackdropBlurDrawable(host, style, cornerRadius, blurRadiusPx);
@@ -218,11 +221,20 @@ final class OneUiBackdropBlurDrawable extends Drawable {
         if (mBackdrop != null && now - mLastCaptureMs < CAPTURE_INTERVAL_MS) return;
 
         View root = mHost.getRootView();
-        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) return;
+        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) {
+            logCaptureResult("skip: invalid root=" + (root == null ? "null"
+                    : root.getWidth() + "x" + root.getHeight()));
+            return;
+        }
         int width = bounds.width() + mCapturePad * 2;
         int height = bounds.height() + mCapturePad * 2;
         if (width <= 0 || height <= 0 || width > MAX_CAPTURE_SIZE || height > MAX_CAPTURE_SIZE
-                || (long) width * height > MAX_CAPTURE_PIXELS) return;
+                || (long) width * height > MAX_CAPTURE_PIXELS) {
+            logCaptureResult("skip: host=" + mHost.getWidth() + "x" + mHost.getHeight()
+                    + " bounds=" + bounds + " patch=" + width + "x" + height
+                    + " pixels=" + ((long) width * height));
+            return;
+        }
 
         try {
             if (mBackdrop == null || mBackdrop.getWidth() != width
@@ -240,6 +252,7 @@ final class OneUiBackdropBlurDrawable extends Drawable {
             }
             if (mWallpaper == null) {
                 mLastCaptureMs = now;
+                logCaptureResult("skip: WallpaperManager returned null drawable");
                 return;
             }
 
@@ -256,13 +269,25 @@ final class OneUiBackdropBlurDrawable extends Drawable {
             mWallpaper.draw(mCaptureCanvas);
             mCaptureCanvas.restoreToCount(save);
             mLastCaptureMs = now;
+            logCaptureResult("captured host=" + mHost.getWidth() + "x" + mHost.getHeight()
+                    + " bounds=" + bounds + " patch=" + width + "x" + height
+                    + " drawable=" + mWallpaper.getClass().getName()
+                    + " sample=" + Integer.toHexString(mBackdrop.getPixel(width / 2, height / 2)));
         } catch (OutOfMemoryError | RuntimeException | LinkageError unavailable) {
+            logCaptureResult("failed: " + unavailable.getClass().getName() + ": "
+                    + unavailable.getMessage());
             mCaptureCanvas.setBitmap(null);
             if (mBackdrop != null) mBackdrop.recycle();
             mBackdrop = null;
             mBackdropShader = null;
             mLastCaptureMs = now;
         }
+    }
+
+    private void logCaptureResult(String message) {
+        if (mLoggedCaptureResult) return;
+        Log.d(TAG, message);
+        mLoggedCaptureResult = true;
     }
 
     private void registerWallpaperListener() {
