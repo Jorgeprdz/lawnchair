@@ -43,6 +43,7 @@ public final class WallpaperBackdropView extends View {
     private @Nullable View mInvalidationTarget;
     private boolean mListenerRegistered;
     private boolean mLoggedSnapshot;
+    private boolean mLoggedFirstDraw;
     private float mBlurRadiusPx;
     private float mCornerRadiusPx;
     private int mInsetLeft;
@@ -118,6 +119,7 @@ public final class WallpaperBackdropView extends View {
         updateWallpaperListener();
         mWallpaper = null;
         mLoggedSnapshot = false;
+        mLoggedFirstDraw = false;
         invalidate();
     }
 
@@ -165,19 +167,38 @@ public final class WallpaperBackdropView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        if (!mLoggedFirstDraw) {
+            View root = getRootView();
+            Log.d(TAG, "onDraw size=" + getWidth() + "x" + getHeight()
+                    + " visibility=" + getVisibility()
+                    + " hardware=" + canvas.isHardwareAccelerated()
+                    + " wallpaperManager=" + (mWallpaperManager != null)
+                    + " root=" + (root == null ? "null" : root.getWidth() + "x" + root.getHeight()));
+            mLoggedFirstDraw = true;
+        }
         if (mWallpaperManager == null) return;
         if (mWallpaper == null) {
             try {
                 mWallpaper = mWallpaperManager.getDrawable();
             } catch (RuntimeException | LinkageError ignored) {
+                Log.w(TAG, "WallpaperManager.getDrawable failed", ignored);
                 return;
             }
         }
-        if (mWallpaper == null) return;
+        if (mWallpaper == null) {
+            Log.w(TAG, "WallpaperManager.getDrawable returned null");
+            return;
+        }
 
         View root = getRootView();
-        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) return;
-        if (!ensureWallpaperSnapshot(root.getWidth(), root.getHeight())) return;
+        if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) {
+            Log.w(TAG, "Wallpaper snapshot skipped: invalid root size");
+            return;
+        }
+        if (!ensureWallpaperSnapshot(root.getWidth(), root.getHeight())) {
+            Log.w(TAG, "Wallpaper snapshot creation failed");
+            return;
+        }
         getLocationInWindow(mViewLocation);
         root.getLocationInWindow(mRootLocation);
         int left = mViewLocation[0] - mRootLocation[0];
@@ -221,6 +242,7 @@ public final class WallpaperBackdropView extends View {
             }
             return true;
         } catch (OutOfMemoryError | RuntimeException | LinkageError unavailable) {
+            Log.w(TAG, "Wallpaper drawable could not be snapshotted", unavailable);
             clearWallpaperSnapshot();
             return false;
         }
