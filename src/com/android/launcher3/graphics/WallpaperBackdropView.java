@@ -189,16 +189,12 @@ public final class WallpaperBackdropView extends View {
             try {
                 WallpaperInfo wallpaperInfo = mWallpaperManager.getWallpaperInfo();
                 if (wallpaperInfo != null) {
-                    // WallpaperManager.getDrawable() is restricted on Android 14+ and a live
-                    // wallpaper is rendered in a separate system surface. Use the service's
-                    // public preview thumbnail when available; it requires no broad storage grant.
-                    mWallpaper = wallpaperInfo.loadThumbnail(getContext().getPackageManager());
-                    if (mWallpaper != null) {
-                        Log.d(TAG, "using live wallpaper service thumbnail: "
+                    // A live wallpaper preview is an app/service icon or a static preview, not
+                    // the wallpaper surface. Scaling it to launcher dimensions produces a huge
+                    // icon behind the glass, so never use it as a backdrop source.
+                    if (!mLoggedNoWallpaperSource) {
+                        Log.w(TAG, "Cannot sample live wallpaper surface: "
                                 + wallpaperInfo.getPackageName());
-                        mLoggedNoWallpaperSource = false;
-                    } else if (!mLoggedNoWallpaperSource) {
-                        Log.w(TAG, "Live wallpaper service supplied no preview thumbnail");
                         mLoggedNoWallpaperSource = true;
                     }
                 } else if (FileAccessManager.getInstance(getContext())
@@ -206,8 +202,7 @@ public final class WallpaperBackdropView extends View {
                     mWallpaper = mWallpaperManager.getDrawable();
                     mLoggedNoWallpaperSource = false;
                 } else if (!mLoggedNoWallpaperSource) {
-                    Log.w(TAG, "No wallpaper image source: live service thumbnail unavailable "
-                            + "and wallpaper file access is not granted");
+                    Log.w(TAG, "No wallpaper image source: wallpaper file access is not granted");
                     mLoggedNoWallpaperSource = true;
                 }
             } catch (RuntimeException | LinkageError ignored) {
