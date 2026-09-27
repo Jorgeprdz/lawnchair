@@ -32,15 +32,15 @@ public final class OneUiGlassProfile {
                     Math.round(34f + 42f * strength),
                     dark ? 0.08f : 0.14f,
                     0.14f + 0.12f * strength,
-                    Math.round(62f + 36f * strength),
-                    Math.round((dark ? 24f : 34f) + (dark ? 22f : 28f) * strength),
-                    Math.round(12f + 14f * strength));
+                    Math.round(40f + 16f * strength),
+                    Math.round((dark ? 14f : 18f) + (dark ? 10f : 15f) * strength),
+                    Math.round(5f + 9f * strength));
         }
         return new OneUiGlassProfile(
                 Math.round(22f + 22f * strength),
                 dark ? 0.04f : 0.08f,
                 0.06f + 0.08f * strength,
-                Math.round(42f + 22f * strength),
+                Math.round(30f + 18f * strength),
                 0,
                 0);
     }

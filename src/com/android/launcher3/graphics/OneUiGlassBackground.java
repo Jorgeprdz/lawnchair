@@ -92,11 +92,7 @@ public final class OneUiGlassBackground {
         final int sourceAlpha = Color.alpha(color);
         final int tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
 
-        int tintAlpha = Math.round(sourceAlpha * profile.tintAlphaScale);
-        if ((!platformBlurEnabled || (allowPlatformBlur && blur == null))) {
-            tintAlpha = Math.max(tintAlpha, profile.fallbackAlpha);
-        }
-        tintAlpha = clamp(tintAlpha, 0, 255);
+        int tintAlpha = resolveTintAlpha(sourceAlpha, profile, blur != null);
         GradientDrawable tint = rounded(cornerRadius, Color.argb(
                 tintAlpha, Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));
 
@@ -137,6 +133,13 @@ public final class OneUiGlassBackground {
             return new LayerDrawable(new Drawable[] {base, haze});
         }
         return base;
+    }
+
+    static int resolveTintAlpha(int sourceAlpha, OneUiGlassProfile profile,
+            boolean hasBackdropBlur) {
+        int tintAlpha = Math.round(sourceAlpha * profile.tintAlphaScale);
+        if (!hasBackdropBlur) tintAlpha = Math.max(tintAlpha, profile.fallbackAlpha);
+        return clamp(tintAlpha, 0, 255);
     }
 
     private static GradientDrawable rounded(float cornerRadius, int color) {

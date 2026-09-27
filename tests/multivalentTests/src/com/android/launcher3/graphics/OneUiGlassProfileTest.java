@@ -19,10 +19,17 @@ public class OneUiGlassProfileTest {
         assertTrue("Frosty needs a visibly broader backdrop blur",
                 frosty.radiusDp >= normal.radiusDp + 25);
         assertEquals(0, normal.hazeAlpha);
-        assertTrue("Frosty needs a visible diffuse layer", frosty.hazeAlpha >= 60);
+        assertTrue("Frosty haze must keep the wallpaper clearly visible", frosty.hazeAlpha <= 36);
         assertTrue("Normal should keep the wallpaper more visible",
                 normal.tintAlphaScale < frosty.tintAlphaScale);
         assertTrue(frosty.highlightAlpha > normal.highlightAlpha);
+        assertTrue("Backdrop blur must not receive the no-blur fallback tint",
+                OneUiGlassBackground.resolveTintAlpha(102, frosty, true) < frosty.fallbackAlpha);
+        assertTrue("Fallback tint still needs enough contrast when blur is unavailable",
+                OneUiGlassBackground.resolveTintAlpha(102, frosty, false)
+                        >= frosty.fallbackAlpha);
+        assertTrue("Normal fallback should remain translucent",
+                normal.fallbackAlpha <= 50);
     }
 
     @Test
