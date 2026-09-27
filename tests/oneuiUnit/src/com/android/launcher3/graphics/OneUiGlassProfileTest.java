@@ -23,7 +23,7 @@ public class OneUiGlassProfileTest {
         assertTrue("Frosty haze must keep the wallpaper clearly visible", frosty.hazeAlpha <= 36);
         assertTrue("Liquid Glass should keep the wallpaper more visible",
                 liquidGlass.tintAlphaScale < frosty.tintAlphaScale);
-        assertTrue(frosty.highlightAlpha > normal.highlightAlpha);
+        assertTrue(frosty.highlightAlpha > liquidGlass.highlightAlpha);
         assertTrue("Backdrop blur must not receive the no-blur fallback tint",
                 OneUiGlassBackground.resolveTintAlpha(102, frosty, true) < frosty.fallbackAlpha);
         assertTrue("Fallback tint still needs enough contrast when blur is unavailable",
