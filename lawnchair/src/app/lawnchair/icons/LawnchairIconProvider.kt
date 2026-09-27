@@ -187,10 +187,12 @@ class LawnchairIconProvider @Inject constructor(
                     // is clock app but icon might not be adaptive, fallback to static themed clock
                     val clockThemedData =
                         ThemeData(context.resources, R.drawable.themed_icon_static_clock)
-                    themedIcon = CustomAdaptiveIconDrawable(
-                        themedColors[0].toDrawable(),
-                        clockThemedData.loadPaddedDrawable().apply { setTint(themedColors[1]) },
-                    )
+                    themedIcon = tintDrawableIfAvailable(
+                        clockThemedData.loadPaddedDrawable(),
+                        themedColors[1],
+                    )?.let { foreground ->
+                        CustomAdaptiveIconDrawable(themedColors[0].toDrawable(), foreground)
+                    }
                 }
 
                 packageName == mCalendar.packageName -> {
@@ -201,10 +203,12 @@ class LawnchairIconProvider @Inject constructor(
                 else -> {
                     // regular icon
                     themedIcon = if (themeData != null) {
-                        CustomAdaptiveIconDrawable(
-                            themedColors[0].toDrawable(),
-                            themeData.loadPaddedDrawable().apply { setTint(themedColors[1]) },
-                        )
+                        tintDrawableIfAvailable(
+                            themeData.loadPaddedDrawable(),
+                            themedColors[1],
+                        )?.let { foreground ->
+                            CustomAdaptiveIconDrawable(themedColors[0].toDrawable(), foreground)
+                        }
                     } else {
                         null
                     }
@@ -430,3 +434,6 @@ class LawnchairIconProvider @Inject constructor(
         const val TAG = "LawnchairIconProvider"
     }
 }
+
+internal fun tintDrawableIfAvailable(drawable: Drawable?, tint: Int): Drawable? =
+    drawable?.apply { setTint(tint) }
