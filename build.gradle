@@ -333,6 +333,10 @@ android {
             manifest.srcFile "github/AndroidManifest.xml"
         }
 
+        oneui {
+            manifest.srcFile "oneui/AndroidManifest.xml"
+        }
+
         nightly {
             manifest.srcFile "nightly/AndroidManifest.xml"
             res.srcDirs = ["nightly/res"]
