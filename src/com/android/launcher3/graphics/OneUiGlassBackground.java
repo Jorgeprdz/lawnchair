@@ -74,6 +74,7 @@ public final class OneUiGlassBackground {
         }
 
         final float density = host.getResources().getDisplayMetrics().density;
+        final float strength = intensity / 100f;
         final boolean dark = (host.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         final OneUiGlassProfile profile = OneUiGlassProfile.create(style, intensity, dark);
