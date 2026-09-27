@@ -88,7 +88,15 @@ public class OneUiFolderIcon extends FolderIcon {
         int left = preview.getOffsetX();
         int top = preview.getOffsetY();
         int diameter = Math.max(1, preview.getScaledRadius() * 2);
-        mGlassSurface.layout(left, top, left + diameter, top + diameter);
+        FrameLayout.LayoutParams surfaceParams = (FrameLayout.LayoutParams)
+                mGlassSurface.getLayoutParams();
+        if (surfaceParams.width != diameter || surfaceParams.height != diameter) {
+            surfaceParams.width = diameter;
+            surfaceParams.height = diameter;
+            mGlassSurface.setLayoutParams(surfaceParams);
+        }
+        ((OneUiFrostedBackdropView) mGlassSurface).layoutSurface(
+                left, top, left + diameter, top + diameter);
 
         float corner;
         if (isLargeFolder()) {

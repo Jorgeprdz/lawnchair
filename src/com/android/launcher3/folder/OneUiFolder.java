@@ -78,7 +78,7 @@ public class OneUiFolder extends Folder {
                     mGlass.setVisible(false, false);
                     mGlass = null;
                 }
-                mFrostyBackdrop.layout(0, 0, getWidth(), getHeight());
+                mFrostyBackdrop.layoutSurface(0, 0, getWidth(), getHeight());
                 mFrostyBackdrop.configure(glassColor, corners,
                         OneUiGlassPreferences.getFolderIntensity(getContext(), mode));
                 mFrostyBackdrop.setVisibility(View.VISIBLE);

@@ -34,6 +34,18 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
     }
 
+    /** Measures the contained wallpaper view too; these folder surfaces are overlay-laid out. */
+    public void layoutSurface(int left, int top, int right, int bottom) {
+        int width = Math.max(0, right - left);
+        int height = Math.max(0, bottom - top);
+        if (getMeasuredWidth() != width || getMeasuredHeight() != height) {
+            int widthSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY);
+            int heightSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+            measure(widthSpec, heightSpec);
+        }
+        layout(left, top, right, bottom);
+    }
+
     /** Configures the same cached wallpaper snapshot and GPU blur path used by the dock. */
     public void configure(int color, float cornerRadius, int intensity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
