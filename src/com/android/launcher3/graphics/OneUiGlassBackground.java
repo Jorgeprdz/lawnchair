@@ -61,6 +61,28 @@ public final class OneUiGlassBackground {
                 false, false);
     }
 
+    /** Foreground diffusion layer for Frosty surfaces using WallpaperBackdropView's GPU blur. */
+    public static Drawable createFrostyBackdropOverlay(View host, int color,
+            float cornerRadius, int intensityPercent) {
+        boolean dark = (host.getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        OneUiGlassProfile profile = OneUiGlassProfile.create(
+                OneUiGlassStyle.FROSTY, intensityPercent, dark);
+        int tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
+        GradientDrawable tint = rounded(cornerRadius, Color.argb(
+                resolveTintAlpha(Color.alpha(color), profile, true),
+                Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));
+
+        int hazeTarget = dark ? Color.rgb(42, 46, 54) : Color.WHITE;
+        int hazeRgb = blendRgb(color, hazeTarget, dark ? 0.10f : 0.22f);
+        GradientDrawable haze = rounded(cornerRadius,
+                alphaColor(hazeRgb, profile.hazeAlpha));
+        float density = host.getResources().getDisplayMetrics().density;
+        haze.setStroke(Math.max(1, Math.round(density)),
+                alphaColor(Color.WHITE, profile.highlightAlpha));
+        return new LayerDrawable(new Drawable[] {tint, haze});
+    }
+
     private static Drawable buildSurface(View host, int style, int color,
             float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
         final int intensity = clamp(intensityPercent, 0, 100);

@@ -9,10 +9,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.RenderEffect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -69,6 +71,7 @@ final class OneUiBackdropBlurDrawable extends Drawable {
     private final int mBlurRadiusPx;
     private final float mCornerRadius;
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Matrix mShaderMatrix = new Matrix();
     private final Canvas mCaptureCanvas = new Canvas();
     private final RectF mRect = new RectF();
     private final Rect mWallpaperBounds = new Rect();
@@ -79,6 +82,7 @@ final class OneUiBackdropBlurDrawable extends Drawable {
     private BitmapShader mBackdropShader;
     private Drawable mWallpaper;
     private Shader mRuntimeShader;
+    private RenderEffect mBlurEffect;
     private int mCapturePad;
     private long mLastCaptureMs;
     private int mAlpha = 255;
@@ -121,7 +125,11 @@ final class OneUiBackdropBlurDrawable extends Drawable {
         mCornerRadius = cornerRadius;
         mBlurRadiusPx = Math.max(1, blurRadiusPx);
         mCapturePad = Math.max(12, mBlurRadiusPx * 2);
-        if (Build.VERSION.SDK_INT >= API_RUNTIME_SHADER) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            mBlurEffect = RenderEffect.createBlurEffect(mBlurRadiusPx, mBlurRadiusPx,
+                    Shader.TileMode.CLAMP);
+        }
+        if (mBlurEffect == null && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER) {
             try {
                 mRuntimeShader = Api33Impl.createShader(SHADER_SOURCE);
                 Api33Impl.setFloatUniform(mRuntimeShader, "blurRadius", mBlurRadiusPx);
@@ -136,19 +144,42 @@ final class OneUiBackdropBlurDrawable extends Drawable {
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (mRuntimeShader == null) return;
         Rect bounds = getBounds();
         if (bounds.isEmpty() || !mHost.isAttachedToWindow()) return;
         captureWallpaper(bounds);
         if (mBackdropShader == null) return;
 
-        Api33Impl.setInputShader(mRuntimeShader, "backdrop", mBackdropShader);
-        Api33Impl.setFloatUniform(mRuntimeShader, "origin", bounds.left, bounds.top);
-        Api33Impl.setFloatUniform(mRuntimeShader, "pad", mCapturePad);
         mPaint.setAlpha(mAlpha);
         mPaint.setColorFilter(mColorFilter);
         mRect.set(bounds);
-        canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mPaint);
+        if (mBlurEffect != null) {
+            mShaderMatrix.setTranslate(mCapturePad - bounds.left, mCapturePad - bounds.top);
+            mBackdropShader.setLocalMatrix(mShaderMatrix);
+            mPaint.setShader(mBackdropShader);
+            if (canvas.isHardwareAccelerated()) {
+                // RenderEffect performs a real GPU blur over the full-resolution wallpaper patch.
+                // The previous nine-tap RuntimeShader produced visible sampling artifacts in
+                // small folder surfaces, especially around detailed wallpaper edges.
+                mPaint.setRenderEffect(mBlurEffect);
+            }
+            canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mPaint);
+            if (canvas.isHardwareAccelerated()) mPaint.setRenderEffect(null);
+            mPaint.setShader(null);
+        } else if (mRuntimeShader != null) {
+            Api33Impl.setInputShader(mRuntimeShader, "backdrop", mBackdropShader);
+            Api33Impl.setFloatUniform(mRuntimeShader, "origin", bounds.left, bounds.top);
+            Api33Impl.setFloatUniform(mRuntimeShader, "pad", mCapturePad);
+            mPaint.setShader(mRuntimeShader);
+            canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mPaint);
+        } else {
+            // Keep the wallpaper patch visible on software-backed transitions; the color layer
+            // above it remains the safe fallback until the hardware renderer is available again.
+            mShaderMatrix.setTranslate(mCapturePad - bounds.left, mCapturePad - bounds.top);
+            mBackdropShader.setLocalMatrix(mShaderMatrix);
+            mPaint.setShader(mBackdropShader);
+            canvas.drawRoundRect(mRect, mCornerRadius, mCornerRadius, mPaint);
+            mPaint.setShader(null);
+        }
     }
 
     private void captureWallpaper(Rect bounds) {

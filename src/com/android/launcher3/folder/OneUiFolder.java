@@ -56,7 +56,7 @@ public class OneUiFolder extends Folder {
             int nightMode = getResources().getConfiguration().uiMode
                     & Configuration.UI_MODE_NIGHT_MASK;
             boolean nativeBlur;
-            if (mode == OneUiGlassStyle.LIQUID_GLASS) {
+            if (mode == OneUiGlassStyle.LIQUID_GLASS || mode == OneUiGlassStyle.FROSTY) {
                 SamsungGlassBlur.clear(this);
                 nativeBlur = false;
             } else {

@@ -120,7 +120,7 @@ public class Hotseat extends FrameLayout implements Insettable {
     private final MultiPropertyFactory mIconsTranslationXFactory;
 
     private final View mQsb;
-    private final View mGlassSurface;
+    private View mGlassSurface;
     private final WallpaperBackdropView mWallpaperBackdrop;
     private final FrameLayout mIconsContainer;
     private final HotseatPagedView mPagedView;
@@ -154,11 +154,7 @@ public class Hotseat extends FrameLayout implements Insettable {
         super(context, attrs, defStyle);
         mActivity = ActivityContext.lookupContext(context);
 
-        mGlassSurface = android.os.Build.VERSION.SDK_INT >= 33
-                ? new LiquidGlassView(context) : new View(context);
-        mGlassSurface.setClickable(false);
-        mGlassSurface.setFocusable(false);
-        mGlassSurface.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        mGlassSurface = createGlassSurface(context, false);
         mGlassSurface.setVisibility(GONE);
 
         mWallpaperBackdrop = new WallpaperBackdropView(context);
@@ -343,6 +339,7 @@ public class Hotseat extends FrameLayout implements Insettable {
             disableGlassSurface();
             return;
         }
+        ensureGlassSurfaceRenderer(mGlassStyle);
         int intensity = OneUiGlassPreferences.getDockIntensity(getContext(), mGlassStyle);
         if (usesGpuWallpaperBlur(mGlassStyle)) {
             SamsungGlassBlur.clear(mGlassSurface);
@@ -403,6 +400,28 @@ public class Hotseat extends FrameLayout implements Insettable {
                 && OneUiGlassStyle.usesLiquidGlassRenderer(style);
     }
 
+    private static View createGlassSurface(Context context, boolean liquidGlass) {
+        View surface = liquidGlass ? new LiquidGlassView(context) : new View(context);
+        surface.setClickable(false);
+        surface.setFocusable(false);
+        surface.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return surface;
+    }
+
+    /** Keep LiquidGlassView's own lens renderer out of Frosty and Crystal surfaces. */
+    private void ensureGlassSurfaceRenderer(int style) {
+        boolean needsLiquidRenderer = usesLiquidGlassRenderer(style);
+        if ((mGlassSurface instanceof LiquidGlassView) == needsLiquidRenderer) return;
+
+        int childIndex = indexOfChild(mGlassSurface);
+        LayoutParams layoutParams = (LayoutParams) mGlassSurface.getLayoutParams();
+        SamsungGlassBlur.clear(mGlassSurface);
+        removeView(mGlassSurface);
+        mGlassSurface = createGlassSurface(getContext(), needsLiquidRenderer);
+        mWallpaperBackdrop.setInvalidationTarget(mGlassSurface);
+        addView(mGlassSurface, childIndex, layoutParams);
+    }
+
     private void configureWallpaperBackdrop(int intensity) {
         boolean frosty = mGlassStyle == OneUiGlassStyle.FROSTY;
         float strength = Math.max(0f, Math.min(100, intensity)) / 100f;
@@ -456,12 +475,15 @@ public class Hotseat extends FrameLayout implements Insettable {
                         + (Color.blue(target) - Color.blue(mGlassColor)) * blend));
     }
 
-    private GradientDrawable createGlassOverlay(int intensity) {
-        boolean frosty = mGlassStyle == OneUiGlassStyle.FROSTY;
+    private Drawable createGlassOverlay(int intensity) {
         boolean dark = (getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         float strength = Math.max(0f, Math.min(100, intensity)) / 100f;
-        float blend = frosty ? (dark ? 0.12f : 0.24f) : (dark ? 0.05f : 0.10f);
+        if (mGlassStyle == OneUiGlassStyle.FROSTY) {
+            return OneUiGlassBackground.createFrostyBackdropOverlay(
+                    this, mGlassColor, mGlassCornerRadius, intensity);
+        }
+        float blend = dark ? 0.05f : 0.10f;
         int target = dark ? Color.BLACK : Color.WHITE;
         int tint = Color.rgb(
                 Math.round(Color.red(mGlassColor)
@@ -470,16 +492,10 @@ public class Hotseat extends FrameLayout implements Insettable {
                         + (Color.green(target) - Color.green(mGlassColor)) * blend),
                 Math.round(Color.blue(mGlassColor)
                         + (Color.blue(target) - Color.blue(mGlassColor)) * blend));
-        int alpha = Math.round((frosty ? 0.12f + 0.13f * strength
-                : 0.04f + 0.08f * strength) * 255f);
+        int alpha = Math.round((0.04f + 0.08f * strength) * 255f);
         GradientDrawable overlay = new GradientDrawable();
         overlay.setColor(Color.argb(alpha, Color.red(tint), Color.green(tint), Color.blue(tint)));
         overlay.setCornerRadius(mGlassCornerRadius);
-        if (frosty) {
-            int strokeAlpha = Math.round((dark ? 0.12f : 0.20f) * strength * 255f);
-            overlay.setStroke(Math.max(1, Math.round(getResources().getDisplayMetrics().density)),
-                    Color.argb(strokeAlpha, 255, 255, 255));
-        }
         return overlay;
     }
 
