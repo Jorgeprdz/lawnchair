@@ -342,6 +342,10 @@ android {
             manifest.srcFile "quickstep/AndroidManifest-launcher.xml"
         }
 
+        lawnWithQuickstepOneui {
+            manifest.srcFile "quickstep/AndroidManifest-launcher.xml"
+        }
+
         lawnWithQuickstepNightly {
             manifest.srcFile "quickstep/AndroidManifest-launcher.xml"
         }
