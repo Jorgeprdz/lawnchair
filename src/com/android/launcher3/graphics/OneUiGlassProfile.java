@@ -44,4 +44,21 @@ public final class OneUiGlassProfile {
                 0,
                 0);
     }
+
+    /**
+     * Folder accent colors can be highly saturated; using one as Frosty's backdrop tint makes
+     * neutral wallpapers look like a solid green/blue pill. Preserve only a faint color trace.
+     */
+    static int neutralizeTint(int color) {
+        int alpha = color >>> 24;
+        int red = (color >>> 16) & 0xff;
+        int green = (color >>> 8) & 0xff;
+        int blue = color & 0xff;
+        int gray = (red * 30 + green * 59 + blue * 11) / 100;
+        float neutralize = 0.88f;
+        red = Math.round(red + (gray - red) * neutralize);
+        green = Math.round(green + (gray - green) * neutralize);
+        blue = Math.round(blue + (gray - blue) * neutralize);
+        return (alpha << 24) | (red << 16) | (green << 8) | blue;
+    }
 }

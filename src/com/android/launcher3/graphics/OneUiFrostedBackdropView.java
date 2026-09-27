@@ -7,7 +7,6 @@ package com.android.launcher3.graphics;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Outline;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.view.View;
 import android.view.ViewOutlineProvider;
@@ -62,10 +61,9 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
         float blurRadius = profile.radiusDp * density * 0.46f;
         mBackdrop.configureGlassBlur(blurRadius, cornerRadius, 0, 0, 0, 0, true);
 
-        GradientDrawable fallback = new GradientDrawable();
-        fallback.setColor(Color.argb(224, Color.red(color), Color.green(color), Color.blue(color)));
-        fallback.setCornerRadius(cornerRadius);
-        setBackground(fallback);
+        // The wallpaper snapshot is the surface. Keep the fallback transparent so a failed
+        // snapshot cannot turn the folder's chosen accent into a flat colored capsule.
+        setBackgroundColor(Color.TRANSPARENT);
         setForeground(OneUiGlassBackground.createFrostyBackdropOverlay(
                 this, color, cornerRadius, intensity));
         setForegroundGravity(android.view.Gravity.FILL);

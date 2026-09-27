@@ -42,4 +42,16 @@ public class OneUiGlassProfileTest {
         assertTrue(light.tintBlend != dark.tintBlend);
         assertTrue(light.hazeAlpha > dark.hazeAlpha);
     }
+
+    @Test
+    public void frostyTintDoesNotTurnNeutralWallpaperIntoFolderAccentColor() {
+        int folderGreen = 0xff20b060;
+        int tint = OneUiGlassProfile.neutralizeTint(folderGreen);
+
+        int red = (tint >>> 16) & 0xff;
+        int green = (tint >>> 8) & 0xff;
+        int blue = tint & 0xff;
+        assertTrue("Folder color saturation should be strongly reduced", green - red < 20);
+        assertTrue("Folder color saturation should be strongly reduced", green - blue < 20);
+    }
 }

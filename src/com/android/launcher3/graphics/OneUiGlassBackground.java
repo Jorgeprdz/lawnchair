@@ -68,13 +68,14 @@ public final class OneUiGlassBackground {
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         OneUiGlassProfile profile = OneUiGlassProfile.create(
                 OneUiGlassStyle.FROSTY, intensityPercent, dark);
-        int tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
+        int neutralTint = OneUiGlassProfile.neutralizeTint(color);
+        int tintRgb = blendRgb(neutralTint, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
         GradientDrawable tint = rounded(cornerRadius, Color.argb(
                 resolveTintAlpha(Color.alpha(color), profile, true),
                 Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));
 
         int hazeTarget = dark ? Color.rgb(42, 46, 54) : Color.WHITE;
-        int hazeRgb = blendRgb(color, hazeTarget, dark ? 0.10f : 0.22f);
+        int hazeRgb = blendRgb(neutralTint, hazeTarget, dark ? 0.10f : 0.22f);
         GradientDrawable haze = rounded(cornerRadius,
                 alphaColor(hazeRgb, profile.hazeAlpha));
         float density = host.getResources().getDisplayMetrics().density;
