@@ -4,6 +4,7 @@
  */
 package com.android.launcher3.graphics;
 
+import android.app.WallpaperInfo;
 import android.app.WallpaperManager;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -22,6 +23,9 @@ import android.view.View;
 import android.view.ViewOutlineProvider;
 
 import androidx.annotation.Nullable;
+
+import app.lawnchair.util.FileAccessManager;
+import app.lawnchair.util.FileAccessState;
 
 /**
  * A local mirror of the wallpaper drawable used as the GPU blur source for dock glass. Android's
@@ -44,6 +48,7 @@ public final class WallpaperBackdropView extends View {
     private boolean mListenerRegistered;
     private boolean mLoggedSnapshot;
     private boolean mLoggedFirstDraw;
+    private boolean mLoggedNoWallpaperSource;
     private float mBlurRadiusPx;
     private float mCornerRadiusPx;
     private int mInsetLeft;
@@ -64,6 +69,7 @@ public final class WallpaperBackdropView extends View {
             (colors, which) -> {
                 mWallpaper = null;
                 mLoggedSnapshot = false;
+                mLoggedNoWallpaperSource = false;
                 clearWallpaperSnapshot();
                 invalidate();
                 if (mInvalidationTarget != null) mInvalidationTarget.invalidate();
@@ -120,6 +126,7 @@ public final class WallpaperBackdropView extends View {
         mWallpaper = null;
         mLoggedSnapshot = false;
         mLoggedFirstDraw = false;
+        mLoggedNoWallpaperSource = false;
         invalidate();
     }
 
@@ -131,6 +138,7 @@ public final class WallpaperBackdropView extends View {
             if (visibility == VISIBLE) {
                 mWallpaper = null;
                 mLoggedSnapshot = false;
+                mLoggedNoWallpaperSource = false;
                 invalidate();
             }
         }
@@ -179,9 +187,34 @@ public final class WallpaperBackdropView extends View {
         if (mWallpaperManager == null) return;
         if (mWallpaper == null) {
             try {
-                mWallpaper = mWallpaperManager.getDrawable();
+                WallpaperInfo wallpaperInfo = mWallpaperManager.getWallpaperInfo();
+                if (wallpaperInfo != null) {
+                    // WallpaperManager.getDrawable() is restricted on Android 14+ and a live
+                    // wallpaper is rendered in a separate system surface. Use the service's
+                    // public preview thumbnail when available; it requires no broad storage grant.
+                    mWallpaper = wallpaperInfo.loadThumbnail(getContext().getPackageManager());
+                    if (mWallpaper != null) {
+                        Log.d(TAG, "using live wallpaper service thumbnail: "
+                                + wallpaperInfo.getPackageName());
+                        mLoggedNoWallpaperSource = false;
+                    } else if (!mLoggedNoWallpaperSource) {
+                        Log.w(TAG, "Live wallpaper service supplied no preview thumbnail");
+                        mLoggedNoWallpaperSource = true;
+                    }
+                } else if (FileAccessManager.getInstance(getContext())
+                        .getWallpaperAccessState().getValue() == FileAccessState.Full.INSTANCE) {
+                    mWallpaper = mWallpaperManager.getDrawable();
+                    mLoggedNoWallpaperSource = false;
+                } else if (!mLoggedNoWallpaperSource) {
+                    Log.w(TAG, "No wallpaper image source: live service thumbnail unavailable "
+                            + "and wallpaper file access is not granted");
+                    mLoggedNoWallpaperSource = true;
+                }
             } catch (RuntimeException | LinkageError ignored) {
-                Log.w(TAG, "WallpaperManager.getDrawable failed", ignored);
+                if (!mLoggedNoWallpaperSource) {
+                    Log.w(TAG, "Could not load a permitted wallpaper preview", ignored);
+                    mLoggedNoWallpaperSource = true;
+                }
                 return;
             }
         }
