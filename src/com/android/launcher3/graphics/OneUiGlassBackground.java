@@ -31,8 +31,8 @@ import app.lawnchair.oneui.OneUiGlassStyle;
 /**
  * Shared bounded glass renderer for One UI-inspired dock and folder backgrounds.
  *
- * <p>Blur is broad and soft, Crystal stays clearer and sharper, and Frosty keeps the original
- * stronger milky One UI treatment. Blur and Crystal retain independent intensity controls;
+ * <p>Blur is broad and soft, Crystal stays clearer and sharper, and Frosty adds a restrained
+ * diffused surface and edge highlight. Blur and Crystal retain independent intensity controls;
  * Frosty intentionally follows the Blur intensity control.</p>
  */
 public final class OneUiGlassBackground {
@@ -74,43 +74,17 @@ public final class OneUiGlassBackground {
         }
 
         final float density = host.getResources().getDisplayMetrics().density;
-        final float strength = intensity / 100f;
         final boolean dark = (host.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-
-        final int blurDp;
-        if (style == OneUiGlassStyle.CRYSTAL) {
-            blurDp = Math.round(8f + 20f * strength);
-        } else if (style == OneUiGlassStyle.FROSTY) {
-            blurDp = Math.round(18f + 42f * strength);
-        } else {
-            blurDp = Math.round(18f + 46f * strength);
-        }
-        Drawable blur = allowPlatformBlur
-                ? createPlatformBlur(host, Math.max(1, Math.round(blurDp * density)), cornerRadius)
-                : null;
+        final OneUiGlassProfile profile = OneUiGlassProfile.create(style, intensity, dark);
+        Drawable blur = allowPlatformBlur ? createPlatformBlur(host,
+                Math.max(1, Math.round(profile.radiusDp * density)), cornerRadius) : null;
 
         final int sourceAlpha = Color.alpha(color);
-        final int tintRgb;
-        final float tintScale;
-        final int fallbackFloor;
-        if (style == OneUiGlassStyle.CRYSTAL) {
-            tintRgb = color;
-            tintScale = 0.08f + 0.14f * strength;
-            fallbackFloor = Math.round(24f + 26f * strength);
-        } else if (style == OneUiGlassStyle.FROSTY) {
-            tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE,
-                    dark ? 0.16f : 0.30f);
-            tintScale = 0.42f + 0.28f * strength;
-            fallbackFloor = Math.round(104f + 54f * strength);
-        } else {
-            tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, dark ? 0.10f : 0.22f);
-            tintScale = 0.20f + 0.20f * strength;
-            fallbackFloor = Math.round(64f + 58f * strength);
-        }
+        final int tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
 
-        int tintAlpha = Math.round(sourceAlpha * tintScale);
-        if (allowPlatformBlur && blur == null) tintAlpha = Math.max(tintAlpha, fallbackFloor);
+        int tintAlpha = Math.round(sourceAlpha * profile.tintAlphaScale);
+        if (allowPlatformBlur && blur == null) tintAlpha = Math.max(tintAlpha, profile.fallbackAlpha);
         tintAlpha = clamp(tintAlpha, 0, 255);
         GradientDrawable tint = rounded(cornerRadius, Color.argb(
                 tintAlpha, Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));
@@ -143,33 +117,15 @@ public final class OneUiGlassBackground {
         }
 
         if (style == OneUiGlassStyle.FROSTY) {
-            int milk = dark
-                    ? alphaColor(Color.rgb(210, 214, 220), Math.round(14f + 24f * strength))
-                    : alphaColor(Color.WHITE, Math.round(34f + 62f * strength));
-            GradientDrawable haze = rounded(cornerRadius, milk);
+            int hazeColor = blendRgb(color, dark ? Color.rgb(42, 46, 54) : Color.WHITE,
+                    dark ? 0.10f : 0.22f);
+            GradientDrawable haze = rounded(cornerRadius,
+                    alphaColor(hazeColor, profile.hazeAlpha));
             haze.setStroke(Math.max(1, Math.round(density)),
-                    alphaColor(Color.WHITE, Math.round(12f + 18f * strength)));
+                    alphaColor(Color.WHITE, profile.highlightAlpha));
             return new LayerDrawable(new Drawable[] {base, haze});
         }
-
-        int hazeRgb = dark ? Color.rgb(38, 39, 42) : Color.WHITE;
-        int hazeAlpha = dark
-                ? Math.round(10f + 24f * strength)
-                : Math.round(18f + 42f * strength);
-        GradientDrawable haze = rounded(cornerRadius, alphaColor(hazeRgb, hazeAlpha));
-
-        GradientDrawable bloom = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {
-                        alphaColor(Color.WHITE, Math.round(12f + 22f * strength)),
-                        alphaColor(Color.WHITE, Math.round(3f + 7f * strength)),
-                        Color.TRANSPARENT,
-                        alphaColor(Color.BLACK, Math.round(2f + 6f * strength)),
-                });
-        bloom.setCornerRadius(cornerRadius);
-        bloom.setStroke(Math.max(1, Math.round(density)),
-                alphaColor(Color.WHITE, Math.round(18f + 24f * strength)));
-
-        return new LayerDrawable(new Drawable[] {base, haze, bloom});
+        return base;
     }
 
     private static GradientDrawable rounded(float cornerRadius, int color) {
@@ -236,6 +192,7 @@ public final class OneUiGlassBackground {
         private Drawable mDelegate;
         private int mLastStyle = Integer.MIN_VALUE;
         private int mLastIntensity = Integer.MIN_VALUE;
+        private int mLastNightMode = Integer.MIN_VALUE;
         private boolean mLastBlurAvailable;
         private int mAlpha = 255;
         private @Nullable ColorFilter mColorFilter;
@@ -265,15 +222,18 @@ public final class OneUiGlassBackground {
         private void ensureDelegate() {
             int style = resolveStyle();
             int intensity = resolveIntensity(style);
+            int nightMode = mHost.getResources().getConfiguration().uiMode
+                    & Configuration.UI_MODE_NIGHT_MASK;
             boolean blurAvailable = mAllowPlatformBlur && canUsePlatformBlur(mHost);
             if (mDelegate != null && style == mLastStyle && intensity == mLastIntensity
-                    && blurAvailable == mLastBlurAvailable) return;
+                    && nightMode == mLastNightMode && blurAvailable == mLastBlurAvailable) return;
 
             if (mDelegate != null) mDelegate.setVisible(false, false);
             mDelegate = buildSurface(mHost, style, mColor, mCornerRadius, intensity,
                     mAllowPlatformBlur);
             mLastStyle = style;
             mLastIntensity = intensity;
+            mLastNightMode = nightMode;
             mLastBlurAvailable = blurAvailable;
             mDelegate.setBounds(getBounds());
             mDelegate.setAlpha(mAlpha);

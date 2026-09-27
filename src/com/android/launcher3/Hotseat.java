@@ -27,6 +27,7 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -131,6 +132,7 @@ public class Hotseat extends FrameLayout implements Insettable {
     private int mGlassColor;
     private int mGlassStyle = OneUiGlassStyle.OFF;
     private int mGlassIntensity = Integer.MIN_VALUE;
+    private int mGlassNightMode = Integer.MIN_VALUE;
 
     PreferenceManager2 preferenceManager2;
     PreferenceManager preferenceManager;
@@ -335,6 +337,8 @@ public class Hotseat extends FrameLayout implements Insettable {
                         mGlassSurface, mGlassStyle, mGlassColor, mGlassCornerRadius));
         mGlassSurface.setVisibility(VISIBLE);
         mGlassIntensity = intensity;
+        mGlassNightMode = getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK;
     }
 
     private void refreshGlassSurfaceIfNeeded() {
@@ -342,7 +346,9 @@ public class Hotseat extends FrameLayout implements Insettable {
             return;
         }
         int intensity = OneUiGlassPreferences.getDockIntensity(getContext(), mGlassStyle);
-        if (intensity != mGlassIntensity) updateGlassSurface();
+        int nightMode = getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK;
+        if (intensity != mGlassIntensity || nightMode != mGlassNightMode) updateGlassSurface();
     }
 
     private void disableGlassSurface() {
@@ -351,6 +357,7 @@ public class Hotseat extends FrameLayout implements Insettable {
         mGlassSurface.setVisibility(GONE);
         mGlassStyle = OneUiGlassStyle.OFF;
         mGlassIntensity = Integer.MIN_VALUE;
+        mGlassNightMode = Integer.MIN_VALUE;
     }
 
     private void layoutGlassSurface(int width, int height) {

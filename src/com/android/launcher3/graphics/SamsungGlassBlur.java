@@ -42,8 +42,10 @@ public final class SamsungGlassBlur {
         }
 
         final int intensity = clamp(intensityPercent, 0, 100);
+        final boolean dark = (view.getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         State old = STATES.get(view);
-        if (old != null && old.matches(style, intensity, sourceColor, cornerRadius)) {
+        if (old != null && old.matches(style, intensity, sourceColor, cornerRadius, dark)) {
             return old.active;
         }
 
@@ -55,8 +57,6 @@ public final class SamsungGlassBlur {
             constructor.setAccessible(true);
             Object builder = constructor.newInstance(BLUR_MODE_WINDOW);
 
-            boolean dark = (view.getResources().getConfiguration().uiMode
-                    & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
             float density = view.getResources().getDisplayMetrics().density;
             float strength = intensity / 100f;
 
@@ -67,7 +67,7 @@ public final class SamsungGlassBlur {
 
             invokeRequired(builderClass, builder,
                     new String[]{"hidden_setRadius", "setRadius"},
-                    new Class<?>[]{int.class}, radiusPx(style, strength, density));
+                    new Class<?>[]{int.class}, radiusPx(style, strength, density, dark));
 
             invokeRequired(builderClass, builder,
                     new String[]{"hidden_setBackgroundColor", "setBackgroundColor"},
@@ -90,7 +90,7 @@ public final class SamsungGlassBlur {
             Log.d(TAG, "Samsung backdrop blur unavailable; using renderer fallback", error);
         }
 
-        STATES.put(view, new State(style, intensity, sourceColor, cornerRadius, active));
+        STATES.put(view, new State(style, intensity, sourceColor, cornerRadius, dark, active));
         return active;
     }
 
@@ -117,14 +117,12 @@ public final class SamsungGlassBlur {
         return dark ? 123 : 108; // MEDIUM / REGULAR
     }
 
-    private static int radiusPx(int style, float strength, float density) {
+    private static int radiusPx(int style, float strength, float density, boolean dark) {
         final float dp;
         if (style == OneUiGlassStyle.CRYSTAL) {
             dp = 8f + 16f * strength;
-        } else if (style == OneUiGlassStyle.FROSTY) {
-            dp = 32f + 48f * strength;
         } else {
-            dp = 18f + 34f * strength;
+            dp = OneUiGlassProfile.create(style, Math.round(strength * 100f), dark).radiusDp;
         }
         return Math.max(1, Math.round(dp * density));
     }
@@ -134,13 +132,11 @@ public final class SamsungGlassBlur {
         float alphaScale;
         if (style == OneUiGlassStyle.CRYSTAL) {
             alphaScale = 0.05f + 0.08f * strength;
-        } else if (style == OneUiGlassStyle.FROSTY) {
-            rgb = blendRgb(source, dark ? Color.rgb(36, 38, 42) : Color.WHITE,
-                    dark ? 0.18f : 0.38f);
-            alphaScale = 0.24f + 0.22f * strength;
         } else {
-            rgb = blendRgb(source, dark ? Color.BLACK : Color.WHITE, dark ? 0.08f : 0.14f);
-            alphaScale = 0.10f + 0.13f * strength;
+            OneUiGlassProfile profile = OneUiGlassProfile.create(style,
+                    Math.round(strength * 100f), dark);
+            rgb = blendRgb(source, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
+            alphaScale = profile.tintAlphaScale;
         }
         int alpha = clamp(Math.round(Color.alpha(source) * alphaScale), 0, 255);
         return Color.argb(alpha, Color.red(rgb), Color.green(rgb), Color.blue(rgb));
@@ -200,18 +196,21 @@ public final class SamsungGlassBlur {
         final int intensity;
         final int color;
         final float corner;
+        final boolean dark;
         final boolean active;
 
-        State(int style, int intensity, int color, float corner, boolean active) {
+        State(int style, int intensity, int color, float corner, boolean dark, boolean active) {
             this.style = style;
             this.intensity = intensity;
             this.color = color;
             this.corner = corner;
+            this.dark = dark;
             this.active = active;
         }
 
-        boolean matches(int style, int intensity, int color, float corner) {
+        boolean matches(int style, int intensity, int color, float corner, boolean dark) {
             return this.style == style && this.intensity == intensity && this.color == color
+                    && this.dark == dark
                     && Math.abs(this.corner - corner) < 0.5f;
         }
     }
