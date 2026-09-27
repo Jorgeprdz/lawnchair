@@ -46,6 +46,8 @@ class OneUiFolderCrystalDrawable(
     private var explicitHost: View? = null
     private var delegate: Drawable? = null
     private var delegateMode = Int.MIN_VALUE
+    private var delegateIntensity = Int.MIN_VALUE
+    private var delegateNightMode = Int.MIN_VALUE
     private var delegateColor = Color.TRANSPARENT
     private var delegateWidth = -1
     private var delegateHeight = -1
@@ -118,7 +120,11 @@ class OneUiFolderCrystalDrawable(
         if (!host.isAttachedToWindow || host.width <= 0 || host.height <= 0) return null
 
         val color = glassColor()
+        val intensity = OneUiGlassPreferences.getFolderIntensity(context, mode)
+        val nightMode = host.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK
         if (delegate == null || delegateMode != mode || delegateColor != color
+            || delegateIntensity != intensity || delegateNightMode != nightMode
             || delegateWidth != bounds.width() || delegateHeight != bounds.height()
         ) {
             delegate = OneUiGlassBackground.createFolder(host, color, folderRadius).also {
@@ -126,6 +132,8 @@ class OneUiFolderCrystalDrawable(
                 it.colorFilter = colorFilterValue
             }
             delegateMode = mode
+            delegateIntensity = intensity
+            delegateNightMode = nightMode
             delegateColor = color
             delegateWidth = bounds.width()
             delegateHeight = bounds.height()
@@ -229,6 +237,8 @@ class OneUiFolderCrystalDrawable(
     private fun clearDelegate() {
         delegate = null
         delegateMode = Int.MIN_VALUE
+        delegateIntensity = Int.MIN_VALUE
+        delegateNightMode = Int.MIN_VALUE
         delegateWidth = -1
         delegateHeight = -1
         invalidateSelf()

@@ -57,7 +57,7 @@ fun FolderPreferences(
         val prefs = preferenceManager()
         val prefs2 = preferenceManager2()
         var folderMode by remember {
-            mutableIntStateOf(OneUiGlassPreferences.getFolderMode(context))
+            mutableIntStateOf(OneUiGlassPreferences.getFolderModeSelection(context))
         }
         var folderBlurIntensity by remember {
             mutableIntStateOf(OneUiGlassPreferences.getFolderBlurIntensity(context))
@@ -108,16 +108,20 @@ fun FolderPreferences(
                     folderMode = mode
                 },
                 entries = listOf(
+                    ListPreferenceEntry(OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+                        stringResource(R.string.folder_background_follow_dock)
+                    },
                     ListPreferenceEntry(OneUiGlassStyle.OFF) { stringResource(R.string.dock_background_off) },
                     ListPreferenceEntry(OneUiGlassStyle.SOLID) { stringResource(R.string.dock_background_solid) },
-                    ListPreferenceEntry(OneUiGlassStyle.BLUR) { stringResource(R.string.dock_background_blur) },
+                    ListPreferenceEntry(OneUiGlassStyle.LIQUID_GLASS) { stringResource(R.string.dock_background_blur) },
                     ListPreferenceEntry(OneUiGlassStyle.CRYSTAL) { stringResource(R.string.dock_background_crystal) },
                     ListPreferenceEntry(OneUiGlassStyle.FROSTY) { stringResource(R.string.dock_background_frosty) },
                 ),
                 label = stringResource(R.string.folder_background_style),
             )
-            ExpandAndShrink(visible = OneUiGlassStyle.isGlass(folderMode)) {
-                val selectedIntensity = when (folderMode) {
+            val effectiveFolderMode = OneUiGlassPreferences.getFolderMode(context)
+            ExpandAndShrink(visible = OneUiGlassStyle.isGlass(effectiveFolderMode)) {
+                val selectedIntensity = when (effectiveFolderMode) {
                     OneUiGlassStyle.CRYSTAL -> folderCrystalIntensity
                     OneUiGlassStyle.FROSTY -> folderFrostyIntensity
                     else -> folderBlurIntensity
@@ -126,8 +130,8 @@ fun FolderPreferences(
                     label = stringResource(R.string.glass_effect_intensity),
                     value = selectedIntensity,
                     onValueChange = { value ->
-                        OneUiGlassPreferences.setFolderIntensity(context, folderMode, value)
-                        when (folderMode) {
+                        OneUiGlassPreferences.setFolderIntensity(context, effectiveFolderMode, value)
+                        when (effectiveFolderMode) {
                             OneUiGlassStyle.CRYSTAL -> folderCrystalIntensity = value
                             OneUiGlassStyle.FROSTY -> folderFrostyIntensity = value
                             else -> folderBlurIntensity = value

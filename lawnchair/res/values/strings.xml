@@ -1093,7 +1093,7 @@
     <string name="workspace_item_resize_unavailable">Not enough space to enlarge this item</string>
     <string name="dock_background_off">Off</string>
     <string name="dock_background_solid">Solid</string>
-    <string name="dock_background_blur">Blur</string>
+    <string name="dock_background_blur">Liquid Glass</string>
     <string name="dock_background_crystal">Crystal</string>
     <string name="widget_grid_preserved">Previous grid kept so your widgets remain in place</string>
 </resources>

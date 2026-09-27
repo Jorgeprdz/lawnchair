@@ -395,12 +395,12 @@ public class Hotseat extends FrameLayout implements Insettable {
 
     private static boolean usesGpuWallpaperBlur(int style) {
         return android.os.Build.VERSION.SDK_INT >= 31
-                && (style == OneUiGlassStyle.BLUR || style == OneUiGlassStyle.FROSTY);
+                && OneUiGlassStyle.usesDockBackdropView(style);
     }
 
     private static boolean usesLiquidGlassRenderer(int style) {
         return android.os.Build.VERSION.SDK_INT >= 33
-                && (style == OneUiGlassStyle.BLUR || style == OneUiGlassStyle.FROSTY);
+                && OneUiGlassStyle.usesLiquidGlassRenderer(style);
     }
 
     private void configureWallpaperBackdrop(int intensity) {
@@ -417,7 +417,6 @@ public class Hotseat extends FrameLayout implements Insettable {
     }
 
     private void configureLiquidGlass(LiquidGlassView glass, int intensity) {
-        boolean frosty = mGlassStyle == OneUiGlassStyle.FROSTY;
         boolean dark = (getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         float strength = Math.max(0f, Math.min(100, intensity)) / 100f;
@@ -428,16 +427,16 @@ public class Hotseat extends FrameLayout implements Insettable {
         glass.setEnableBackdropBlur(true);
         glass.setEnableAdaptiveTint(false);
         glass.setEnableEdgeHighlight(true);
-        glass.setEdgeHighlightOpacity(frosty ? 19f : 13f);
+        glass.setEdgeHighlightOpacity(13f);
         glass.setEnableChromaticDispersion(true);
-        glass.setDispersionStrength(frosty ? 0.08f : 0.05f);
+        glass.setDispersionStrength(0.05f);
         glass.setMaterial(GlassMaterial.CLEAR);
         glass.setOverLight(!dark);
         glass.setCornerRadius(mGlassCornerRadius);
-        glass.setBlurAmount(strength * (frosty ? 0.62f : 0.36f));
-        glass.setSaturation(frosty ? 88f : 100f);
-        glass.setBevelWidth((frosty ? 20f : 15f) * density);
-        glass.setRefractionHeight((frosty ? 42f : 34f) * density);
+        glass.setBlurAmount(strength * 0.36f);
+        glass.setSaturation(100f);
+        glass.setBevelWidth(15f * density);
+        glass.setRefractionHeight(34f * density);
         glass.setRefractionOutward(false);
         glass.setRefractionNoFold(false);
         glass.setRefractionFalloff(0f);
@@ -446,8 +445,7 @@ public class Hotseat extends FrameLayout implements Insettable {
     }
 
     private int resolveLiquidGlassTint(boolean dark) {
-        float blend = mGlassStyle == OneUiGlassStyle.FROSTY
-                ? (dark ? 0.10f : 0.20f) : (dark ? 0.04f : 0.08f);
+        float blend = dark ? 0.04f : 0.08f;
         int target = dark ? Color.BLACK : Color.WHITE;
         return Color.rgb(
                 Math.round(Color.red(mGlassColor)

@@ -30,6 +30,8 @@ import android.view.ViewParent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import app.lawnchair.oneui.OneUiGlassStyle;
+
 /**
  * Real Crystal material for One UI surfaces.
  *
@@ -63,6 +65,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     + "uniform float refractionPx;\n"
                     + "uniform float depth;\n"
                     + "uniform float specular;\n"
+                    + "uniform float dispersion;\n"
                     + "uniform float4 tint;\n"
                     + "\n"
                     + "float sdRoundRect(float2 p, float2 halfSize, float r) {\n"
@@ -106,7 +109,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     + "    half4 blue = blurBackdrop(baseCoord - float2(refractionPx * 0.24, 0.0), blurPx);\n"
                     + "    half4 dispersed = half4(red.r, soft.g, blue.b, soft.a);\n"
                     + "    half4 tintColor = half4(tint.r, tint.g, tint.b, tint.a);\n"
-                    + "    half4 glass = mix(soft, dispersed, 0.48);\n"
+                    + "    half4 glass = mix(soft, dispersed, dispersion);\n"
                     + "    glass = mix(glass, tintColor, tint.a);\n"
                     + "\n"
                     + "    float topGlow = (1.0 - smoothstep(0.0, 0.52, local.y / max(1.0, size.y)))\n"
@@ -125,6 +128,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     + "}";
 
     private final View mHost;
+    private final int mStyle;
     private final int mColor;
     private final float mCornerRadius;
     private final Paint mShaderPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -139,6 +143,8 @@ final class OneUiCrystalRenderer extends Drawable {
 
     private Bitmap mBackdrop;
     private BitmapShader mBackdropShader;
+    // Kept as Object so loading this Drawable on API < 33 does not resolve RuntimeShader.
+    private Object mRuntimeShader;
     private Drawable mWallpaper;
     private int mCapturePad;
     private int mAlpha = 255;
@@ -149,12 +155,15 @@ final class OneUiCrystalRenderer extends Drawable {
     private float mSpecular;
     private @Nullable ColorFilter mColorFilter;
 
-    static Drawable create(View host, int color, float cornerRadius, int intensityPercent) {
-        return new OneUiCrystalRenderer(host, color, cornerRadius, intensityPercent);
+    static Drawable create(View host, int style, int color, float cornerRadius,
+            int intensityPercent) {
+        return new OneUiCrystalRenderer(host, style, color, cornerRadius, intensityPercent);
     }
 
-    private OneUiCrystalRenderer(View host, int color, float cornerRadius, int intensityPercent) {
+    private OneUiCrystalRenderer(View host, int style, int color, float cornerRadius,
+            int intensityPercent) {
         mHost = host;
+        mStyle = style;
         mColor = color;
         mCornerRadius = cornerRadius;
         setIntensity(intensityPercent);
@@ -172,10 +181,18 @@ final class OneUiCrystalRenderer extends Drawable {
         } catch (RuntimeException | LinkageError ignored) {
             density = 1f;
         }
-        mBlurPx = (2.5f + 9.5f * mStrength) * density;
-        mRefractionPx = (3.0f + 15.0f * mStrength) * density;
-        mDepthPx = (3.0f + 13.0f * mStrength) * density;
-        mSpecular = 0.30f + 0.70f * mStrength;
+        if (mStyle == OneUiGlassStyle.LIQUID_GLASS) {
+            // Liquid Glass uses a broad lens and more visible refraction; Crystal stays sharper.
+            mBlurPx = (2.0f + 7.0f * mStrength) * density;
+            mRefractionPx = (8.0f + 22.0f * mStrength) * density;
+            mDepthPx = (5.0f + 12.0f * mStrength) * density;
+            mSpecular = 0.42f + 0.50f * mStrength;
+        } else {
+            mBlurPx = (2.5f + 9.5f * mStrength) * density;
+            mRefractionPx = (3.0f + 15.0f * mStrength) * density;
+            mDepthPx = (3.0f + 13.0f * mStrength) * density;
+            mSpecular = 0.30f + 0.70f * mStrength;
+        }
         mCapturePad = Math.round((20f + 28f * mStrength) * density + mRefractionPx + mBlurPx);
     }
 
@@ -437,8 +454,10 @@ final class OneUiCrystalRenderer extends Drawable {
             if (renderer.mBackdropShader == null) {
                 throw new IllegalStateException("Crystal backdrop shader is missing");
             }
-            android.graphics.RuntimeShader shader =
-                    new android.graphics.RuntimeShader(CRYSTAL_SHADER);
+            android.graphics.RuntimeShader shader = renderer.mRuntimeShader == null
+                    ? new android.graphics.RuntimeShader(CRYSTAL_SHADER)
+                    : (android.graphics.RuntimeShader) renderer.mRuntimeShader;
+            renderer.mRuntimeShader = shader;
             shader.setInputShader("backdrop", renderer.mBackdropShader);
             shader.setFloatUniform("size", bounds.width(), bounds.height());
             shader.setFloatUniform("origin", bounds.left, bounds.top);
@@ -448,6 +467,8 @@ final class OneUiCrystalRenderer extends Drawable {
             shader.setFloatUniform("refractionPx", renderer.mRefractionPx);
             shader.setFloatUniform("depth", renderer.mDepthPx);
             shader.setFloatUniform("specular", renderer.mSpecular);
+            shader.setFloatUniform("dispersion",
+                    renderer.mStyle == OneUiGlassStyle.LIQUID_GLASS ? 0.58f : 0.40f);
 
             float tintAlpha = (0.05f + 0.13f * renderer.mStrength) * Color.alpha(renderer.mColor) / 255f;
             shader.setFloatUniform("tint",

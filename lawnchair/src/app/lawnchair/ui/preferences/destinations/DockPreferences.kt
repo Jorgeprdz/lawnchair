@@ -116,7 +116,7 @@ fun DockPreferences(modifier: Modifier = Modifier) {
                     entries = listOf(
                         ListPreferenceEntry(OneUiGlassStyle.OFF) { stringResource(R.string.dock_background_off) },
                         ListPreferenceEntry(OneUiGlassStyle.SOLID) { stringResource(R.string.dock_background_solid) },
-                        ListPreferenceEntry(OneUiGlassStyle.BLUR) { stringResource(R.string.dock_background_blur) },
+                        ListPreferenceEntry(OneUiGlassStyle.LIQUID_GLASS) { stringResource(R.string.dock_background_blur) },
                         ListPreferenceEntry(OneUiGlassStyle.CRYSTAL) { stringResource(R.string.dock_background_crystal) },
                         ListPreferenceEntry(OneUiGlassStyle.FROSTY) { stringResource(R.string.dock_background_frosty) },
                     ),

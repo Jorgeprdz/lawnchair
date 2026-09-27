@@ -101,8 +101,13 @@ public class OneUiFolderIcon extends FolderIcon {
         int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
         int nightMode = getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK;
-        boolean nativeBlur = SamsungGlassBlur.apply(
-                mGlassSurface, mode, intensity, color, corner);
+        boolean nativeBlur;
+        if (mode == OneUiGlassStyle.LIQUID_GLASS) {
+            SamsungGlassBlur.clear(mGlassSurface);
+            nativeBlur = false;
+        } else {
+            nativeBlur = SamsungGlassBlur.apply(mGlassSurface, mode, intensity, color, corner);
+        }
         mNativeGlassActive = nativeBlur;
 
         if (mode != mLastMode || intensity != mLastIntensity || color != mLastColor

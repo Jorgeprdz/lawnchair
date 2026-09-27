@@ -24,6 +24,8 @@ import app.lawnchair.util.LawnchairUtilsKt;
 public class OneUiFolder extends Folder {
     private Path mOneUiClipPath;
     private Drawable mGlass;
+    private int mLastGlassMode = Integer.MIN_VALUE;
+    private int mLastGlassIntensity = Integer.MIN_VALUE;
     private int mLastGlassColor = Integer.MIN_VALUE;
     private int mLastNightMode = Integer.MIN_VALUE;
     private boolean mLastNativeBlur;
@@ -53,15 +55,24 @@ public class OneUiFolder extends Folder {
             int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
             int nightMode = getResources().getConfiguration().uiMode
                     & Configuration.UI_MODE_NIGHT_MASK;
-            boolean nativeBlur = SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
+            boolean nativeBlur;
+            if (mode == OneUiGlassStyle.LIQUID_GLASS) {
+                SamsungGlassBlur.clear(this);
+                nativeBlur = false;
+            } else {
+                nativeBlur = SamsungGlassBlur.apply(this, mode, intensity, glassColor, corners);
+            }
 
-            if (mGlass == null || glassColor != mLastGlassColor
+            if (mGlass == null || mode != mLastGlassMode || intensity != mLastGlassIntensity
+                    || glassColor != mLastGlassColor
                     || nightMode != mLastNightMode || nativeBlur != mLastNativeBlur) {
                 if (mGlass != null) mGlass.setVisible(false, false);
                 mGlass = nativeBlur
                         ? OneUiGlassBackground.createFolderOverlay(this, glassColor, corners)
                         : OneUiGlassBackground.createFolder(this, glassColor, corners);
                 mLastGlassColor = glassColor;
+                mLastGlassMode = mode;
+                mLastGlassIntensity = intensity;
                 mLastNightMode = nightMode;
                 mLastNativeBlur = nativeBlur;
             }
@@ -75,6 +86,8 @@ public class OneUiFolder extends Folder {
             if (mGlass != null) mGlass.setVisible(false, false);
             mGlass = null;
             mLastGlassColor = Integer.MIN_VALUE;
+            mLastGlassMode = Integer.MIN_VALUE;
+            mLastGlassIntensity = Integer.MIN_VALUE;
             mLastNightMode = Integer.MIN_VALUE;
             mLastNativeBlur = false;
         }

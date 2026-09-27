@@ -5,6 +5,9 @@
 package app.lawnchair.oneui
 
 import android.content.Context
+import app.lawnchair.preferences.PreferenceManager
+import app.lawnchair.preferences2.PreferenceManager2
+import app.lawnchair.preferences2.firstCached
 
 /**
  * Isolated preference store for One UI glass controls.
@@ -105,14 +108,47 @@ object OneUiGlassPreferences {
         }
     }
 
-    /** 0 Off, 1 Solid, 2 Blur, 3 Crystal, 4 Frosty. */
+    /**
+     * Folder selection. New installs follow the dock material; an explicitly selected folder
+     * style remains independent and survives dock changes.
+     */
     @JvmStatic
-    fun getFolderMode(context: Context): Int =
-        OneUiGlassStyle.normalize(prefs(context).getInt(KEY_FOLDER_MODE, OneUiGlassStyle.SOLID))
+    fun getFolderModeSelection(context: Context): Int {
+        val mode = prefs(context).getInt(KEY_FOLDER_MODE, OneUiGlassStyle.FOLDER_FOLLOW_DOCK)
+        return if (mode == OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+            mode
+        } else {
+            OneUiGlassStyle.normalize(mode)
+        }
+    }
+
+    /** Resolved material consumed by folder icons and open folders. */
+    @JvmStatic
+    fun getFolderMode(context: Context): Int {
+        val selection = getFolderModeSelection(context)
+        if (selection != OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+            return OneUiGlassStyle.normalize(selection)
+        }
+        val preferences2 = PreferenceManager2.getInstance(context)
+        val storedDockMode = preferences2.hotseatBackgroundMode.firstCached()
+        val dockMode = if (storedDockMode in OneUiGlassStyle.OFF..OneUiGlassStyle.FROSTY) {
+            storedDockMode
+        } else if (PreferenceManager.getInstance(context).hotseatBG.get()) {
+            OneUiGlassStyle.SOLID
+        } else {
+            OneUiGlassStyle.OFF
+        }
+        return OneUiGlassStyle.resolveFolderMode(selection, resolveDockStyle(context, dockMode))
+    }
 
     @JvmStatic
     fun setFolderMode(context: Context, value: Int) {
-        prefs(context).edit().putInt(KEY_FOLDER_MODE, OneUiGlassStyle.normalize(value)).apply()
+        val normalized = if (value == OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+            value
+        } else {
+            OneUiGlassStyle.normalize(value)
+        }
+        prefs(context).edit().putInt(KEY_FOLDER_MODE, normalized).apply()
     }
 
     @JvmStatic
@@ -145,14 +181,23 @@ object OneUiGlassPreferences {
     }
 
     @JvmStatic
-    fun getFolderIntensity(context: Context, style: Int): Int = when (style) {
-        OneUiGlassStyle.CRYSTAL -> getFolderCrystalIntensity(context)
-        OneUiGlassStyle.FROSTY -> getFolderFrostyIntensity(context)
-        else -> getFolderBlurIntensity(context)
+    fun getFolderIntensity(context: Context, style: Int): Int {
+        if (getFolderModeSelection(context) == OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+            return getDockIntensity(context, style)
+        }
+        return when (style) {
+            OneUiGlassStyle.CRYSTAL -> getFolderCrystalIntensity(context)
+            OneUiGlassStyle.FROSTY -> getFolderFrostyIntensity(context)
+            else -> getFolderBlurIntensity(context)
+        }
     }
 
     @JvmStatic
     fun setFolderIntensity(context: Context, style: Int, value: Int) {
+        if (getFolderModeSelection(context) == OneUiGlassStyle.FOLDER_FOLLOW_DOCK) {
+            setDockIntensity(context, style, value)
+            return
+        }
         when (style) {
             OneUiGlassStyle.CRYSTAL -> setFolderCrystalIntensity(context, value)
             OneUiGlassStyle.FROSTY -> setFolderFrostyIntensity(context, value)

@@ -6,9 +6,13 @@ package app.lawnchair.oneui
 
 /** Canonical One UI glass style ids shared by settings, dock, folders and the renderer. */
 object OneUiGlassStyle {
+    const val FOLDER_FOLLOW_DOCK = -1
     const val OFF = 0
     const val SOLID = 1
-    const val BLUR = 2
+    const val LIQUID_GLASS = 2
+    /** Stored value retained for preference compatibility with earlier builds. */
+    @Deprecated("Use LIQUID_GLASS")
+    const val BLUR = LIQUID_GLASS
     const val CRYSTAL = 3
     const val FROSTY = 4
 
@@ -17,5 +21,16 @@ object OneUiGlassStyle {
         if (value in OFF..FROSTY) value else fallback
 
     @JvmStatic
-    fun isGlass(value: Int): Boolean = value in BLUR..FROSTY
+    fun isGlass(value: Int): Boolean = value in LIQUID_GLASS..FROSTY
+
+    @JvmStatic
+    fun usesLiquidGlassRenderer(value: Int): Boolean = value == LIQUID_GLASS
+
+    @JvmStatic
+    fun usesDockBackdropView(value: Int): Boolean =
+        value == LIQUID_GLASS || value == FROSTY
+
+    @JvmStatic
+    fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
+        normalize(if (folderMode == FOLDER_FOLLOW_DOCK) dockMode else folderMode)
 }

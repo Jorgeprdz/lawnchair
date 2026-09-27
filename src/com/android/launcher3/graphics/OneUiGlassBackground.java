@@ -31,43 +31,44 @@ import app.lawnchair.oneui.OneUiGlassStyle;
 /**
  * Shared bounded glass renderer for One UI-inspired dock and folder backgrounds.
  *
- * <p>Blur is broad and soft, Crystal stays clearer and sharper, and Frosty adds a restrained
- * diffused surface and edge highlight. Blur and Crystal retain independent intensity controls;
- * Frosty intentionally follows the Blur intensity control.</p>
+ * <p>Liquid Glass uses a refractive lens, Crystal stays clearer and sharper, and Frosty adds a
+ * broad GPU blur with diffusion and an edge highlight. Each material has its own intensity.</p>
  */
 public final class OneUiGlassBackground {
     private OneUiGlassBackground() { }
 
     /** Dock entry point. The selected material is explicit and shared with settings. */
     public static Drawable createDock(View host, int style, int color, float cornerRadius) {
-        return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
+        return new DynamicGlassDrawable(host,
+                OneUiGlassStyle.normalize(style, OneUiGlassStyle.LIQUID_GLASS),
                 color, cornerRadius, true, true);
     }
 
     public static Drawable createDockOverlay(View host, int style, int color, float cornerRadius) {
-        return new DynamicGlassDrawable(host, OneUiGlassStyle.normalize(style, OneUiGlassStyle.BLUR),
+        return new DynamicGlassDrawable(host,
+                OneUiGlassStyle.normalize(style, OneUiGlassStyle.LIQUID_GLASS),
                 color, cornerRadius, true, false);
     }
 
     /** Folder entry point; style and intensity are resolved live from shared preferences. */
     public static Drawable createFolder(View host, int color, float cornerRadius) {
-        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.LIQUID_GLASS, color, cornerRadius,
                 false, true);
     }
 
     public static Drawable createFolderOverlay(View host, int color, float cornerRadius) {
-        return new DynamicGlassDrawable(host, OneUiGlassStyle.BLUR, color, cornerRadius,
+        return new DynamicGlassDrawable(host, OneUiGlassStyle.LIQUID_GLASS, color, cornerRadius,
                 false, false);
     }
 
     private static Drawable buildSurface(View host, int style, int color,
             float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
         final int intensity = clamp(intensityPercent, 0, 100);
-        if (style < OneUiGlassStyle.BLUR) {
+        if (style < OneUiGlassStyle.LIQUID_GLASS) {
             return new ColorDrawable(Color.TRANSPARENT);
         }
-        if (style == OneUiGlassStyle.CRYSTAL) {
-            return OneUiCrystalRenderer.create(host, color, cornerRadius, intensity);
+        if (style == OneUiGlassStyle.CRYSTAL || style == OneUiGlassStyle.LIQUID_GLASS) {
+            return OneUiCrystalRenderer.create(host, style, color, cornerRadius, intensity);
         }
         if (intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
@@ -223,7 +224,7 @@ public final class OneUiGlassBackground {
 
         private int resolveStyle() {
             return mDockControlled
-                    ? OneUiGlassStyle.normalize(mBaseStyle, OneUiGlassStyle.BLUR)
+                    ? OneUiGlassStyle.normalize(mBaseStyle, OneUiGlassStyle.LIQUID_GLASS)
                     : OneUiGlassPreferences.getFolderMode(mHost.getContext());
         }
 
