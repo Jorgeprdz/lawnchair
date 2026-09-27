@@ -409,9 +409,11 @@ public class Hotseat extends FrameLayout implements Insettable {
         float density = getResources().getDisplayMetrics().density;
         float radiusDp = frosty ? 16f + 14f * strength : 8f + 8f * strength;
         float blurRadius = usesLiquidGlassRenderer(mGlassStyle) ? 0f : radiusDp * density;
+        // Hotseat fills the launcher root. Keep the wallpaper mirror clipped to the dock so its
+        // full-screen snapshot cannot paint over Workspace or cover its touch targets.
         mWallpaperBackdrop.configureGlassBlur(blurRadius, mGlassCornerRadius,
                 mGlassInsetLeft, mGlassInsetTop, mGlassInsetRight, mGlassInsetBottom,
-                !usesLiquidGlassRenderer(mGlassStyle));
+                true);
     }
 
     private void configureLiquidGlass(LiquidGlassView glass, int intensity) {
