@@ -272,6 +272,12 @@ android {
             dimension "channel"
         }
 
+        oneui {
+            // Keep the install identity used by the existing OneUI Next builds.
+            applicationId 'app.lawnchair.oneui'
+            dimension "channel"
+        }
+
         nightly {
             applicationId 'app.lawnchair.nightly'
             dimension "channel"
