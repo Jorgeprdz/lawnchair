@@ -31,6 +31,7 @@ import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.InsetDrawable;
 import android.util.AttributeSet;
