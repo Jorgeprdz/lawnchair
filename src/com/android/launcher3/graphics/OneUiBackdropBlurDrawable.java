@@ -95,7 +95,7 @@ final class OneUiBackdropBlurDrawable extends Drawable {
         mHost = host;
         mWallpaperManager = WallpaperManager.getInstance(host.getContext());
         WeakReference<OneUiBackdropBlurDrawable> weakSelf = new WeakReference<>(this);
-        mWallpaperListener = (colors, which, userId) -> {
+        mWallpaperListener = (colors, which) -> {
             OneUiBackdropBlurDrawable drawable = weakSelf.get();
             if (drawable != null) {
                 drawable.mWallpaper = null;
