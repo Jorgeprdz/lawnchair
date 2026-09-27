@@ -8,11 +8,13 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.FrameLayout;
 
 import com.android.launcher3.graphics.OneUiGlassBackground;
+import com.android.launcher3.graphics.OneUiFrostedBackdropView;
 import com.android.launcher3.graphics.SamsungGlassBlur;
 
 import app.lawnchair.oneui.OneUiGlassPreferences;
@@ -51,7 +53,7 @@ public class OneUiFolderIcon extends FolderIcon {
 
     private void ensureGlassSurface() {
         if (mGlassSurface != null) return;
-        mGlassSurface = new View(getContext());
+        mGlassSurface = new OneUiFrostedBackdropView(getContext());
         mGlassSurface.setClickable(false);
         mGlassSurface.setFocusable(false);
         mGlassSurface.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -101,28 +103,38 @@ public class OneUiFolderIcon extends FolderIcon {
         int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
         int nightMode = getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK;
+        boolean wallpaperBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && OneUiGlassStyle.usesWallpaperSnapshotForFolder(mode);
         boolean nativeBlur;
-        if (mode == OneUiGlassStyle.LIQUID_GLASS || mode == OneUiGlassStyle.FROSTY) {
+        if (wallpaperBackdrop) {
             SamsungGlassBlur.clear(mGlassSurface);
+            ((OneUiFrostedBackdropView) mGlassSurface).configure(color, corner, intensity);
+            nativeBlur = false;
+        } else if (mode == OneUiGlassStyle.LIQUID_GLASS || mode == OneUiGlassStyle.FROSTY) {
+            SamsungGlassBlur.clear(mGlassSurface);
+            ((OneUiFrostedBackdropView) mGlassSurface).clearGlass();
             nativeBlur = false;
         } else {
+            ((OneUiFrostedBackdropView) mGlassSurface).clearGlass();
             nativeBlur = SamsungGlassBlur.apply(mGlassSurface, mode, intensity, color, corner);
         }
         mNativeGlassActive = nativeBlur || mode == OneUiGlassStyle.FROSTY;
 
         if (mode != mLastMode || intensity != mLastIntensity || color != mLastColor
                 || nightMode != mLastNightMode || Math.abs(corner - mLastCorner) >= 0.5f
-                || nativeBlur != mLastNative) {
-            Drawable material = nativeBlur
-                    ? OneUiGlassBackground.createFolderOverlay(mGlassSurface, color, corner)
-                    : OneUiGlassBackground.createFolder(mGlassSurface, color, corner);
-            mGlassSurface.setBackground(material);
+                || (nativeBlur || wallpaperBackdrop) != mLastNative) {
+            if (!wallpaperBackdrop) {
+                Drawable material = nativeBlur
+                        ? OneUiGlassBackground.createFolderOverlay(mGlassSurface, color, corner)
+                        : OneUiGlassBackground.createFolder(mGlassSurface, color, corner);
+                mGlassSurface.setBackground(material);
+            }
             mLastMode = mode;
             mLastIntensity = intensity;
             mLastColor = color;
             mLastNightMode = nightMode;
             mLastCorner = corner;
-            mLastNative = nativeBlur;
+            mLastNative = nativeBlur || wallpaperBackdrop;
         }
         mGlassSurface.setVisibility(VISIBLE);
     }

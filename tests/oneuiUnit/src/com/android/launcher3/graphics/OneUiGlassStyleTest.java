@@ -28,6 +28,13 @@ public class OneUiGlassStyleTest {
     }
 
     @Test
+    public void onlyFrostyFoldersUseTheWallpaperSnapshotBackdrop() {
+        assertTrue(OneUiGlassStyle.usesWallpaperSnapshotForFolder(OneUiGlassStyle.FROSTY));
+        assertFalse(OneUiGlassStyle.usesWallpaperSnapshotForFolder(OneUiGlassStyle.LIQUID_GLASS));
+        assertFalse(OneUiGlassStyle.usesWallpaperSnapshotForFolder(OneUiGlassStyle.CRYSTAL));
+    }
+
+    @Test
     public void folderCanFollowDockOrKeepAnExplicitMaterial() {
         assertEquals(OneUiGlassStyle.LIQUID_GLASS,
                 OneUiGlassStyle.resolveFolderMode(OneUiGlassStyle.FOLDER_FOLLOW_DOCK,

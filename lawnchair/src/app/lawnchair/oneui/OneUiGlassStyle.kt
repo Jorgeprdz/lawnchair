@@ -31,6 +31,9 @@ object OneUiGlassStyle {
         value == LIQUID_GLASS || value == FROSTY
 
     @JvmStatic
+    fun usesWallpaperSnapshotForFolder(value: Int): Boolean = value == FROSTY
+
+    @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
         normalize(if (folderMode == FOLDER_FOLLOW_DOCK) dockMode else folderMode)
 }
