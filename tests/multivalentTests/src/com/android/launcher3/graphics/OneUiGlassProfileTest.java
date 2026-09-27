@@ -13,13 +13,16 @@ import org.junit.Test;
 public class OneUiGlassProfileTest {
     @Test
     public void normalAndFrostyHaveDistinctGlassProfiles() {
-        OneUiGlassProfile normal = OneUiGlassProfile.create(OneUiGlassStyle.BLUR, 70, false);
-        OneUiGlassProfile frosty = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 70, false);
+        OneUiGlassProfile normal = OneUiGlassProfile.create(OneUiGlassStyle.BLUR, 100, false);
+        OneUiGlassProfile frosty = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 100, false);
 
-        assertTrue(frosty.radiusDp > normal.radiusDp);
+        assertTrue("Frosty needs a visibly broader backdrop blur",
+                frosty.radiusDp >= normal.radiusDp + 25);
         assertEquals(0, normal.hazeAlpha);
-        assertTrue(frosty.hazeAlpha > 0);
-        assertTrue(frosty.tintAlphaScale > normal.tintAlphaScale);
+        assertTrue("Frosty needs a visible diffuse layer", frosty.hazeAlpha >= 60);
+        assertTrue("Normal should keep the wallpaper more visible",
+                normal.tintAlphaScale < frosty.tintAlphaScale);
+        assertTrue(frosty.highlightAlpha > normal.highlightAlpha);
     }
 
     @Test

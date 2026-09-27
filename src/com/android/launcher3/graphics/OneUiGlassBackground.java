@@ -78,14 +78,24 @@ public final class OneUiGlassBackground {
         final boolean dark = (host.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
         final OneUiGlassProfile profile = OneUiGlassProfile.create(style, intensity, dark);
-        Drawable blur = allowPlatformBlur ? createPlatformBlur(host,
+        final boolean platformBlurEnabled = canUsePlatformBlur(host);
+        Drawable blur = allowPlatformBlur && platformBlurEnabled ? createPlatformBlur(host,
                 Math.max(1, Math.round(profile.radiusDp * density)), cornerRadius) : null;
+        if (!platformBlurEnabled && Build.VERSION.SDK_INT >= 33) {
+            // Some devices disable window blur globally (the S25 currently reports mBlurEnabled=false).
+            // Use a bounded wallpaper-only GPU blur so our own surfaces still have a real backdrop.
+            float radiusScale = style == OneUiGlassStyle.FROSTY ? 0.46f : 0.34f;
+            blur = OneUiBackdropBlurDrawable.create(host, style, cornerRadius,
+                    Math.max(1, Math.round(profile.radiusDp * density * radiusScale)));
+        }
 
         final int sourceAlpha = Color.alpha(color);
         final int tintRgb = blendRgb(color, dark ? Color.BLACK : Color.WHITE, profile.tintBlend);
 
         int tintAlpha = Math.round(sourceAlpha * profile.tintAlphaScale);
-        if (allowPlatformBlur && blur == null) tintAlpha = Math.max(tintAlpha, profile.fallbackAlpha);
+        if ((!platformBlurEnabled || (allowPlatformBlur && blur == null))) {
+            tintAlpha = Math.max(tintAlpha, profile.fallbackAlpha);
+        }
         tintAlpha = clamp(tintAlpha, 0, 255);
         GradientDrawable tint = rounded(cornerRadius, Color.argb(
                 tintAlpha, Color.red(tintRgb), Color.green(tintRgb), Color.blue(tintRgb)));

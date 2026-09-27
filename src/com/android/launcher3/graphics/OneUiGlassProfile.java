@@ -29,18 +29,18 @@ public final class OneUiGlassProfile {
         float strength = Math.max(0, Math.min(100, intensityPercent)) / 100f;
         if (style == OneUiGlassStyle.FROSTY) {
             return new OneUiGlassProfile(
-                    Math.round(28f + 40f * strength),
-                    dark ? 0.10f : 0.20f,
-                    0.18f + 0.12f * strength,
-                    Math.round(48f + 30f * strength),
-                    Math.round((dark ? 10f : 20f) + (dark ? 12f : 22f) * strength),
-                    Math.round(9f + 12f * strength));
+                    Math.round(34f + 42f * strength),
+                    dark ? 0.08f : 0.14f,
+                    0.14f + 0.12f * strength,
+                    Math.round(62f + 36f * strength),
+                    Math.round((dark ? 24f : 34f) + (dark ? 22f : 28f) * strength),
+                    Math.round(12f + 14f * strength));
         }
         return new OneUiGlassProfile(
-                Math.round(18f + 24f * strength),
-                dark ? 0.06f : 0.12f,
-                0.09f + 0.10f * strength,
-                Math.round(30f + 20f * strength),
+                Math.round(22f + 22f * strength),
+                dark ? 0.04f : 0.08f,
+                0.06f + 0.08f * strength,
+                Math.round(42f + 22f * strength),
                 0,
                 0);
     }
