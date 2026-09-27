@@ -51,7 +51,16 @@ public class OneUiGlassProfileTest {
         int red = (tint >>> 16) & 0xff;
         int green = (tint >>> 8) & 0xff;
         int blue = tint & 0xff;
-        assertTrue("Folder color saturation should be strongly reduced", green - red < 20);
-        assertTrue("Folder color saturation should be strongly reduced", green - blue < 20);
+        assertTrue("Frosty must not carry the folder's green accent", Math.abs(green - red) <= 1);
+        assertTrue("Frosty must not carry the folder's green accent", Math.abs(green - blue) <= 1);
+    }
+
+    @Test
+    public void frostyFolderDiffusionPreventsLauncherWidgetsBleedingThrough() {
+        OneUiGlassProfile light = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 100, false);
+        OneUiGlassProfile dark = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 100, true);
+
+        assertTrue(OneUiGlassProfile.frostyFolderHazeAlpha(light) >= 75);
+        assertTrue(OneUiGlassProfile.frostyFolderHazeAlpha(dark) >= 70);
     }
 }

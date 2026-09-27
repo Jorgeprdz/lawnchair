@@ -77,7 +77,7 @@ public final class OneUiGlassBackground {
         int hazeTarget = dark ? Color.rgb(42, 46, 54) : Color.WHITE;
         int hazeRgb = blendRgb(neutralTint, hazeTarget, dark ? 0.10f : 0.22f);
         GradientDrawable haze = rounded(cornerRadius,
-                alphaColor(hazeRgb, profile.hazeAlpha));
+                alphaColor(hazeRgb, OneUiGlassProfile.frostyFolderHazeAlpha(profile)));
         float density = host.getResources().getDisplayMetrics().density;
         haze.setStroke(Math.max(1, Math.round(density)),
                 alphaColor(Color.WHITE, profile.highlightAlpha));

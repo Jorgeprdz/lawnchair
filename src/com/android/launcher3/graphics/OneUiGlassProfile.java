@@ -55,10 +55,14 @@ public final class OneUiGlassProfile {
         int green = (color >>> 8) & 0xff;
         int blue = color & 0xff;
         int gray = (red * 30 + green * 59 + blue * 11) / 100;
-        float neutralize = 0.88f;
+        float neutralize = 1f;
         red = Math.round(red + (gray - red) * neutralize);
         green = Math.round(green + (gray - green) * neutralize);
         blue = Math.round(blue + (gray - blue) * neutralize);
         return (alpha << 24) | (red << 16) | (green << 8) | blue;
+    }
+
+    static int frostyFolderHazeAlpha(OneUiGlassProfile profile) {
+        return Math.min(255, profile.hazeAlpha + 48);
     }
 }
