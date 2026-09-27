@@ -72,25 +72,29 @@ class LawnchairIconProvider @Inject constructor(
     private val themeMapLock = Any()
     private var themeMapName: String = ""
     private var themeMapEnabled: Boolean? = null
+    private var themeMapIconState: String = ""
     private var _themeMap: Map<String, ThemeData>? = null
 
     val themeMap: Map<String, ThemeData>
         get() = synchronized(themeMapLock) {
             val sourceName = themedIconSource?.packPackageName.orEmpty()
             val enabled = themedIconsEnabled
+            val iconState = themeManager.iconState.toUniqueId()
             if (
                 _themeMap == null ||
                 themeMapName != sourceName ||
-                themeMapEnabled != enabled
+                themeMapEnabled != enabled ||
+                themeMapIconState != iconState
             ) {
                 themeMapName = sourceName
                 themeMapEnabled = enabled
+                themeMapIconState = iconState
                 _themeMap = if (enabled) getThemedIconMap() else DISABLED_MAP
             }
             _themeMap!!
         }
 
-    val systemIconState = themeManager.iconState
+    val systemIconState get() = themeManager.iconState
 
     private fun resolveIconEntry(componentName: ComponentName, user: UserHandle): IconEntry? {
         val componentKey = ComponentKey(componentName, user)
@@ -228,6 +232,7 @@ class LawnchairIconProvider @Inject constructor(
             "dti=${prefs.drawerThemedIcons.get()}," +
             "fm=${prefs.forceIconMonochrome.get()}," +
             "tb=${prefs.tintIconPackBackgrounds.get()}," +
+            "night=${themeManager.iconState.uiModeNight}," +
             "ov=$overrideState"
     }
 

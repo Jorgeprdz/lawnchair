@@ -49,6 +49,7 @@ constructor(
         prefs1.shadowBGIcons,
         prefs1.coloredBackgroundLightness,
         prefs1.forceIconMonochrome,
+        prefs1.launcherTheme,
     )
 
     private val prefListener = PreferenceChangeListener {
@@ -134,6 +135,7 @@ constructor(
             themeController = themeController,
             iconShape = appShape,
             folderShape = folderShape,
+            uiModeNight = uiModeNight,
         )
     }
 }

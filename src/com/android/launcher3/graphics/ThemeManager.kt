@@ -16,7 +16,9 @@
 
 package com.android.launcher3.graphics
 
+import android.content.ComponentCallbacks
 import android.content.Context
+import android.content.res.Configuration
 import android.content.res.Resources
 import com.android.launcher3.EncryptionType
 import com.android.launcher3.Item
@@ -51,6 +53,8 @@ constructor(
     private val iconControllerFactory: IconControllerFactory,
     lifecycle: DaggerSingletonTracker,
 ) {
+    protected var uiModeNight =
+        context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
 
     /** Representation of the current icon state */
     open var iconState = parseIconState(null)
@@ -79,6 +83,15 @@ constructor(
             context, uiExecutor) { verifyIconState() }
         receiver.registerPkgActions("android", ACTION_OVERLAY_CHANGED)
 
+        val configurationCallback = object : ComponentCallbacks {
+            override fun onConfigurationChanged(configuration: Configuration) {
+                this@ThemeManager.onConfigurationChanged(configuration)
+            }
+
+            override fun onLowMemory() = Unit
+        }
+        context.registerComponentCallbacks(configurationCallback)
+
         val keys = (iconControllerFactory.prefKeys + PREF_ICON_SHAPE)
 
         val keysArray = keys.toTypedArray()
@@ -89,6 +102,7 @@ constructor(
         prefs.addListener(prefListener, *keysArray)
         lifecycle.addCloseable {
             receiver.unregisterReceiverSafely()
+            context.unregisterComponentCallbacks(configurationCallback)
             prefs.removeListener(prefListener, *keysArray)
         }
     }
@@ -99,6 +113,13 @@ constructor(
         iconState = newState
 
         listeners.forEach { it.onThemeChanged() }
+    }
+
+    internal fun onConfigurationChanged(configuration: Configuration) {
+        val newUiModeNight = configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        if (newUiModeNight == uiModeNight) return
+        uiModeNight = newUiModeNight
+        uiExecutor.execute { verifyIconState() }
     }
 
     fun addChangeListener(listener: ThemeChangeListener) = listeners.add(listener)
@@ -138,6 +159,7 @@ constructor(
             iconShape = iconShape,
             folderShape = folderShape,
             shapeRadius = shapeModel?.shapeRadius ?: DEFAULT_ICON_RADIUS,
+            uiModeNight = uiModeNight,
         )
     }
 
@@ -149,8 +171,9 @@ constructor(
         val iconShape: ShapeDelegate,
         val folderShape: ShapeDelegate,
         val shapeRadius: Float,
+        val uiModeNight: Int,
     ) {
-        fun toUniqueId() = "${iconMask.hashCode()},$themeCode"
+        fun toUniqueId() = "${iconMask.hashCode()},$themeCode,$uiModeNight"
     }
 
     /** Interface for receiving theme change events */

@@ -143,7 +143,13 @@ constructor(
         lifeCycle.addCloseable { idp.removeOnChangeListener(idpChangeListener) }
 
         // Theme changes
-        val themeChangeListener = ThemeChangeListener { refreshAndReloadLauncher() }
+        val themeChangeListener = ThemeChangeListener {
+            MODEL_EXECUTOR.execute {
+                iconPool.clear()
+                iconCache.clearMemoryCache()
+                model.forceReload()
+            }
+        }
         themeManager.addChangeListener(themeChangeListener)
         lifeCycle.addCloseable { themeManager.removeChangeListener(themeChangeListener) }
 

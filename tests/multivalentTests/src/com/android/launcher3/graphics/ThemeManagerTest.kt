@@ -16,6 +16,7 @@
 
 package com.android.launcher3.graphics
 
+import android.content.res.Configuration
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.launcher3.FakeLauncherPrefs
@@ -91,6 +92,49 @@ class ThemeManagerTest {
         themeManager.isMonoThemeEnabled = false
         TestUtil.runOnExecutorSync(MAIN_EXECUTOR) {}
         assertEquals(disabledIconState, themeManager.iconState)
+    }
+
+    @Test
+    fun `icon state identity changes when UI night mode changes`() {
+        themeManager.isMonoThemeEnabled = true
+        TestUtil.runOnExecutorSync(MAIN_EXECUTOR) {}
+        val initialState = themeManager.iconState.toUniqueId()
+        val originalConfiguration = Configuration(context.resources.configuration)
+        val currentNightMode = originalConfiguration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val newNightMode = if (currentNightMode == Configuration.UI_MODE_NIGHT_YES) {
+            Configuration.UI_MODE_NIGHT_NO
+        } else {
+            Configuration.UI_MODE_NIGHT_YES
+        }
+        val changedConfiguration = Configuration(originalConfiguration).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or newNightMode
+        }
+
+        try {
+            context.resources.updateConfiguration(
+                changedConfiguration,
+                context.resources.displayMetrics,
+            )
+            themeManager.onConfigurationChanged(changedConfiguration)
+            TestUtil.runOnExecutorSync(MAIN_EXECUTOR) {}
+
+            val changedState = themeManager.iconState.toUniqueId()
+            assertNotEquals(initialState, changedState)
+
+            themeManager.onConfigurationChanged(
+                Configuration(changedConfiguration).apply { fontScale = 1.1f },
+            )
+            TestUtil.runOnExecutorSync(MAIN_EXECUTOR) {}
+            assertEquals(changedState, themeManager.iconState.toUniqueId())
+        } finally {
+            context.resources.updateConfiguration(
+                originalConfiguration,
+                context.resources.displayMetrics,
+            )
+            themeManager.onConfigurationChanged(originalConfiguration)
+            themeManager.isMonoThemeEnabled = false
+            TestUtil.runOnExecutorSync(MAIN_EXECUTOR) {}
+        }
     }
 }
 
