@@ -25,17 +25,17 @@ public final class WallpaperBackdropView extends View {
 
     private final WallpaperManager mWallpaperManager;
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+    private Drawable mWallpaper;
+    private @Nullable View mInvalidationTarget;
+    private boolean mListenerRegistered;
+    private final int[] mViewLocation = new int[2];
+    private final int[] mRootLocation = new int[2];
     private final WallpaperManager.OnColorsChangedListener mColorsChangedListener =
             (colors, which) -> {
                 mWallpaper = null;
                 invalidate();
                 if (mInvalidationTarget != null) mInvalidationTarget.invalidate();
             };
-    private Drawable mWallpaper;
-    private @Nullable View mInvalidationTarget;
-    private boolean mListenerRegistered;
-    private final int[] mViewLocation = new int[2];
-    private final int[] mRootLocation = new int[2];
 
     public WallpaperBackdropView(Context context) {
         super(context);
