@@ -44,7 +44,7 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <!--override minSdk declared in it-->
-    <uses-sdk tools:overrideLibrary="com.kieronquinn.app.smartspacer.sdk" />
+    <uses-sdk tools:overrideLibrary="com.kieronquinn.app.smartspacer.sdk,com.kieronquinn.app.smartspacer.sdk.client" />
 
     <permission
         android:name="${packageName}.permission.READ_SETTINGS"
