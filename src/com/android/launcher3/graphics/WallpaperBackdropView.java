@@ -6,8 +6,11 @@ package com.android.launcher3.graphics;
 
 import android.app.WallpaperManager;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Outline;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RenderEffect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
@@ -23,14 +26,18 @@ import androidx.annotation.Nullable;
  * A local mirror of the wallpaper drawable used as the GPU blur source for dock glass. Android's
  * wallpaper is a separate surface and cannot be sampled by a normal View renderer; on devices with
  * layered/live wallpapers this mirrors the drawable exposed by WallpaperManager, not the system's
- * live composed surface. The cached drawable is drawn at launcher-root coordinates, so the dock
- * blur does not capture app icons or allocate a screenshot per frame.
+ * live composed surface. Its downsampled snapshot is cached at launcher-root dimensions, so the
+ * dock renderer gets standard bitmap content without capturing app icons or allocating per frame.
  */
 public final class WallpaperBackdropView extends View {
 
     private final WallpaperManager mWallpaperManager;
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
     private Drawable mWallpaper;
+    private Bitmap mWallpaperSnapshot;
+    private final Canvas mSnapshotCanvas = new Canvas();
+    private final Paint mSnapshotPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final Rect mSnapshotBounds = new Rect();
     private @Nullable View mInvalidationTarget;
     private boolean mListenerRegistered;
     private float mBlurRadiusPx;
@@ -52,6 +59,7 @@ public final class WallpaperBackdropView extends View {
     private final WallpaperManager.OnColorsChangedListener mColorsChangedListener =
             (colors, which) -> {
                 mWallpaper = null;
+                clearWallpaperSnapshot();
                 invalidate();
                 if (mInvalidationTarget != null) mInvalidationTarget.invalidate();
             };
@@ -65,16 +73,19 @@ public final class WallpaperBackdropView extends View {
     }
 
     /**
-     * Applies the Android GPU blur to the locally drawn wallpaper and clips it to the dock shape.
-     * This does not sample another app's window or the live wallpaper surface.
+     * Applies the Android GPU blur to a stable bitmap-backed wallpaper view and clips it to the
+     * dock shape. On Android 13+, LiquidGlass samples this ordinary bitmap content and adds its
+     * refraction shader; this avoids trying to record Samsung's special wallpaper drawable.
      */
     public void configureGlassBlur(float blurRadiusPx, float cornerRadiusPx,
-            int insetLeft, int insetTop, int insetRight, int insetBottom) {
+            int insetLeft, int insetTop, int insetRight, int insetBottom,
+            boolean clipToDockShape) {
         mCornerRadiusPx = Math.max(0f, cornerRadiusPx);
         mInsetLeft = Math.max(0, insetLeft);
         mInsetTop = Math.max(0, insetTop);
         mInsetRight = Math.max(0, insetRight);
         mInsetBottom = Math.max(0, insetBottom);
+        setClipToOutline(clipToDockShape);
         if (Float.compare(mBlurRadiusPx, blurRadiusPx) != 0) {
             mBlurRadiusPx = Math.max(0f, blurRadiusPx);
             setRenderEffect(mBlurRadiusPx > 0f
@@ -160,6 +171,7 @@ public final class WallpaperBackdropView extends View {
 
         View root = getRootView();
         if (root == null || root.getWidth() <= 0 || root.getHeight() <= 0) return;
+        if (!ensureWallpaperSnapshot(root.getWidth(), root.getHeight())) return;
         getLocationInWindow(mViewLocation);
         root.getLocationInWindow(mRootLocation);
         int left = mViewLocation[0] - mRootLocation[0];
@@ -167,9 +179,42 @@ public final class WallpaperBackdropView extends View {
 
         int save = canvas.save();
         canvas.translate(-left, -top);
-        mWallpaper.setBounds(0, 0, root.getWidth(), root.getHeight());
-        mWallpaper.draw(canvas);
+        mSnapshotBounds.set(0, 0, root.getWidth(), root.getHeight());
+        canvas.drawBitmap(mWallpaperSnapshot, null, mSnapshotBounds, mSnapshotPaint);
         canvas.restoreToCount(save);
+    }
+
+    private boolean ensureWallpaperSnapshot(int width, int height) {
+        if (mWallpaperSnapshot != null
+                && mSnapshotBounds.right == width && mSnapshotBounds.bottom == height) {
+            return true;
+        }
+        clearWallpaperSnapshot();
+        float scale = Math.min(1f, Math.min(2048f / Math.max(width, height),
+                (float) Math.sqrt(3_200_000d / ((long) width * height))));
+        int bitmapWidth = Math.max(1, Math.round(width * scale));
+        int bitmapHeight = Math.max(1, Math.round(height * scale));
+        try {
+            mWallpaperSnapshot = Bitmap.createBitmap(
+                    bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+            mSnapshotCanvas.setBitmap(mWallpaperSnapshot);
+            mWallpaper.setBounds(0, 0, bitmapWidth, bitmapHeight);
+            mWallpaper.draw(mSnapshotCanvas);
+            mSnapshotBounds.set(0, 0, width, height);
+            return true;
+        } catch (OutOfMemoryError | RuntimeException | LinkageError unavailable) {
+            clearWallpaperSnapshot();
+            return false;
+        }
+    }
+
+    private void clearWallpaperSnapshot() {
+        mSnapshotCanvas.setBitmap(null);
+        if (mWallpaperSnapshot != null && !mWallpaperSnapshot.isRecycled()) {
+            mWallpaperSnapshot.recycle();
+        }
+        mWallpaperSnapshot = null;
+        mSnapshotBounds.setEmpty();
     }
 
     @Override
