@@ -17,6 +17,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewOutlineProvider;
 
@@ -30,6 +31,7 @@ import androidx.annotation.Nullable;
  * dock renderer gets standard bitmap content without capturing app icons or allocating per frame.
  */
 public final class WallpaperBackdropView extends View {
+    private static final String TAG = "WallpaperBackdrop";
 
     private final WallpaperManager mWallpaperManager;
     private final Handler mMainHandler = new Handler(Looper.getMainLooper());
@@ -40,6 +42,7 @@ public final class WallpaperBackdropView extends View {
     private final Rect mSnapshotBounds = new Rect();
     private @Nullable View mInvalidationTarget;
     private boolean mListenerRegistered;
+    private boolean mLoggedSnapshot;
     private float mBlurRadiusPx;
     private float mCornerRadiusPx;
     private int mInsetLeft;
@@ -59,6 +62,7 @@ public final class WallpaperBackdropView extends View {
     private final WallpaperManager.OnColorsChangedListener mColorsChangedListener =
             (colors, which) -> {
                 mWallpaper = null;
+                mLoggedSnapshot = false;
                 clearWallpaperSnapshot();
                 invalidate();
                 if (mInvalidationTarget != null) mInvalidationTarget.invalidate();
@@ -113,6 +117,7 @@ public final class WallpaperBackdropView extends View {
         super.onAttachedToWindow();
         updateWallpaperListener();
         mWallpaper = null;
+        mLoggedSnapshot = false;
         invalidate();
     }
 
@@ -123,6 +128,7 @@ public final class WallpaperBackdropView extends View {
             updateWallpaperListener();
             if (visibility == VISIBLE) {
                 mWallpaper = null;
+                mLoggedSnapshot = false;
                 invalidate();
             }
         }
@@ -201,6 +207,18 @@ public final class WallpaperBackdropView extends View {
             mWallpaper.setBounds(0, 0, bitmapWidth, bitmapHeight);
             mWallpaper.draw(mSnapshotCanvas);
             mSnapshotBounds.set(0, 0, width, height);
+            if (!mLoggedSnapshot) {
+                int c1 = mWallpaperSnapshot.getPixel(bitmapWidth / 4, bitmapHeight / 4);
+                int c2 = mWallpaperSnapshot.getPixel(bitmapWidth / 2, bitmapHeight / 2);
+                int c3 = mWallpaperSnapshot.getPixel(bitmapWidth / 2, bitmapHeight * 3 / 4);
+                int c4 = mWallpaperSnapshot.getPixel(bitmapWidth / 2, bitmapHeight * 9 / 10);
+                Log.d(TAG, "snapshot drawable=" + mWallpaper.getClass().getName()
+                        + " bitmap=" + bitmapWidth + "x" + bitmapHeight
+                        + " samples=" + Integer.toHexString(c1) + ","
+                        + Integer.toHexString(c2) + "," + Integer.toHexString(c3) + ","
+                        + Integer.toHexString(c4));
+                mLoggedSnapshot = true;
+            }
             return true;
         } catch (OutOfMemoryError | RuntimeException | LinkageError unavailable) {
             clearWallpaperSnapshot();
