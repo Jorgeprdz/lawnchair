@@ -7,10 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-env:
-  ONEUI_APPLICATION_ID: app.lawnchair.oneui
+  contents: read
 
 jobs:
   build-oneui-debug:
@@ -20,57 +17,12 @@ jobs:
         with:
           submodules: true
 
-      - name: Normalize M8A source guards
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path('src/com/android/launcher3/Hotseat.java')
-          s = p.read_text()
-          old = '        layoutGlassSurface(width, height);'
-          new = '        layoutGlassSurface(widthSize, heightSize);'
-          if old in s:
-              p.write_text(s.replace(old, new, 1))
-          PY
-
-          if ! git diff --quiet -- src/com/android/launcher3/Hotseat.java; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/com/android/launcher3/Hotseat.java
-            git commit -m "[M8A] fix hotseat glass measure layout"
-            git push origin HEAD:feature/oneui-next || true
-          fi
-
       - uses: actions/setup-java@v6
         with:
           distribution: zulu
           java-version: 21
 
       - uses: gradle/actions/setup-gradle@v6
-
-      - name: Make this build install separately
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path('build.gradle')
-          s = p.read_text()
-
-          old_id = "applicationId 'app.lawnchair'"
-          new_id = "applicationId 'app.lawnchair.oneui'"
-          if old_id not in s:
-              raise SystemExit('Expected Github flavor applicationId was not found')
-          s = s.replace(old_id, new_id, 1)
-
-          old_name = 'resValue("string", "derived_app_name", "Lawnchair (Debug)")'
-          new_name = 'resValue("string", "derived_app_name", "Lawnchair OneUI")'
-          if old_name not in s:
-              raise SystemExit('Expected debug app name was not found')
-          s = s.replace(old_name, new_name, 1)
-
-          p.write_text(s)
-          PY
 
       - name: Restore stable signing key
         env:
@@ -94,13 +46,16 @@ jobs:
           storeFile=$GITHUB_WORKSPACE/oneui-stable.jks
           EOF
 
-      - name: Build separate OneUI APK
-        run: ./gradlew assembleLawnWithQuickstepGithubDebug
+      - name: Test themed icon state and glass behavior
+        run: ./gradlew testLawnWithQuickstepGithubDebugUnitTest --no-daemon
+
+      - name: Build OneUI debug and instrumentation APKs
+        run: ./gradlew assembleLawnWithQuickstepGithubDebug assembleLawnWithQuickstepGithubDebugAndroidTest --no-daemon
 
       - name: Verify package and signing certificate
         run: |
           set -euo pipefail
-          APK="$(find build/outputs/apk -type f -name '*.apk' | head -n1)"
+          APK="$(find build/outputs/apk -type f -name '*.apk' ! -path '*androidTest*' | head -n1)"
           if [ -z "$APK" ]; then
             echo "APK not found"
             exit 1
@@ -109,13 +64,20 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n1)"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
 
-          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.oneui.debug'"
+          "$AAPT" dump badging "$APK" | grep "package: name='app.lawnchair.debug'"
           "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/oneui-cert.txt
           grep -Fi 'b19449e782c304983e6a1686bae0089f25c62d33e8ed1be10931f12eb7a82eca' /tmp/oneui-cert.txt
+
+      - name: Stage installable APK
+        run: |
+          set -euo pipefail
+          APK="$(find build/outputs/apk -type f -name '*.apk' ! -path '*androidTest*' | head -n1)"
+          mkdir -p oneui-artifact
+          cp "$APK" oneui-artifact/Lawnchair-OneUI-Next-Nightly.apk
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v7
         with:
-          name: Lawnchair-OneUI-Separate-Debug
-          path: build/outputs/apk/**/*.apk
+          name: Lawnchair-OneUI-Next-Nightly
+          path: oneui-artifact/Lawnchair-OneUI-Next-Nightly.apk
           if-no-files-found: error
