@@ -2699,6 +2699,7 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
         }
     }
 
+    /** LC-Note: isDragWidget() being unused is intended to make placing widget on dock possible */
     private boolean isDragWidget(DragObject d) {
         return (d.dragInfo instanceof LauncherAppWidgetInfo ||
                 d.dragInfo instanceof com.android.launcher3.model.data.WidgetStackInfo ||
@@ -2925,6 +2926,8 @@ public class Workspace<T extends View & PageIndicator> extends PagedView<T>
                 || mLauncher.getHotseat().getShortcutsAndWidgets() == null
                 || isDragWidget(dragObject)
                 || com.android.launcher3.util.WorkspaceItemSize.isMax(dragObject.dragInfo)) {
+            // OneUI widget stacks and Max items remain workspace-only because their
+            // persistence and layout contracts differ from ordinary hotseat shortcuts.
             return false;
         }
         View hotseatIcons = mLauncher.getHotseat().getPagedView();
