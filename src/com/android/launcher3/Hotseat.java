@@ -441,7 +441,7 @@ public class Hotseat extends FrameLayout implements Insettable {
         glass.setRefractionNoFold(false);
         glass.setRefractionFalloff(0f);
         glass.setEdgeSoftness(3f * density);
-        glass.setGlassTint(resolveLiquidGlassTint(dark), strength * (frosty ? 0.18f : 0.10f));
+        glass.setGlassTint(resolveLiquidGlassTint(dark), strength * 0.10f);
     }
 
     private int resolveLiquidGlassTint(boolean dark) {
