@@ -89,7 +89,7 @@ public class OneUiGlassStyleTest {
         OneUiGlassProfile profile = OneUiGlassProfile.create(
                 OneUiGlassStyle.FROSTY, 35, false);
 
-        assertEquals(profile.hazeAlpha, OneUiGlassProfile.frostyFolderHazeAlpha(profile));
+        assertEquals(profile.hazeAlpha + 22, OneUiGlassProfile.frostyFolderHazeAlpha(profile));
         assertEquals(23, profile.hazeAlpha);
     }
 

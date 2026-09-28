@@ -63,8 +63,8 @@ public final class OneUiGlassProfile {
     }
 
     static int frostyFolderHazeAlpha(OneUiGlassProfile profile) {
-        // Keep the folder's second haze layer close to the material profile. A large extra veil
-        // compounded with the open-folder tint and made the wallpaper look like an opaque sheet.
-        return profile.hazeAlpha;
+        // The source is the wallpaper snapshot; this extra diffusion masks launcher content
+        // beneath the folder while staying well below the old near-opaque double haze.
+        return Math.min(255, profile.hazeAlpha + 22);
     }
 }

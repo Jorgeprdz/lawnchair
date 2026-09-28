@@ -62,7 +62,8 @@ public class OneUiGlassProfileTest {
 
         int lightHaze = OneUiGlassProfile.frostyFolderHazeAlpha(light);
         int darkHaze = OneUiGlassProfile.frostyFolderHazeAlpha(dark);
-        assertTrue("Light Frosty keeps a soft diffusion layer", lightHaze >= 30 && lightHaze < 40);
-        assertTrue("Dark Frosty keeps the wallpaper visible", darkHaze >= 20 && darkHaze < 30);
+        assertTrue("Light Frosty keeps diffusion without an opaque panel",
+                lightHaze >= 50 && lightHaze < 60);
+        assertTrue("Dark Frosty keeps launcher content muted", darkHaze >= 40 && darkHaze < 50);
     }
 }
