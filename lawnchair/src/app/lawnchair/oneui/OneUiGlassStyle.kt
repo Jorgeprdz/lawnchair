@@ -69,6 +69,15 @@ object OneUiGlassStyle {
         }
     }
 
+    /** Glass-folder tint keeps the selected color's brightness without a strong color cast. */
+    @JvmStatic
+    fun neutralizeGlassTint(color: Int): Int {
+        val gray = (0.2126f * ((color shr 16) and 0xff)
+                + 0.7152f * ((color shr 8) and 0xff)
+                + 0.0722f * (color and 0xff)).toInt().coerceIn(0, 255)
+        return (color and -0x1000000) or (gray shl 16) or (gray shl 8) or gray
+    }
+
     /** Folder Liquid Glass avoids chromatic splitting, which reads as oily color fringing. */
     @JvmStatic
     fun folderDispersion(): Float = 0f

@@ -83,8 +83,9 @@ public class OneUiFolder extends Folder {
 
         if (OneUiGlassStyle.isGlass(mode)) {
             int baseColor = LawnchairUtilsKt.resolveFolderBackgroundColor(getContext());
+            int glassTint = OneUiGlassStyle.neutralizeGlassTint(baseColor);
             int glassColor = Color.argb(solidAlpha,
-                    Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor));
+                    Color.red(glassTint), Color.green(glassTint), Color.blue(glassTint));
             float corners = getResources().getDimension(R.dimen.bg_round_rect_radius);
             int intensity = OneUiGlassPreferences.getFolderIntensity(getContext(), mode);
             int nightMode = getResources().getConfiguration().uiMode
@@ -104,7 +105,7 @@ public class OneUiFolder extends Folder {
                 if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
                 mFrostyBackdrop.draw(canvas);
                 canvas.restoreToCount(backdropSave);
-                drawOpenFolderVeil(canvas, baseColor, mode, intensity);
+                drawOpenFolderVeil(canvas, glassTint, mode, intensity);
                 resetBackdropLayout();
                 // It was drawn above with the folder's animation clip; suppress the normal child
                 // pass to avoid drawing the full-screen wallpaper twice.
@@ -142,7 +143,7 @@ public class OneUiFolder extends Folder {
             if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
             mGlass.draw(canvas);
             canvas.restoreToCount(save);
-            drawOpenFolderVeil(canvas, baseColor, mode, intensity);
+            drawOpenFolderVeil(canvas, glassTint, mode, intensity);
         } else {
             if (mFrostyBackdrop != null) {
                 mFrostyBackdrop.clearGlass();

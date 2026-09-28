@@ -4,6 +4,8 @@
  */
 package com.android.launcher3.graphics;
 
+import android.graphics.Color;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -83,6 +85,15 @@ public class OneUiGlassStyleTest {
                 frosty > liquid && frosty <= 110);
         assertEquals("Crystal keeps its own renderer without an extra veil", 0,
                 OneUiGlassStyle.openFolderVeilAlpha(OneUiGlassStyle.CRYSTAL, 35));
+    }
+
+    @Test
+    public void glassFolderTintPreservesBrightnessWithoutWallpaperHueCast() {
+        int tint = OneUiGlassStyle.neutralizeGlassTint(0xffc9f28f);
+        assertEquals(Color.red(tint), Color.green(tint));
+        assertEquals(Color.green(tint), Color.blue(tint));
+        assertTrue(Color.red(tint) > 0 && Color.red(tint) < 255);
+        assertEquals(0xff, Color.alpha(tint));
     }
 
     @Test
