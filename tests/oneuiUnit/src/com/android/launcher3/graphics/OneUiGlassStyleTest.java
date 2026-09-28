@@ -45,10 +45,10 @@ public class OneUiGlassStyleTest {
 
     @Test
     public void folderLiquidGlassKeepsWallpaperDetailWithoutChromaticFringing() {
-        assertEquals(0.06f, OneUiGlassStyle.folderRefractionScale(
+        assertEquals(0.12f, OneUiGlassStyle.folderRefractionScale(
                 OneUiGlassStyle.LIQUID_GLASS), 0.001f);
         assertEquals(0f, OneUiGlassStyle.folderDispersion(), 0.001f);
-        assertTrue("Liquid folders keep a restrained optical refraction",
+        assertFalse("Large Liquid folders use the smooth GPU-blurred backdrop",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.LIQUID_GLASS));
         assertFalse("Frosty folders use diffusion instead of the high-frequency lens shader",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.FROSTY));
