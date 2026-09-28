@@ -44,6 +44,15 @@ public class OneUiGlassStyleTest {
     }
 
     @Test
+    public void folderLiquidGlassKeepsSubtleRefractionWithoutBurnedColorFringing() {
+        assertEquals(0.62f, OneUiGlassStyle.folderRefractionScale(
+                OneUiGlassStyle.LIQUID_GLASS), 0.001f);
+        assertEquals(0.08f, OneUiGlassStyle.folderDispersion(
+                OneUiGlassStyle.LIQUID_GLASS), 0.001f);
+        assertEquals(0f, OneUiGlassStyle.folderDispersion(OneUiGlassStyle.FROSTY), 0.001f);
+    }
+
+    @Test
     public void folderCanFollowDockOrKeepAnExplicitMaterial() {
         assertEquals(OneUiGlassStyle.LIQUID_GLASS,
                 OneUiGlassStyle.resolveFolderMode(OneUiGlassStyle.FOLDER_FOLLOW_DOCK,

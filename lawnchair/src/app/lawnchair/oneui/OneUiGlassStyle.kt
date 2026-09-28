@@ -37,6 +37,15 @@ object OneUiGlassStyle {
     @JvmStatic
     fun usesWallpaperOnlyFolderBackdrop(value: Int): Boolean = isGlass(value)
 
+    /** Keep folder Liquid Glass refractive, while limiting the RGB fringing that reads as burn. */
+    @JvmStatic
+    fun folderRefractionScale(value: Int): Float =
+        if (value == LIQUID_GLASS) 0.62f else 1f
+
+    @JvmStatic
+    fun folderDispersion(value: Int): Float =
+        if (value == LIQUID_GLASS) 0.08f else 0f
+
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
         normalize(if (folderMode == FOLDER_FOLLOW_DOCK) dockMode else folderMode)

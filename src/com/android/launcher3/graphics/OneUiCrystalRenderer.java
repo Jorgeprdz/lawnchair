@@ -479,11 +479,15 @@ final class OneUiCrystalRenderer extends Drawable {
             shader.setFloatUniform("capturePad", renderer.mCapturePad);
             shader.setFloatUniform("radius", renderer.mCornerRadius);
             shader.setFloatUniform("blurPx", renderer.mBlurPx);
-            shader.setFloatUniform("refractionPx", renderer.mRefractionPx);
+            float folderRefractionScale = renderer.mWallpaperOnlyFolderBackdrop
+                    ? OneUiGlassStyle.folderRefractionScale(renderer.mStyle) : 1f;
+            shader.setFloatUniform("refractionPx",
+                    renderer.mRefractionPx * folderRefractionScale);
             shader.setFloatUniform("depth", renderer.mDepthPx);
             shader.setFloatUniform("specular", renderer.mSpecular);
-            shader.setFloatUniform("dispersion",
-                    renderer.mStyle == OneUiGlassStyle.LIQUID_GLASS ? 0.58f : 0.40f);
+            shader.setFloatUniform("dispersion", renderer.mWallpaperOnlyFolderBackdrop
+                    ? OneUiGlassStyle.folderDispersion(renderer.mStyle)
+                    : (renderer.mStyle == OneUiGlassStyle.LIQUID_GLASS ? 0.58f : 0.40f));
 
             float tintAlpha = (0.05f + 0.13f * renderer.mStrength) * Color.alpha(renderer.mColor) / 255f;
             shader.setFloatUniform("tint",
