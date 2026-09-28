@@ -8,12 +8,14 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.os.Build;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 
 /** Wallpaper-backed Frosty material shared by open and closed folder surfaces. */
 public final class OneUiFrostedBackdropView extends FrameLayout {
+    private static final String TAG = "OneUiFolderBackdrop";
     private final WallpaperBackdropView mBackdrop;
     private int mColor = Integer.MIN_VALUE;
     private int mIntensity = Integer.MIN_VALUE;
@@ -100,6 +102,7 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
 
     /** Re-records the wallpaper crop after the folder icon moves between workspace pages. */
     public void refreshBackdropPosition() {
+        Log.d(TAG, "refreshing wallpaper crop after folder page movement");
         mBackdrop.invalidate();
         invalidate();
     }

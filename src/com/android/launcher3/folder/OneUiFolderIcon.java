@@ -10,6 +10,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 
@@ -22,6 +23,7 @@ import app.lawnchair.oneui.OneUiGlassStyle;
 
 /** FolderIcon wrapper with a blur surface bounded to the preview instead of the whole icon cell. */
 public class OneUiFolderIcon extends FolderIcon {
+    private static final String TAG = "OneUiFolderBackdrop";
     private static final long BACKDROP_POSITION_REFRESH_DELAY_MS = 120;
 
     private View mGlassSurface;
@@ -169,6 +171,7 @@ public class OneUiFolderIcon extends FolderIcon {
         int y = mWindowLocation[1];
         if (x == mLastWindowX && y == mLastWindowY) return;
 
+        Log.d(TAG, "folder moved " + mLastWindowX + "," + mLastWindowY + " -> " + x + "," + y);
         mLastWindowX = x;
         mLastWindowY = y;
         removeCallbacks(mRefreshBackdropPosition);
