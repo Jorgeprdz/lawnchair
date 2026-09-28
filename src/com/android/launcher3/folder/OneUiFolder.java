@@ -51,6 +51,18 @@ public class OneUiFolder extends Folder {
     }
 
     @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        if (mFrostyBackdrop != null) {
+            // layoutSurface() temporarily measures the backdrop to the folder's full bounds for
+            // manual drawing. Restore its zero-size LinearLayout measurement before layout so it
+            // cannot push FolderPagedView or the footer out of the visible folder bounds.
+            int zero = MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY);
+            mFrostyBackdrop.measure(zero, zero);
+        }
+    }
+
+    @Override
     public void setClipPath(Path clipPath) {
         mOneUiClipPath = clipPath;
         super.setClipPath(clipPath);
