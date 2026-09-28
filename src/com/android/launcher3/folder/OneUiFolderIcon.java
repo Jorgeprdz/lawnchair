@@ -22,6 +22,8 @@ import app.lawnchair.oneui.OneUiGlassStyle;
 
 /** FolderIcon wrapper with a blur surface bounded to the preview instead of the whole icon cell. */
 public class OneUiFolderIcon extends FolderIcon {
+    private static final long BACKDROP_POSITION_REFRESH_DELAY_MS = 120;
+
     private View mGlassSurface;
     private boolean mNativeGlassActive;
     private int mLastMode = Integer.MIN_VALUE;
@@ -30,6 +32,14 @@ public class OneUiFolderIcon extends FolderIcon {
     private int mLastNightMode = Integer.MIN_VALUE;
     private float mLastCorner = Float.NaN;
     private boolean mLastNative;
+    private final int[] mWindowLocation = new int[2];
+    private int mLastWindowX = Integer.MIN_VALUE;
+    private int mLastWindowY = Integer.MIN_VALUE;
+    private final Runnable mRefreshBackdropPosition = () -> {
+        if (mGlassSurface instanceof OneUiFrostedBackdropView frostedBackdrop) {
+            frostedBackdrop.refreshBackdropPosition();
+        }
+    };
 
     public OneUiFolderIcon(Context context) {
         super(context);
@@ -113,6 +123,7 @@ public class OneUiFolderIcon extends FolderIcon {
                 & Configuration.UI_MODE_NIGHT_MASK;
         boolean wallpaperBackdrop = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 && OneUiGlassStyle.usesWallpaperSnapshotForFolder(mode);
+        if (wallpaperBackdrop) refreshBackdropPositionAfterMove();
         boolean nativeBlur;
         if (wallpaperBackdrop) {
             SamsungGlassBlur.clear(mGlassSurface);
@@ -147,8 +158,28 @@ public class OneUiFolderIcon extends FolderIcon {
         mGlassSurface.setVisibility(VISIBLE);
     }
 
+    /**
+     * WallpaperBackdropView maps the root wallpaper into its own display list using its window
+     * position. Workspace paging moves FolderIcon through parent transforms without changing the
+     * surface size, so refresh that display list once after the page transition settles.
+     */
+    private void refreshBackdropPositionAfterMove() {
+        getLocationInWindow(mWindowLocation);
+        int x = mWindowLocation[0];
+        int y = mWindowLocation[1];
+        if (x == mLastWindowX && y == mLastWindowY) return;
+
+        mLastWindowX = x;
+        mLastWindowY = y;
+        removeCallbacks(mRefreshBackdropPosition);
+        postDelayed(mRefreshBackdropPosition, BACKDROP_POSITION_REFRESH_DELAY_MS);
+    }
+
     @Override
     protected void onDetachedFromWindow() {
+        removeCallbacks(mRefreshBackdropPosition);
+        mLastWindowX = Integer.MIN_VALUE;
+        mLastWindowY = Integer.MIN_VALUE;
         if (mGlassSurface != null) SamsungGlassBlur.clear(mGlassSurface);
         super.onDetachedFromWindow();
     }

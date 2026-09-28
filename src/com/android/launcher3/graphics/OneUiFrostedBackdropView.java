@@ -97,4 +97,10 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
         mNightMode = Integer.MIN_VALUE;
         mCornerRadius = Float.NaN;
     }
+
+    /** Re-records the wallpaper crop after the folder icon moves between workspace pages. */
+    public void refreshBackdropPosition() {
+        mBackdrop.invalidate();
+        invalidate();
+    }
 }
