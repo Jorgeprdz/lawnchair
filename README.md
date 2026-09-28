@@ -1,121 +1,91 @@
-# Lawnchair 16
+<div align="center">
+  <img src="docs/assets/lawnchair-round.webp" width="92" alt="Icono de Lawnchair" />
+  <h1>Lawnchair One UI Next</h1>
+  <h2>Tu Android. Tu estilo. Tu pantalla de inicio.</h2>
+  <p><strong>Una experiencia inspirada en One UI, con la libertad de personalizar cada detalle.</strong></p>
+  <p>Carpetas amplias, pilas de widgets, iconos a tu gusto y un dock que se adapta a tu fondo. Todo sobre la base abierta de Lawnchair.</p>
+  <p>
+    <a href="https://github.com/Jorgeprdz/lawnchair/releases/tag/oneui-next-2026.09.28"><img alt="Descargar APK de prueba" src="https://img.shields.io/badge/↓%20DESCARGAR%20APK-6C5CE7?style=for-the-badge&labelColor=15151B"></a>
+    &nbsp;
+    <a href="https://github.com/Jorgeprdz/lawnchair/releases/tag/oneui-next-2026.09.28"><img alt="Ver capturas y notas" src="https://img.shields.io/badge/VER%20CAPTURAS%20Y%20CAMBIOS-22232A?style=for-the-badge"></a>
+  </p>
+  <p>
+    <a href="https://github.com/Jorgeprdz/lawnchair/actions/workflows/oneui-build.yml?query=branch%3Afeature%2Foneui-next"><img alt="Build One UI Next" src="https://github.com/Jorgeprdz/lawnchair/actions/workflows/oneui-build.yml/badge.svg?branch=feature%2Foneui-next"></a>
+    <a href="LICENSE.txt"><img alt="Licencia Apache 2.0" src="https://img.shields.io/badge/licencia-Apache--2.0-blue.svg"></a>
+    <img alt="Android 8.0 o superior" src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white">
+  </p>
+</div>
 
-[![Build debug APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/ci.yml)
-[![Build release APK](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml/badge.svg)](https://github.com/LawnchairLauncher/lawnchair/actions/workflows/release_update.yml)
-[![Crowdin](https://badges.crowdin.net/e/188ba69d884418987f0b7f1dd55e3a4e/localized.svg)](https://lawnchair.crowdin.com/lawnchair)
-[![OpenCollective](https://img.shields.io/opencollective/all/lawnchair?label=financial%20contributors&logo=open-collective)](https://opencollective.com/lawnchair)
-[![Telegram](https://img.shields.io/endpoint?url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Flccommunity)](https://t.me/lccommunity)
-[![Discord](https://img.shields.io/discord/803299970169700402?label=server&logo=discord)](https://discord.gg/3x8qNWxgGZ)
-[![GitHub Downloads](https://img.shields.io/github/downloads/LawnchairLauncher/lawnchair/total.svg?label=GitHub%20Downloads&logo=github)](https://github.com/LawnchairLauncher/lawnchair/releases)
-[![Play Store Installs](https://img.shields.io/endpoint?color=green&logo=googleplay&logoColor=green&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Dapp.lawnchair.play%26l%3DPlay%2520Store%2520Installs%26m%3D%24shortinstalls)](https://play.google.com/store/apps/details?id=app.lawnchair.play)
-
-> [!WARNING]
-> This branch contains major changes from the rebase of Launcher3, including changes that can cause
-> Lawnchair to crash or break.
->
-> For regular users, we recommend staying on *Lawnchair 15 Beta 3*.
-
-<picture>
-    <!-- Avoid image being clickable with slight workaround -->
-    <!-- ❤️ Credit to simonppt for the current mockup on Unsplash 
-            https://unsplash.com/photos/a-white-flower-with-green-leaves-on-a-white-background-ojBNiaeykwc
-    -->
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/device-frame.webp" width="250px">
-    <img alt="A device running Lawnchair Launcher with green flower wallpaper" src="docs/assets/device-frame.webp" width="250px">
-</picture>
-
-Lawnchair is a free, open-source home app for Android. Taking Launcher3—Android’s default home app—as a starting point, it ports Pixel Launcher features and introduces rich customization options.
-
-This branch houses the codebase of Lawnchair 16, which is currently in development and is based on Launcher3 from Android 16. For Lawnchair 9 to 15, see the branches with the `9-` to `15-` prefixes, respectively.
-
-## Features
-
-- Material 3 Expressive theming that follows your wallpaper and system colors.
-- At a Glance widget support, with integration for [Smartspacer](https://github.com/KieronQuinn/Smartspacer).
-- QuickSwitch support for Android Recents integration on Android 10-15 (root required).
-- Global search for apps, contacts, and web results from the home screen.
-- Customization options for icon packs, fonts, and color settings.
-
-## Download
-
-<p align="left">
-  <a href="https://play.google.com/store/apps/details?id=app.lawnchair.play">
-    <picture>
-      <!-- Avoid image being clickable with slight workaround -->
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-google-play.webp" height="60">
-      <img alt="Get it on Google Play" src="docs/assets/badge-google-play.webp" height="60">
-    </picture>
-  </a>
-  <a href="https://apt.izzysoft.de/fdroid/index/apk/app.lawnchair">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-izzyondroid.webp" height="60">
-      <img alt="Get it on IzzyOnDroid" src="docs/assets/badge-izzyondroid.webp" height="60">
-    </picture>
-  </a>
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/LawnchairLauncher/lawnchair/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-obtainium.webp" height="60">
-      <img alt="Get it on Obtainium" src="docs/assets/badge-obtainium.webp" height="60">
-    </picture>
-  </a>
-    <a href="https://github.com/LawnchairLauncher/lawnchair/releases">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/badge-github.webp" height="60">
-      <img alt="Get it on GitHub" src="docs/assets/badge-github.webp" height="60">
-    </picture>
-  </a>
+<p align="center">
+  <a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/01-s25-home-large-folder-frosty-dock.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/01-s25-home-large-folder-frosty-dock.png" width="245" alt="Escritorio de Lawnchair One UI Next con carpeta grande y dock Frosty"></a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/02-s25-open-folder-icons.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/02-s25-open-folder-icons.png" width="245" alt="Carpeta abierta con aplicaciones visibles"></a>
 </p>
+<p align="center"><em>Capturas reales en Galaxy S25 · toca una imagen para verla completa</em></p>
 
-Lawnchair on Play Store will install as a different app compared to other sources. Features may be restricted to comply with Google Play’s publishing rules.
+---
 
-You can also [verify your installation](https://docs.lawnchair.app/getting-started/install-and-setup/verify) to check if you have installed an official build.
+## Una pantalla que se siente tuya
 
-### Development builds
+Lawnchair One UI Next parte del launcher abierto Launcher3 y lo lleva hacia una experiencia más personal: diseña tu escritorio, organiza mejor tus aplicaciones y combina tus widgets con un dock hecho a tu medida.
 
-Interested in keeping yourself up-to-date with every Lawnchair development? Try our development builds!
+### ✦ Ordena a tu manera
 
-These builds offer the latest features and bug fixes at a cost of performance and additional issues. Make backups before installing.
+- **Carpetas grandes:** muestra hasta nueve apps de un vistazo y elige la forma que mejor encaja con tu escritorio.
+- **Iconos grandes:** dale protagonismo a tus aplicaciones favoritas sin cambiar toda la cuadrícula.
+- **Cuadrícula flexible:** organiza los elementos con más control y ajusta el espacio de tus widgets.
 
-Download: [Obtainium][Obtainium link] • [GitHub][GitHub link] • [nightly.link][Nightly link]
+### ✦ Haz más con tus widgets
 
-## Sponsors
+- **Redimensiona widgets:** cambia ancho y alto para aprovechar cada espacio.
+- **Crea pilas:** reúne varios widgets en un mismo lugar, cambia de página y edita la pila desde Lawnchair.
+- **Conserva tu diseño:** los controles de cuadrícula ayudan a mantener una distribución ordenada al ajustar tamaños.
 
-<p align="left">
-  <a href="https://coderabbit.link/lawnchair">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sponsor-coderabbit-dark.svg" width="300">
-      <img alt="CodeRabbit" src="docs/assets/sponsor-coderabbit-light.svg" width="300">
-    </picture>
-  </a>
-</p>
+### ✦ Dale carácter al dock y a las carpetas
 
-[CodeRabbit](https://coderabbit.link/lawnchair) is an AI-powered code review platform that integrates directly into pull-request workflows and IDEs, examining code changes in context and suggesting improvements.
+- **Cinco apariencias para el dock:** Off, Solid, Liquid Glass, Crystal y Frosty.
+- **Ajusta el acabado:** regula la intensidad y el radio de las esquinas.
+- **Elige cómo se ven tus carpetas:** usa un fondo propio o haz que sigan el estilo del dock.
+- **Liquid Glass en el dock:** refracción y luz sobre el fondo de pantalla. La carpeta Liquid Glass sigue en ajuste visual y no se presenta como terminada.
+- **Frosty:** difusión suave para una apariencia de vidrio esmerilado.
 
-## Support Lawnchair
+### ✦ Personaliza los iconos y los gestos
 
-If you love what we do, consider [supporting us on Open Collective](https://opencollective.com/lawnchair)! Your contributions help keep Lawnchair independent and enable us to develop faster.
+- Usa **paquetes de iconos**, iconos temáticos y opciones de escala.
+- La rama incorpora refresco de los iconos temáticos al alternar entre **modo claro y oscuro**.
+- En Samsung con **Finder** disponible, configura un gesto para abrir la búsqueda de Samsung desde el escritorio.
+- Conserva los colores dinámicos que Android obtiene del wallpaper.
 
-A huge thank you to our Core Backers ($5+):
-*(These backers directly fund our Project Velocity Fund)*
+## Mira las funciones
 
-[![Core Backers](https://opencollective.com/lawnchair/tiers/backer.svg?avatarHeight=64&width=890&button=false)](https://opencollective.com/lawnchair)
+Las imágenes se tomaron del launcher en uso. El release reúne la colección completa en un ZIP.
 
-[Become a supporter](https://opencollective.com/lawnchair) to help us cover our operational costs, or become a Core Backer to be featured here!
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/03-s25-widgets-and-large-icon.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/03-s25-widgets-and-large-icon.png" width="190" alt="Widgets e icono grande en el escritorio"></a><br><strong>Widgets + iconos grandes</strong></td>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/04-s25-samsung-finder-gesture.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/04-s25-samsung-finder-gesture.png" width="190" alt="Samsung Finder abierto desde un gesto"></a><br><strong>Samsung Finder</strong></td>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/08-widget-stack-editor.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/08-widget-stack-editor.png" width="190" alt="Editor de pilas de widgets"></a><br><strong>Pilas de widgets</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/05-widget-grid.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/05-widget-grid.png" width="190" alt="Cuadrícula y ubicación de widgets"></a><br><strong>Cuadrícula</strong></td>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/10-large-folder-nine-app-preview.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/10-large-folder-nine-app-preview.png" width="190" alt="Carpeta grande con nueve aplicaciones"></a><br><strong>Carpetas grandes</strong></td>
+    <td align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/15-dock-frosty-s25.png"><img src="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/15-dock-frosty-s25.png" width="190" alt="Dock Frosty en Galaxy S25"></a><br><strong>Dock Frosty</strong></td>
+  </tr>
+</table>
 
-## Contribute
+<p align="center"><a href="https://github.com/Jorgeprdz/lawnchair/releases/download/oneui-next-2026.09.28/Lawnchair-OneUI-Next-Screenshots-2026-09-28.zip"><strong>↓ Descargar las 16 capturas del release</strong></a></p>
 
-Visit the [Lawnchair contributing guidelines](CONTRIBUTING.md) for information and tips on contributing to Lawnchair.
+## Instálalo en unos pasos
 
-## Quick links
+1. **Descarga el APK** desde [Releases](https://github.com/Jorgeprdz/lawnchair/releases/tag/oneui-next-2026.09.28).
+2. Abre el archivo y permite la instalación desde esa fuente si Android lo solicita.
+3. Elige Lawnchair como tu aplicación de inicio.
+4. Mantén pulsado el escritorio o abre **Ajustes de Lawnchair** para empezar a personalizar.
 
-- [Website](https://lawnchair.app)
-- [Documentation](https://docs.lawnchair.app/)
-- [News on Telegram](https://t.me/lawnchairci)
-- [Discord](https://discord.com/invite/3x8qNWxgGZ)
-- [X (formerly Twitter)](https://x.com/lawnchairapp)
-- [_XDA_ thread](https://xdaforums.com/t/lawnchair-customizable-pixel-launcher.3627137/)
+> **Build comunitaria de prueba.** No es la versión oficial de Lawnchair ni está publicada en Google Play. Haz una copia de seguridad de tus ajustes antes de instalar. Las funciones de Samsung requieren sus aplicaciones correspondientes. Los estilos Liquid Glass, Crystal y Frosty se dibujan dentro del launcher; no modifican SystemUI ni necesitan root.
 
-<!-- Download links -->
-[Nightly link]: https://nightly.link/LawnchairLauncher/lawnchair/workflows/ci/15-dev
-[Obtainium link]: https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22app.lawnchair.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Flawnchairlauncher%2Flawnchair%22%2C%22author%22%3A%22Lawnchair%20Launcher%22%2C%22name%22%3A%22Lawnchair%20(Debug)%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22Lawnchair%20Nightly%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22dontSortReleasesList%5C%22%3Afalse%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Afalse%2C%5C%22releaseDateAsVersion%5C%22%3Atrue%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22Lawnchair%20is%20a%20free%2C%20open-source%20home%20app%20for%20Android.%20(NOTE%3A%20This%20is%20the%20debug%20version%20of%20Lawnchair%2C%20for%20the%20beta%2Fstable%20versions%20see%20%5C%5C%5C%22Lawnchair%5C%5C%5C%22)%5C%22%7D%22%7D
-[GitHub link]: https://github.com/LawnchairLauncher/lawnchair/releases/tag/nightly
+## Hecho en abierto
+
+Esta personalización vive en [`feature/oneui-next`](https://github.com/Jorgeprdz/lawnchair/tree/feature/oneui-next) y se construye con GitHub Actions. Cada release enlaza el código, el resultado de compilación y los datos necesarios para verificar el APK.
+
+Lawnchair es un proyecto comunitario de código abierto basado en Launcher3. **One UI Next es una personalización independiente y no una publicación oficial de Lawnchair Launcher.** Consulta la [licencia Apache 2.0](LICENSE.txt), [abre un issue](https://github.com/Jorgeprdz/lawnchair/issues) o revisa el [código fuente](https://github.com/Jorgeprdz/lawnchair/tree/feature/oneui-next).
