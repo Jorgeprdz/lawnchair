@@ -63,8 +63,8 @@ object OneUiGlassStyle {
     fun openFolderVeilAlpha(value: Int, intensityPercent: Int): Int {
         val strength = intensityPercent.coerceIn(0, 100) / 100f
         return when (value) {
-            LIQUID_GLASS -> (52f + 20f * strength).toInt()
-            FROSTY -> (78f + 25f * strength).toInt()
+            LIQUID_GLASS -> (88f + 18f * strength).toInt()
+            FROSTY -> (148f + 22f * strength).toInt()
             else -> 0
         }
     }
