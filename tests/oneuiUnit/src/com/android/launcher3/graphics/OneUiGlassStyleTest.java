@@ -48,9 +48,9 @@ public class OneUiGlassStyleTest {
         assertEquals(0.34f, OneUiGlassStyle.folderRefractionScale(
                 OneUiGlassStyle.LIQUID_GLASS), 0.001f);
         assertEquals(0f, OneUiGlassStyle.folderDispersion(), 0.001f);
-        assertTrue("Large folder Liquid Glass uses the corrected SDF edge lens",
+        assertFalse("Large Liquid Glass folders use the stable GPU-blurred backdrop",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.LIQUID_GLASS));
-        assertTrue("Frosty folders need the GPU backdrop blur profile",
+        assertFalse("Frosty folders use diffusion instead of the high-frequency lens shader",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.FROSTY));
         assertTrue("Crystal keeps its existing optical shader in folders",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.CRYSTAL));

@@ -48,11 +48,11 @@ object OneUiGlassStyle {
         else -> 1f
     }
 
-    /** Blur used only when a folder has to fall back from the runtime lens shader. */
+    /** GPU backdrop blur used by large folders, which avoid the high-frequency lens shader. */
     @JvmStatic
     fun folderFallbackBlurScale(value: Int): Float = when (value) {
-        LIQUID_GLASS -> 0.34f
-        FROSTY -> 0.76f
+        LIQUID_GLASS -> 1.15f
+        FROSTY -> 1.65f
         else -> 0f
     }
 
@@ -60,10 +60,10 @@ object OneUiGlassStyle {
     @JvmStatic
     fun folderDispersion(): Float = 0f
 
-    /** Large-folder lens shader uses its SDF edge band; dock geometry follows its own profile. */
+    /** Crystal keeps its edge lens; Liquid/Frosty use the stable GPU-blurred folder backdrop. */
     @JvmStatic
     fun usesFolderRuntimeShader(value: Int): Boolean =
-        value == CRYSTAL || value == LIQUID_GLASS || value == FROSTY
+        value == CRYSTAL
 
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
