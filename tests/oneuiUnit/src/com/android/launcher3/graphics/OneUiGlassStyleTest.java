@@ -63,6 +63,8 @@ public class OneUiGlassStyleTest {
         float frostyBlur = OneUiGlassStyle.folderFallbackBlurScale(OneUiGlassStyle.FROSTY);
 
         assertTrue("Liquid folders need a real backdrop blur", liquidBlur > 0f);
+        assertTrue("Liquid folders retain more wallpaper detail than Frosty",
+                liquidBlur < 1f);
         assertTrue("Frosty folders need stronger diffusion than Liquid Glass",
                 frostyBlur > liquidBlur);
         assertEquals("Crystal keeps its existing shader profile", 0f,

@@ -51,7 +51,7 @@ object OneUiGlassStyle {
     /** GPU backdrop blur used by large folders, which avoid the high-frequency lens shader. */
     @JvmStatic
     fun folderFallbackBlurScale(value: Int): Float = when (value) {
-        LIQUID_GLASS -> 1.15f
+        LIQUID_GLASS -> 0.70f
         FROSTY -> 1.65f
         else -> 0f
     }
