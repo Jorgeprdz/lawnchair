@@ -45,7 +45,7 @@ public class OneUiGlassStyleTest {
 
     @Test
     public void folderLiquidGlassKeepsWallpaperDetailWithoutChromaticFringing() {
-        assertEquals(0.22f, OneUiGlassStyle.folderRefractionScale(
+        assertEquals(0.06f, OneUiGlassStyle.folderRefractionScale(
                 OneUiGlassStyle.LIQUID_GLASS), 0.001f);
         assertEquals(0f, OneUiGlassStyle.folderDispersion(), 0.001f);
         assertTrue("Liquid folders keep a restrained optical refraction",

@@ -45,7 +45,7 @@ object OneUiGlassStyle {
     fun folderRefractionScale(value: Int): Float = when (value) {
         // Large-folder bounds magnify these samples across a much wider surface than the dock.
         // Keep just a small optical offset so high-contrast wallpaper details do not smear into bands.
-        LIQUID_GLASS -> 0.22f
+        LIQUID_GLASS -> 0.06f
         FROSTY -> 0.12f
         else -> 1f
     }
