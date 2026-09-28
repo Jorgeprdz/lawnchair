@@ -49,6 +49,10 @@ object OneUiGlassStyle {
     @JvmStatic
     fun folderDispersion(): Float = 0f
 
+    /** Large folders use a captured-bitmap lens; the runtime shader remains reserved for the dock. */
+    @JvmStatic
+    fun usesFolderRuntimeShader(value: Int): Boolean = value == CRYSTAL
+
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
         normalize(if (folderMode == FOLDER_FOLLOW_DOCK) dockMode else folderMode)

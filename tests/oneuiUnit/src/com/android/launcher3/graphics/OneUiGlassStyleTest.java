@@ -48,6 +48,10 @@ public class OneUiGlassStyleTest {
         assertEquals(0.14f, OneUiGlassStyle.folderRefractionScale(
                 OneUiGlassStyle.LIQUID_GLASS), 0.001f);
         assertEquals(0f, OneUiGlassStyle.folderDispersion(), 0.001f);
+        assertFalse("Large folder Liquid Glass must avoid the unstable full-screen lens shader",
+                OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.LIQUID_GLASS));
+        assertTrue("Crystal keeps its existing optical shader in folders",
+                OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.CRYSTAL));
     }
 
     @Test

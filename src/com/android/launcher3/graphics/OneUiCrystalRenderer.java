@@ -229,7 +229,10 @@ final class OneUiCrystalRenderer extends Drawable {
         }
 
         boolean captured = captureBackdrop(bounds);
-        if (captured && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER && mBackdropShader != null) {
+        boolean useRuntimeShader = !mWallpaperOnlyFolderBackdrop
+                || OneUiGlassStyle.usesFolderRuntimeShader(mStyle);
+        if (captured && useRuntimeShader && Build.VERSION.SDK_INT >= API_RUNTIME_SHADER
+                && mBackdropShader != null) {
             try {
                 Api33Impl.drawShader(this, canvas, bounds);
                 return;
@@ -366,7 +369,12 @@ final class OneUiCrystalRenderer extends Drawable {
                         Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
                         Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
                 mDst.set(bounds);
-                mDst.inset(-mRefractionPx * 0.10f, -mRefractionPx * 0.10f);
+                float magnification = mWallpaperOnlyFolderBackdrop
+                        && mStyle == OneUiGlassStyle.LIQUID_GLASS
+                                ? mRefractionPx
+                                        * OneUiGlassStyle.folderRefractionScale(mStyle) * 0.70f
+                                : mRefractionPx * 0.10f;
+                mDst.inset(-magnification, -magnification);
                 canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
             }
 
