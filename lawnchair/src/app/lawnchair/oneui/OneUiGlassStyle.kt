@@ -65,8 +65,8 @@ object OneUiGlassStyle {
         return when (value) {
             // The backdrop already contains GPU blur and a tint. Keep this second veil light so
             // open folders preserve wallpaper color instead of turning into opaque pale panels.
-            LIQUID_GLASS -> (28f + 16f * strength).toInt()
-            FROSTY -> (52f + 20f * strength).toInt()
+            LIQUID_GLASS -> (8f + 8f * strength).toInt()
+            FROSTY -> (12f + 8f * strength).toInt()
             else -> 0
         }
     }

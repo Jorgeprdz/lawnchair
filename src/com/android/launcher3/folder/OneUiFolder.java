@@ -169,7 +169,9 @@ public class OneUiFolder extends Folder {
                 Color.red(color), Color.green(color), Color.blue(color)));
         int save = canvas.save();
         if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
-        canvas.drawRect(0, 0, getWidth(), getHeight(), mOpenFolderVeilPaint);
+        float radius = getResources().getDimension(R.dimen.bg_round_rect_radius);
+        canvas.drawRoundRect(0, 0, getWidth(), getHeight(), radius, radius,
+                mOpenFolderVeilPaint);
         canvas.restoreToCount(save);
     }
 

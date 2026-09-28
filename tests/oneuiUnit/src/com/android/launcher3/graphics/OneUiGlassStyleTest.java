@@ -78,10 +78,19 @@ public class OneUiGlassStyleTest {
         int frosty = OneUiGlassStyle.openFolderVeilAlpha(
                 OneUiGlassStyle.FROSTY, 35);
 
-        assertEquals("Liquid Glass should not wash out the blurred wallpaper", 33, liquid);
-        assertEquals("Frosty keeps a stronger veil while retaining backdrop detail", 59, frosty);
+        assertEquals("Liquid Glass keeps the folder wallpaper visible", 10, liquid);
+        assertEquals("Frosty adds only a faint secondary veil", 14, frosty);
         assertEquals("Crystal keeps its own renderer without an extra veil", 0,
                 OneUiGlassStyle.openFolderVeilAlpha(OneUiGlassStyle.CRYSTAL, 35));
+    }
+
+    @Test
+    public void frostyFolderDoesNotStackAnOpaqueSecondHaze() {
+        OneUiGlassProfile profile = OneUiGlassProfile.create(
+                OneUiGlassStyle.FROSTY, 35, false);
+
+        assertEquals(profile.hazeAlpha, OneUiGlassProfile.frostyFolderHazeAlpha(profile));
+        assertEquals(23, profile.hazeAlpha);
     }
 
     @Test
