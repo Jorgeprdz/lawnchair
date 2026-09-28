@@ -59,6 +59,10 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
                 app.lawnchair.oneui.OneUiGlassStyle.FROSTY, intensity,
                 nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES);
         float blurRadius = profile.radiusDp * density * 0.46f;
+        // Wallpaper drawables can expose translucent edge pixels. Back them with the selected
+        // neutral tint so same-window widgets cannot bleed through the frosted folder surface.
+        mBackdrop.setBackgroundColor(
+                OneUiGlassProfile.frostyBackdropFallbackColor(color));
         mBackdrop.configureGlassBlur(blurRadius, cornerRadius, 0, 0, 0, 0, true);
 
         // The wallpaper snapshot is the surface. Keep the fallback transparent so a failed

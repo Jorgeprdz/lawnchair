@@ -67,4 +67,8 @@ public final class OneUiGlassProfile {
         // beneath the folder while staying well below the old near-opaque double haze.
         return Math.min(255, profile.hazeAlpha + 22);
     }
+
+    static int frostyBackdropFallbackColor(int color) {
+        return 0xff000000 | (neutralizeTint(color) & 0x00ffffff);
+    }
 }

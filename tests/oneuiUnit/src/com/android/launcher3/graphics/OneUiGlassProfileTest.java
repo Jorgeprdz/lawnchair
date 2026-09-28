@@ -66,4 +66,13 @@ public class OneUiGlassProfileTest {
                 lightHaze >= 50 && lightHaze < 60);
         assertTrue("Dark Frosty keeps launcher content muted", darkHaze >= 40 && darkHaze < 50);
     }
+
+    @Test
+    public void frostyWallpaperFallbackIsOpaqueAndNeutral() {
+        int fallback = OneUiGlassProfile.frostyBackdropFallbackColor(0x8020b060);
+
+        assertEquals(0xff, fallback >>> 24);
+        assertEquals((fallback >>> 16) & 0xff, (fallback >>> 8) & 0xff);
+        assertEquals((fallback >>> 8) & 0xff, fallback & 0xff);
+    }
 }
