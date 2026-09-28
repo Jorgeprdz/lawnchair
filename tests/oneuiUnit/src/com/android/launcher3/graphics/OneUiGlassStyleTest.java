@@ -55,6 +55,19 @@ public class OneUiGlassStyleTest {
     }
 
     @Test
+    public void folderFallbackBlurKeepsLiquidAndFrostyVisuallyDistinct() {
+        float liquidBlur = OneUiGlassStyle.folderFallbackBlurScale(
+                OneUiGlassStyle.LIQUID_GLASS);
+        float frostyBlur = OneUiGlassStyle.folderFallbackBlurScale(OneUiGlassStyle.FROSTY);
+
+        assertTrue("Liquid folders need a real backdrop blur", liquidBlur > 0f);
+        assertTrue("Frosty folders need stronger diffusion than Liquid Glass",
+                frostyBlur > liquidBlur);
+        assertEquals("Crystal keeps its existing shader profile", 0f,
+                OneUiGlassStyle.folderFallbackBlurScale(OneUiGlassStyle.CRYSTAL), 0.001f);
+    }
+
+    @Test
     public void folderCanFollowDockOrKeepAnExplicitMaterial() {
         assertEquals(OneUiGlassStyle.LIQUID_GLASS,
                 OneUiGlassStyle.resolveFolderMode(OneUiGlassStyle.FOLDER_FOLLOW_DOCK,
