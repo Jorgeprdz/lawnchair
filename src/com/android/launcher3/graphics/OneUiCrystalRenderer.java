@@ -592,7 +592,10 @@ final class OneUiCrystalRenderer extends Drawable {
             shader.setFloatUniform("folderLens",
                     renderer.mWallpaperOnlyFolderBackdrop ? 1f : 0f);
             shader.setFloatUniform("radius", renderer.mCornerRadius);
-            shader.setFloatUniform("blurPx", renderer.mBlurPx);
+            float folderBlurScale = renderer.mWallpaperOnlyFolderBackdrop
+                    && renderer.mStyle == OneUiGlassStyle.LIQUID_GLASS
+                            ? OneUiGlassStyle.folderFallbackBlurScale(renderer.mStyle) : 1f;
+            shader.setFloatUniform("blurPx", renderer.mBlurPx * folderBlurScale);
             float folderRefractionScale = renderer.mWallpaperOnlyFolderBackdrop
                     ? OneUiGlassStyle.folderRefractionScale(renderer.mStyle) : 1f;
             shader.setFloatUniform("refractionPx",
