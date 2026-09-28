@@ -45,7 +45,7 @@ object OneUiGlassStyle {
     fun folderRefractionScale(value: Int): Float = when (value) {
         // Large-folder bounds magnify these samples across a much wider surface than the dock.
         // Keep just a small optical offset so high-contrast wallpaper details do not smear into bands.
-        LIQUID_GLASS -> 0.12f
+        LIQUID_GLASS -> 0.22f
         FROSTY -> 0.12f
         else -> 1f
     }
@@ -82,10 +82,10 @@ object OneUiGlassStyle {
     @JvmStatic
     fun folderDispersion(): Float = 0f
 
-    /** Crystal keeps its edge lens; Liquid/Frosty use the stable GPU-blurred folder backdrop. */
+    /** Liquid and Crystal use the optical shader; Frosty stays a softly diffused backdrop. */
     @JvmStatic
     fun usesFolderRuntimeShader(value: Int): Boolean =
-        value == CRYSTAL
+        value == LIQUID_GLASS || value == CRYSTAL
 
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
