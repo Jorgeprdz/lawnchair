@@ -58,15 +58,15 @@ object OneUiGlassStyle {
         else -> 0f
     }
 
-    /** A small color-matched veil keeps unblurred launcher content from bleeding through open folders. */
+    /** Color-matched veil masks same-window launcher content behind open glass folders. */
     @JvmStatic
     fun openFolderVeilAlpha(value: Int, intensityPercent: Int): Int {
         val strength = intensityPercent.coerceIn(0, 100) / 100f
         return when (value) {
-            // The backdrop already contains GPU blur and a tint. Keep this second veil light so
-            // open folders preserve wallpaper color instead of turning into opaque pale panels.
+            // Frosty samples only the wallpaper, so a stronger open-folder veil is needed to
+            // dim widgets drawn by the launcher behind it. Keep Liquid Glass lighter.
             LIQUID_GLASS -> (8f + 8f * strength).toInt()
-            FROSTY -> (12f + 8f * strength).toInt()
+            FROSTY -> (48f + 48f * strength).toInt()
             else -> 0
         }
     }

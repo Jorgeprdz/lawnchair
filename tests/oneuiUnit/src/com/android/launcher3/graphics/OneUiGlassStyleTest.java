@@ -79,7 +79,8 @@ public class OneUiGlassStyleTest {
                 OneUiGlassStyle.FROSTY, 35);
 
         assertEquals("Liquid Glass keeps the folder wallpaper visible", 10, liquid);
-        assertEquals("Frosty adds only a faint secondary veil", 14, frosty);
+        assertEquals("Frosty dims same-window launcher content behind its wallpaper blur",
+                64, frosty);
         assertEquals("Crystal keeps its own renderer without an extra veil", 0,
                 OneUiGlassStyle.openFolderVeilAlpha(OneUiGlassStyle.CRYSTAL, 35));
     }
