@@ -486,7 +486,7 @@ final class OneUiCrystalRenderer extends Drawable {
             shader.setFloatUniform("depth", renderer.mDepthPx);
             shader.setFloatUniform("specular", renderer.mSpecular);
             shader.setFloatUniform("dispersion", renderer.mWallpaperOnlyFolderBackdrop
-                    ? OneUiGlassStyle.folderDispersion(renderer.mStyle)
+                    ? OneUiGlassStyle.folderDispersion()
                     : (renderer.mStyle == OneUiGlassStyle.LIQUID_GLASS ? 0.58f : 0.40f));
 
             float tintAlpha = (0.05f + 0.13f * renderer.mStrength) * Color.alpha(renderer.mColor) / 255f;
