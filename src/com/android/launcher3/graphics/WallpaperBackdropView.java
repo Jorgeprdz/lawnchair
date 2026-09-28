@@ -49,6 +49,7 @@ public final class WallpaperBackdropView extends View {
     private boolean mLoggedSnapshot;
     private boolean mLoggedFirstDraw;
     private boolean mLoggedNoWallpaperSource;
+    private boolean mLogNextDraw;
     private float mBlurRadiusPx;
     private float mCornerRadiusPx;
     private int mInsetLeft;
@@ -117,6 +118,11 @@ public final class WallpaperBackdropView extends View {
 
     public void setInvalidationTarget(@Nullable View target) {
         mInvalidationTarget = target;
+    }
+
+    public void refreshForBackdropPositionChange() {
+        mLogNextDraw = true;
+        invalidate();
     }
 
     @Override
@@ -231,6 +237,20 @@ public final class WallpaperBackdropView extends View {
         root.getLocationInWindow(mRootLocation);
         int left = mViewLocation[0] - mRootLocation[0];
         int top = mViewLocation[1] - mRootLocation[1];
+        if (mLogNextDraw) {
+            float scaleX = (float) mWallpaperSnapshot.getWidth() / root.getWidth();
+            float scaleY = (float) mWallpaperSnapshot.getHeight() / root.getHeight();
+            int sampleX = Math.max(0, Math.min(mWallpaperSnapshot.getWidth() - 1,
+                    Math.round((left + getWidth() / 2f) * scaleX)));
+            int sampleY = Math.max(0, Math.min(mWallpaperSnapshot.getHeight() - 1,
+                    Math.round((top + getHeight() / 2f) * scaleY)));
+            Log.d(TAG, "position refresh view=" + mViewLocation[0] + "," + mViewLocation[1]
+                    + " root=" + mRootLocation[0] + "," + mRootLocation[1]
+                    + " crop=" + left + "," + top + " size=" + getWidth() + "x" + getHeight()
+                    + " sample=" + Integer.toHexString(
+                            mWallpaperSnapshot.getPixel(sampleX, sampleY)));
+            mLogNextDraw = false;
+        }
 
         int save = canvas.save();
         canvas.translate(-left, -top);

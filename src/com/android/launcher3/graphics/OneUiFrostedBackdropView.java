@@ -103,7 +103,7 @@ public final class OneUiFrostedBackdropView extends FrameLayout {
     /** Re-records the wallpaper crop after the folder icon moves between workspace pages. */
     public void refreshBackdropPosition() {
         Log.d(TAG, "refreshing wallpaper crop after folder page movement");
-        mBackdrop.invalidate();
+        mBackdrop.refreshForBackdropPositionChange();
         invalidate();
     }
 }
