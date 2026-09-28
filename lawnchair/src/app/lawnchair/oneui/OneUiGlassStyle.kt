@@ -63,8 +63,10 @@ object OneUiGlassStyle {
     fun openFolderVeilAlpha(value: Int, intensityPercent: Int): Int {
         val strength = intensityPercent.coerceIn(0, 100) / 100f
         return when (value) {
-            LIQUID_GLASS -> (88f + 18f * strength).toInt()
-            FROSTY -> (148f + 22f * strength).toInt()
+            // The backdrop already contains GPU blur and a tint. Keep this second veil light so
+            // open folders preserve wallpaper color instead of turning into opaque pale panels.
+            LIQUID_GLASS -> (28f + 16f * strength).toInt()
+            FROSTY -> (52f + 20f * strength).toInt()
             else -> 0
         }
     }
