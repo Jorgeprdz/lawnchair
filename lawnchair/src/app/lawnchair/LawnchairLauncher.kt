@@ -62,6 +62,7 @@ import com.android.launcher3.LauncherSettings.Favorites.CONTAINER_WIDGETS_PREDIC
 import com.android.launcher3.LauncherState
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
+import com.android.launcher3.folder.Folder
 import com.android.launcher3.folder.FolderIcon
 import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.PredictedContainerInfo
@@ -293,6 +294,32 @@ class LawnchairLauncher : QuickstepLauncher() {
         } else {
             mWallpaperThemeManager.updateTheme()
         }
+    }
+
+    /** Applies glass-only preference changes to existing surfaces and folder views in place. */
+    fun refreshGlassPreferences() {
+        if (!android.os.Looper.getMainLooper().isCurrentThread) {
+            runOnUiThread { refreshGlassPreferences() }
+            return
+        }
+        if (isFinishing || isDestroyed) return
+        hotseat.refreshGlassPreferences()
+        refreshFolderGlassPreferences()
+    }
+
+    fun refreshFolderGlassPreferences() {
+        if (!android.os.Looper.getMainLooper().isCurrentThread) {
+            runOnUiThread { refreshFolderGlassPreferences() }
+            return
+        }
+        if (isFinishing || isDestroyed) return
+        workspace.mapOverItems { _, view ->
+            if (view is FolderIcon) view.invalidate()
+            false
+        }
+        (AbstractFloatingView.getTopOpenViewWithType(
+            this, AbstractFloatingView.TYPE_FOLDER,
+        ) as? Folder)?.invalidate()
     }
 
     override fun onStateBack() {

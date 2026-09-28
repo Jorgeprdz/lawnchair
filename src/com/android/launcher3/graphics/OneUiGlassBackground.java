@@ -85,13 +85,16 @@ public final class OneUiGlassBackground {
     }
 
     private static Drawable buildSurface(View host, int style, int color,
-            float cornerRadius, int intensityPercent, boolean allowPlatformBlur) {
+            float cornerRadius, int intensityPercent, boolean allowPlatformBlur,
+            boolean wallpaperOnlyFolderBackdrop) {
         final int intensity = clamp(intensityPercent, 0, 100);
         if (style < OneUiGlassStyle.LIQUID_GLASS) {
             return new ColorDrawable(Color.TRANSPARENT);
         }
         if (style == OneUiGlassStyle.CRYSTAL || style == OneUiGlassStyle.LIQUID_GLASS) {
-            return OneUiCrystalRenderer.create(host, style, color, cornerRadius, intensity);
+            return OneUiCrystalRenderer.create(host, style, color, cornerRadius, intensity,
+                    wallpaperOnlyFolderBackdrop
+                            && OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(style));
         }
         if (intensity == 0) {
             return new ColorDrawable(Color.TRANSPARENT);
@@ -268,7 +271,7 @@ public final class OneUiGlassBackground {
 
             if (mDelegate != null) mDelegate.setVisible(false, false);
             mDelegate = buildSurface(mHost, style, mColor, mCornerRadius, intensity,
-                    mAllowPlatformBlur);
+                    mAllowPlatformBlur, !mDockControlled);
             mLastStyle = style;
             mLastIntensity = intensity;
             mLastNightMode = nightMode;

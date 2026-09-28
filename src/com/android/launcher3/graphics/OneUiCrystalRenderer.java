@@ -45,6 +45,7 @@ final class OneUiCrystalRenderer extends Drawable {
     private static final int API_RUNTIME_SHADER = 33;
     private static final int MAX_CAPTURE_SIZE = 2048;
     private static final long MAX_CAPTURE_PIXELS = 2_500_000L;
+    private static final long CAPTURE_INTERVAL_MS = 160L;
     private static final String LAUNCHER_PREVIEW_VIEW = "app.lawnchair.views.LauncherPreviewView";
 
     private static final ThreadLocal<Boolean> sCapturingBackdrop =
@@ -131,6 +132,7 @@ final class OneUiCrystalRenderer extends Drawable {
     private final int mStyle;
     private final int mColor;
     private final float mCornerRadius;
+    private final boolean mWallpaperOnlyFolderBackdrop;
     private final Paint mShaderPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mFallbackPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint mOverlayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -148,6 +150,7 @@ final class OneUiCrystalRenderer extends Drawable {
     private Drawable mWallpaper;
     private int mCapturePad;
     private int mAlpha = 255;
+    private long mLastCaptureMs;
     private float mStrength;
     private float mBlurPx;
     private float mRefractionPx;
@@ -156,16 +159,18 @@ final class OneUiCrystalRenderer extends Drawable {
     private @Nullable ColorFilter mColorFilter;
 
     static Drawable create(View host, int style, int color, float cornerRadius,
-            int intensityPercent) {
-        return new OneUiCrystalRenderer(host, style, color, cornerRadius, intensityPercent);
+            int intensityPercent, boolean wallpaperOnlyFolderBackdrop) {
+        return new OneUiCrystalRenderer(host, style, color, cornerRadius, intensityPercent,
+                wallpaperOnlyFolderBackdrop);
     }
 
     private OneUiCrystalRenderer(View host, int style, int color, float cornerRadius,
-            int intensityPercent) {
+            int intensityPercent, boolean wallpaperOnlyFolderBackdrop) {
         mHost = host;
         mStyle = style;
         mColor = color;
         mCornerRadius = cornerRadius;
+        mWallpaperOnlyFolderBackdrop = wallpaperOnlyFolderBackdrop;
         setIntensity(intensityPercent);
     }
 
@@ -246,6 +251,10 @@ final class OneUiCrystalRenderer extends Drawable {
         if (!isHostSafeForCapture(bounds)) {
             return false;
         }
+        long now = android.os.SystemClock.uptimeMillis();
+        if (mBackdrop != null && now - mLastCaptureMs < CAPTURE_INTERVAL_MS) {
+            return true;
+        }
 
         View root = mHost.getRootView();
         int width = bounds.width() + mCapturePad * 2;
@@ -272,14 +281,19 @@ final class OneUiCrystalRenderer extends Drawable {
             Canvas captureCanvas = new Canvas(mBackdrop);
             captureCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
             drawWallpaperUnderlay(root, captureCanvas, captureLeft, captureTop);
-
-            sCapturingBackdrop.set(true);
-            try {
-                captureCanvas.translate(-captureLeft, -captureTop);
-                root.draw(captureCanvas);
-            } finally {
-                sCapturingBackdrop.set(false);
+            // Drawing the launcher root from a folder drawable recursively rasterizes workspace
+            // widgets and their RemoteViews. Folder glass uses the wallpaper snapshot as its
+            // backdrop, matching the dock renderer while keeping widget views out of this path.
+            if (!mWallpaperOnlyFolderBackdrop) {
+                sCapturingBackdrop.set(true);
+                try {
+                    captureCanvas.translate(-captureLeft, -captureTop);
+                    root.draw(captureCanvas);
+                } finally {
+                    sCapturingBackdrop.set(false);
+                }
             }
+            mLastCaptureMs = now;
             return true;
         } catch (OutOfMemoryError oom) {
             recycleBackdrop();
@@ -421,6 +435,7 @@ final class OneUiCrystalRenderer extends Drawable {
     @Override
     protected void onBoundsChange(Rect bounds) {
         recycleBackdrop();
+        mLastCaptureMs = 0;
         invalidateSelf();
     }
 

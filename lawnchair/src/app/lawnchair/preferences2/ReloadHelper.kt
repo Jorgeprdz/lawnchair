@@ -40,6 +40,11 @@ class ReloadHelper(private val context: Context) {
         LawnchairLauncher.instance?.recreateIfNotScheduled()
     }
 
+    /** Refreshes glass surfaces in place; appearance-only changes must not recreate widgets. */
+    fun refreshGlass() {
+        LawnchairLauncher.instance?.refreshGlassPreferences()
+    }
+
     fun restart() {
         reloadGrid()
         recreate()

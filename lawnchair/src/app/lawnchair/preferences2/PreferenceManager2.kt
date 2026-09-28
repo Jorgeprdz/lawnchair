@@ -216,7 +216,7 @@ class PreferenceManager2 @Inject constructor(
     val hotseatBackgroundMode = preference(
         key = intPreferencesKey("hotseat_background_mode"),
         defaultValue = -1,
-        onSet = { reloadHelper.recreate() },
+        onSet = { reloadHelper.refreshGlass() },
     )
 
     val hotseatBackgroundColor = preference(

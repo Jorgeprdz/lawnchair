@@ -35,6 +35,15 @@ public class OneUiGlassStyleTest {
     }
 
     @Test
+    public void folderGlassNeverCapturesWorkspaceWidgetsAsItsBackdrop() {
+        assertTrue(OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(OneUiGlassStyle.LIQUID_GLASS));
+        assertTrue(OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(OneUiGlassStyle.CRYSTAL));
+        assertTrue(OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(OneUiGlassStyle.FROSTY));
+        assertFalse(OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(OneUiGlassStyle.SOLID));
+        assertFalse(OneUiGlassStyle.usesWallpaperOnlyFolderBackdrop(OneUiGlassStyle.OFF));
+    }
+
+    @Test
     public void folderCanFollowDockOrKeepAnExplicitMaterial() {
         assertEquals(OneUiGlassStyle.LIQUID_GLASS,
                 OneUiGlassStyle.resolveFolderMode(OneUiGlassStyle.FOLDER_FOLLOW_DOCK,

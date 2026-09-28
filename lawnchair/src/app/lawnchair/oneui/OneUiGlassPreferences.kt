@@ -5,6 +5,9 @@
 package app.lawnchair.oneui
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import app.lawnchair.LawnchairLauncher
 import app.lawnchair.preferences.PreferenceManager
 import app.lawnchair.preferences2.PreferenceManager2
 import app.lawnchair.preferences2.firstCached
@@ -35,6 +38,12 @@ object OneUiGlassPreferences {
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun refreshFolderSurfaces() {
+        Handler(Looper.getMainLooper()).post {
+            LawnchairLauncher.instance?.refreshFolderGlassPreferences()
+        }
+    }
 
     private fun readIntensity(context: Context, key: String, legacyKey: String, default: Int): Int {
         val p = prefs(context)
@@ -149,6 +158,7 @@ object OneUiGlassPreferences {
             OneUiGlassStyle.normalize(value)
         }
         prefs(context).edit().putInt(KEY_FOLDER_MODE, normalized).apply()
+        refreshFolderSurfaces()
     }
 
     @JvmStatic
@@ -158,6 +168,7 @@ object OneUiGlassPreferences {
     @JvmStatic
     fun setFolderBlurIntensity(context: Context, value: Int) {
         prefs(context).edit().putInt(KEY_FOLDER_BLUR_INTENSITY, value.coerceIn(0, 100)).apply()
+        refreshFolderSurfaces()
     }
 
     @JvmStatic
@@ -167,6 +178,7 @@ object OneUiGlassPreferences {
     @JvmStatic
     fun setFolderCrystalIntensity(context: Context, value: Int) {
         prefs(context).edit().putInt(KEY_FOLDER_CRYSTAL_INTENSITY, value.coerceIn(0, 100)).apply()
+        refreshFolderSurfaces()
     }
 
     @JvmStatic
@@ -178,6 +190,7 @@ object OneUiGlassPreferences {
     @JvmStatic
     fun setFolderFrostyIntensity(context: Context, value: Int) {
         prefs(context).edit().putInt(KEY_FOLDER_FROSTY_INTENSITY, value.coerceIn(0, 100)).apply()
+        refreshFolderSurfaces()
     }
 
     @JvmStatic
@@ -220,6 +233,7 @@ object OneUiGlassPreferences {
             KEY_LARGE_FOLDER_SHAPE,
             value.coerceIn(OneUiLargeFolderShape.ROUNDED_SQUARE, OneUiLargeFolderShape.CIRCLE),
         ).apply()
+        refreshFolderSurfaces()
     }
 
     @JvmStatic

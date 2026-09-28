@@ -33,6 +33,10 @@ object OneUiGlassStyle {
     @JvmStatic
     fun usesWallpaperSnapshotForFolder(value: Int): Boolean = value == FROSTY
 
+    /** Folder glass samples the wallpaper only; recursively drawing the workspace touches widgets. */
+    @JvmStatic
+    fun usesWallpaperOnlyFolderBackdrop(value: Int): Boolean = isGlass(value)
+
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =
         normalize(if (folderMode == FOLDER_FOLLOW_DOCK) dockMode else folderMode)

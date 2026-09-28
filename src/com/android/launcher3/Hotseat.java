@@ -335,6 +335,13 @@ public class Hotseat extends FrameLayout implements Insettable {
         setBackground(bg);
     }
 
+    /** Re-reads dock glass preferences without recreating Launcher or its hosted widgets. */
+    public void refreshGlassPreferences() {
+        if (!isAttachedToWindow()) return;
+        setUpBackground();
+        invalidate();
+    }
+
     private void updateGlassSurface() {
         if (!OneUiGlassStyle.isGlass(mGlassStyle)) {
             disableGlassSurface();
