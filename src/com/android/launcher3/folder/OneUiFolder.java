@@ -53,13 +53,17 @@ public class OneUiFolder extends Folder {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        if (mFrostyBackdrop != null) {
-            // layoutSurface() temporarily measures the backdrop to the folder's full bounds for
-            // manual drawing. Restore its zero-size LinearLayout measurement before layout so it
-            // cannot push FolderPagedView or the footer out of the visible folder bounds.
-            int zero = MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY);
-            mFrostyBackdrop.measure(zero, zero);
-        }
+        resetBackdropLayout();
+    }
+
+    private void resetBackdropLayout() {
+        if (mFrostyBackdrop == null) return;
+        // layoutSurface() temporarily measures and lays out the backdrop to the folder's full
+        // bounds for manual drawing. This view lives in a LinearLayout with zero-size params, so
+        // restore both its measured size and bounds before the parent's next layout pass.
+        int zero = MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY);
+        mFrostyBackdrop.measure(zero, zero);
+        mFrostyBackdrop.layout(0, 0, 0, 0);
     }
 
     @Override
@@ -98,6 +102,7 @@ public class OneUiFolder extends Folder {
                 if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
                 mFrostyBackdrop.draw(canvas);
                 canvas.restoreToCount(backdropSave);
+                resetBackdropLayout();
                 // It was drawn above with the folder's animation clip; suppress the normal child
                 // pass to avoid drawing the full-screen wallpaper twice.
                 mFrostyBackdrop.setClipBounds(mEmptyBackdropClip);
