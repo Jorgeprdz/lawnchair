@@ -61,6 +61,7 @@ final class OneUiCrystalRenderer extends Drawable {
                     + "uniform float2 size;\n"
                     + "uniform float2 origin;\n"
                     + "uniform float capturePad;\n"
+                    + "uniform float folderLens;\n"
                     + "uniform float radius;\n"
                     + "uniform float blurPx;\n"
                     + "uniform float refractionPx;\n"
@@ -103,6 +104,24 @@ final class OneUiCrystalRenderer extends Drawable {
                     + "    float2 tangent = float2(-normal.y, normal.x);\n"
                     + "    float2 warp = normal * refractionPx * (0.24 + 0.76 * rim);\n"
                     + "    warp += tangent * refractionPx * 0.10 * lens;\n"
+                    + "    if (folderLens > 0.5) {\n"
+                    + "        float2 q = abs(p) - max(center - corner, float2(0.0, 0.0));\n"
+                    + "        float2 outside = max(q, float2(0.0, 0.0));\n"
+                    + "        float outsideLength = length(outside);\n"
+                    + "        float2 side = sign(p);\n"
+                    + "        float2 edgeNormal = float2(side.x, 0.0);\n"
+                    + "        if (outsideLength > 0.001) {\n"
+                    + "            edgeNormal = side * outside / outsideLength;\n"
+                    + "        } else if (q.y > q.x) {\n"
+                    + "            edgeNormal = float2(0.0, side.y);\n"
+                    + "        }\n"
+                    + "        float edgeDistance = max(0.0, -sd);\n"
+                    + "        float edgeBand = max(1.0, depth * 2.8);\n"
+                    + "        rim = 1.0 - smoothstep(0.0, edgeBand, edgeDistance);\n"
+                    + "        float edgeFalloff = pow(max(0.0, rim), 1.20);\n"
+                    + "        warp = -edgeNormal * refractionPx * edgeFalloff;\n"
+                    + "        warp += tangent * refractionPx * 0.06 * lens * edgeFalloff;\n"
+                    + "    }\n"
                     + "    float2 baseCoord = local + float2(capturePad, capturePad) + warp;\n"
                     + "\n"
                     + "    half4 soft = blurBackdrop(baseCoord, blurPx);\n"
@@ -147,6 +166,10 @@ final class OneUiCrystalRenderer extends Drawable {
     private BitmapShader mBackdropShader;
     // Kept as Object so loading this Drawable on API < 33 does not resolve RuntimeShader.
     private Object mRuntimeShader;
+    // API 31 types are kept out of the base renderer for older Android releases.
+    private Object mFolderBackdropRenderNode;
+    private Object mFolderBackdropBlurEffect;
+    private boolean mFolderBackdropNodeDirty = true;
     private Drawable mWallpaper;
     private int mCapturePad;
     private int mAlpha = 255;
@@ -199,6 +222,17 @@ final class OneUiCrystalRenderer extends Drawable {
             mSpecular = 0.30f + 0.70f * mStrength;
         }
         mCapturePad = Math.round((20f + 28f * mStrength) * density + mRefractionPx + mBlurPx);
+        mFolderBackdropBlurEffect = null;
+        float fallbackBlurScale = mWallpaperOnlyFolderBackdrop
+                ? OneUiGlassStyle.folderFallbackBlurScale(mStyle) : 0f;
+        if (fallbackBlurScale > 0f && Build.VERSION.SDK_INT >= 31) {
+            try {
+                mFolderBackdropBlurEffect = Api31Impl.createBlurEffect(mBlurPx * fallbackBlurScale);
+            } catch (RuntimeException | LinkageError ignored) {
+                mFolderBackdropBlurEffect = null;
+            }
+        }
+        mFolderBackdropNodeDirty = true;
     }
 
     @Override
@@ -297,6 +331,7 @@ final class OneUiCrystalRenderer extends Drawable {
                 }
             }
             mLastCaptureMs = now;
+            mFolderBackdropNodeDirty = true;
             return true;
         } catch (OutOfMemoryError oom) {
             recycleBackdrop();
@@ -365,17 +400,19 @@ final class OneUiCrystalRenderer extends Drawable {
             canvas.clipPath(mClipPath);
 
             if (mBackdrop != null && !mBackdrop.isRecycled()) {
-                mSrc.set(mCapturePad, mCapturePad,
-                        Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
-                        Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
-                mDst.set(bounds);
                 float magnification = mWallpaperOnlyFolderBackdrop
                         && mStyle == OneUiGlassStyle.LIQUID_GLASS
                                 ? mRefractionPx
                                         * OneUiGlassStyle.folderRefractionScale(mStyle) * 0.70f
                                 : mRefractionPx * 0.10f;
-                mDst.inset(-magnification, -magnification);
-                canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
+                if (!drawFolderBackdropWithGpuBlur(canvas, bounds, magnification)) {
+                    mSrc.set(mCapturePad, mCapturePad,
+                            Math.min(mBackdrop.getWidth(), mCapturePad + bounds.width()),
+                            Math.min(mBackdrop.getHeight(), mCapturePad + bounds.height()));
+                    mDst.set(bounds);
+                    mDst.inset(-magnification, -magnification);
+                    canvas.drawBitmap(mBackdrop, mSrc, mDst, mFallbackPaint);
+                }
             }
 
             drawSoberOverlays(canvas, bounds);
@@ -384,6 +421,21 @@ final class OneUiCrystalRenderer extends Drawable {
             throw death;
         } catch (Throwable ignored) {
             drawStaticFallback(canvas, bounds);
+        }
+    }
+
+    private boolean drawFolderBackdropWithGpuBlur(Canvas canvas, Rect bounds, float magnification) {
+        if (!mWallpaperOnlyFolderBackdrop || mFolderBackdropBlurEffect == null
+                || Build.VERSION.SDK_INT < 31 || !canvas.isHardwareAccelerated()) {
+            return false;
+        }
+        try {
+            Api31Impl.drawFolderBackdrop(this, canvas, bounds, magnification);
+            return true;
+        } catch (RuntimeException | LinkageError ignored) {
+            mFolderBackdropRenderNode = null;
+            mFolderBackdropNodeDirty = true;
+            return false;
         }
     }
 
@@ -438,6 +490,8 @@ final class OneUiCrystalRenderer extends Drawable {
             mBackdrop = null;
             mBackdropShader = null;
         }
+        mFolderBackdropRenderNode = null;
+        mFolderBackdropNodeDirty = true;
     }
 
     @Override
@@ -453,6 +507,7 @@ final class OneUiCrystalRenderer extends Drawable {
         mShaderPaint.setAlpha(mAlpha);
         mFallbackPaint.setAlpha(mAlpha);
         mOverlayPaint.setAlpha(mAlpha);
+        mFolderBackdropNodeDirty = true;
         invalidateSelf();
     }
 
@@ -462,12 +517,61 @@ final class OneUiCrystalRenderer extends Drawable {
         mShaderPaint.setColorFilter(colorFilter);
         mFallbackPaint.setColorFilter(colorFilter);
         mOverlayPaint.setColorFilter(colorFilter);
+        mFolderBackdropNodeDirty = true;
         invalidateSelf();
     }
 
     @Override
     public int getOpacity() {
         return PixelFormat.TRANSLUCENT;
+    }
+
+    private static final class Api31Impl {
+        private Api31Impl() { }
+
+        static Object createBlurEffect(float radius) {
+            float safeRadius = Math.max(1f, radius);
+            return android.graphics.RenderEffect.createBlurEffect(
+                    safeRadius, safeRadius, Shader.TileMode.CLAMP);
+        }
+
+        static void drawFolderBackdrop(OneUiCrystalRenderer renderer, Canvas canvas, Rect bounds,
+                float magnification) {
+            int width = renderer.mBackdrop.getWidth();
+            int height = renderer.mBackdrop.getHeight();
+            android.graphics.RenderNode node = renderer.mFolderBackdropRenderNode == null
+                    ? new android.graphics.RenderNode("OneUiFolderBackdrop")
+                    : (android.graphics.RenderNode) renderer.mFolderBackdropRenderNode;
+            node.setPosition(0, 0, width, height);
+
+            if (renderer.mFolderBackdropNodeDirty) {
+                Canvas recordingCanvas = node.beginRecording(width, height);
+                try {
+                    recordingCanvas.drawBitmap(renderer.mBackdrop, 0f, 0f,
+                            renderer.mFallbackPaint);
+                } finally {
+                    node.endRecording();
+                }
+                node.setRenderEffect((android.graphics.RenderEffect)
+                        renderer.mFolderBackdropBlurEffect);
+                renderer.mFolderBackdropNodeDirty = false;
+            }
+            renderer.mFolderBackdropRenderNode = node;
+
+            int save = canvas.save();
+            float centerX = renderer.mCapturePad + bounds.width() * 0.5f;
+            float centerY = renderer.mCapturePad + bounds.height() * 0.5f;
+            float scale = 1f + Math.min(0.10f,
+                    Math.max(0f, magnification) * 2f / Math.max(1f,
+                            Math.min(bounds.width(), bounds.height())));
+            canvas.translate(bounds.left - renderer.mCapturePad,
+                    bounds.top - renderer.mCapturePad);
+            canvas.translate(centerX, centerY);
+            canvas.scale(scale, scale);
+            canvas.translate(-centerX, -centerY);
+            canvas.drawRenderNode(node);
+            canvas.restoreToCount(save);
+        }
     }
 
     private static final class Api33Impl {
@@ -485,6 +589,8 @@ final class OneUiCrystalRenderer extends Drawable {
             shader.setFloatUniform("size", bounds.width(), bounds.height());
             shader.setFloatUniform("origin", bounds.left, bounds.top);
             shader.setFloatUniform("capturePad", renderer.mCapturePad);
+            shader.setFloatUniform("folderLens",
+                    renderer.mWallpaperOnlyFolderBackdrop ? 1f : 0f);
             shader.setFloatUniform("radius", renderer.mCornerRadius);
             shader.setFloatUniform("blurPx", renderer.mBlurPx);
             float folderRefractionScale = renderer.mWallpaperOnlyFolderBackdrop

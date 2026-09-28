@@ -42,16 +42,28 @@ object OneUiGlassStyle {
      * recognizable wallpaper detail instead of stretching it into oily bands.
      */
     @JvmStatic
-    fun folderRefractionScale(value: Int): Float =
-        if (value == LIQUID_GLASS) 0.14f else 1f
+    fun folderRefractionScale(value: Int): Float = when (value) {
+        LIQUID_GLASS -> 0.34f
+        FROSTY -> 0.12f
+        else -> 1f
+    }
+
+    /** Blur used only when a folder has to fall back from the runtime lens shader. */
+    @JvmStatic
+    fun folderFallbackBlurScale(value: Int): Float = when (value) {
+        LIQUID_GLASS -> 0.34f
+        FROSTY -> 0.76f
+        else -> 0f
+    }
 
     /** Folder Liquid Glass avoids chromatic splitting, which reads as oily color fringing. */
     @JvmStatic
     fun folderDispersion(): Float = 0f
 
-    /** Large folders use a captured-bitmap lens; the runtime shader remains reserved for the dock. */
+    /** Large-folder lens shader uses its SDF edge band; dock geometry follows its own profile. */
     @JvmStatic
-    fun usesFolderRuntimeShader(value: Int): Boolean = value == CRYSTAL
+    fun usesFolderRuntimeShader(value: Int): Boolean =
+        value == CRYSTAL || value == LIQUID_GLASS || value == FROSTY
 
     @JvmStatic
     fun resolveFolderMode(folderMode: Int, dockMode: Int): Int =

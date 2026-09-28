@@ -45,11 +45,13 @@ public class OneUiGlassStyleTest {
 
     @Test
     public void folderLiquidGlassKeepsWallpaperDetailWithoutChromaticFringing() {
-        assertEquals(0.14f, OneUiGlassStyle.folderRefractionScale(
+        assertEquals(0.34f, OneUiGlassStyle.folderRefractionScale(
                 OneUiGlassStyle.LIQUID_GLASS), 0.001f);
         assertEquals(0f, OneUiGlassStyle.folderDispersion(), 0.001f);
-        assertFalse("Large folder Liquid Glass must avoid the unstable full-screen lens shader",
+        assertTrue("Large folder Liquid Glass uses the corrected SDF edge lens",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.LIQUID_GLASS));
+        assertTrue("Frosty folders need the GPU backdrop blur profile",
+                OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.FROSTY));
         assertTrue("Crystal keeps its existing optical shader in folders",
                 OneUiGlassStyle.usesFolderRuntimeShader(OneUiGlassStyle.CRYSTAL));
     }
