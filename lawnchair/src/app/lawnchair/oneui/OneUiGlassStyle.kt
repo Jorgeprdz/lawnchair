@@ -43,7 +43,9 @@ object OneUiGlassStyle {
      */
     @JvmStatic
     fun folderRefractionScale(value: Int): Float = when (value) {
-        LIQUID_GLASS -> 0.34f
+        // Large-folder bounds magnify these samples across a much wider surface than the dock.
+        // Keep just a small optical offset so high-contrast wallpaper details do not smear into bands.
+        LIQUID_GLASS -> 0.12f
         FROSTY -> 0.12f
         else -> 1f
     }
@@ -51,7 +53,7 @@ object OneUiGlassStyle {
     /** GPU backdrop blur used by large folders, which avoid the high-frequency lens shader. */
     @JvmStatic
     fun folderFallbackBlurScale(value: Int): Float = when (value) {
-        LIQUID_GLASS -> 0.70f
+        LIQUID_GLASS -> 0.35f
         FROSTY -> 1.65f
         else -> 0f
     }
