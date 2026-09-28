@@ -60,7 +60,9 @@ public class OneUiGlassProfileTest {
         OneUiGlassProfile light = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 100, false);
         OneUiGlassProfile dark = OneUiGlassProfile.create(OneUiGlassStyle.FROSTY, 100, true);
 
-        assertTrue(OneUiGlassProfile.frostyFolderHazeAlpha(light) >= 75);
-        assertTrue(OneUiGlassProfile.frostyFolderHazeAlpha(dark) >= 70);
+        int lightHaze = OneUiGlassProfile.frostyFolderHazeAlpha(light);
+        int darkHaze = OneUiGlassProfile.frostyFolderHazeAlpha(dark);
+        assertTrue("Light Frosty keeps a soft diffusion layer", lightHaze >= 30 && lightHaze < 40);
+        assertTrue("Dark Frosty keeps the wallpaper visible", darkHaze >= 20 && darkHaze < 30);
     }
 }
