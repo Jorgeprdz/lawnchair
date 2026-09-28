@@ -72,6 +72,20 @@ public class OneUiGlassStyleTest {
     }
 
     @Test
+    public void openFolderVeilSoftensUnblurredLauncherContentByMaterial() {
+        int liquid = OneUiGlassStyle.openFolderVeilAlpha(
+                OneUiGlassStyle.LIQUID_GLASS, 35);
+        int frosty = OneUiGlassStyle.openFolderVeilAlpha(
+                OneUiGlassStyle.FROSTY, 35);
+
+        assertTrue("Liquid Glass keeps the open folder translucent", liquid >= 48 && liquid <= 72);
+        assertTrue("Frosty adds stronger diffusion over launcher content",
+                frosty > liquid && frosty <= 110);
+        assertEquals("Crystal keeps its own renderer without an extra veil", 0,
+                OneUiGlassStyle.openFolderVeilAlpha(OneUiGlassStyle.CRYSTAL, 35));
+    }
+
+    @Test
     public void folderCanFollowDockOrKeepAnExplicitMaterial() {
         assertEquals(OneUiGlassStyle.LIQUID_GLASS,
                 OneUiGlassStyle.resolveFolderMode(OneUiGlassStyle.FOLDER_FOLLOW_DOCK,

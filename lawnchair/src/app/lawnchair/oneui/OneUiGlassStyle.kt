@@ -58,6 +58,17 @@ object OneUiGlassStyle {
         else -> 0f
     }
 
+    /** A small color-matched veil keeps unblurred launcher content from bleeding through open folders. */
+    @JvmStatic
+    fun openFolderVeilAlpha(value: Int, intensityPercent: Int): Int {
+        val strength = intensityPercent.coerceIn(0, 100) / 100f
+        return when (value) {
+            LIQUID_GLASS -> (52f + 20f * strength).toInt()
+            FROSTY -> (78f + 25f * strength).toInt()
+            else -> 0
+        }
+    }
+
     /** Folder Liquid Glass avoids chromatic splitting, which reads as oily color fringing. */
     @JvmStatic
     fun folderDispersion(): Float = 0f

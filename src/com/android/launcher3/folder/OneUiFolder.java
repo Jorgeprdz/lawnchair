@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -27,6 +28,7 @@ import app.lawnchair.util.LawnchairUtilsKt;
 /** Open Folder wrapper adding the same shared glass material used by the dock. */
 public class OneUiFolder extends Folder {
     private Path mOneUiClipPath;
+    private final Paint mOpenFolderVeilPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final android.graphics.Rect mEmptyBackdropClip = new android.graphics.Rect();
     private Drawable mGlass;
     private int mLastGlassMode = Integer.MIN_VALUE;
@@ -102,6 +104,7 @@ public class OneUiFolder extends Folder {
                 if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
                 mFrostyBackdrop.draw(canvas);
                 canvas.restoreToCount(backdropSave);
+                drawOpenFolderVeil(canvas, baseColor, mode, intensity);
                 resetBackdropLayout();
                 // It was drawn above with the folder's animation clip; suppress the normal child
                 // pass to avoid drawing the full-screen wallpaper twice.
@@ -139,6 +142,7 @@ public class OneUiFolder extends Folder {
             if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
             mGlass.draw(canvas);
             canvas.restoreToCount(save);
+            drawOpenFolderVeil(canvas, baseColor, mode, intensity);
         } else {
             if (mFrostyBackdrop != null) {
                 mFrostyBackdrop.clearGlass();
@@ -155,6 +159,17 @@ public class OneUiFolder extends Folder {
         }
 
         super.dispatchDraw(canvas);
+    }
+
+    private void drawOpenFolderVeil(Canvas canvas, int color, int mode, int intensity) {
+        int alpha = OneUiGlassStyle.openFolderVeilAlpha(mode, intensity);
+        if (alpha <= 0) return;
+        mOpenFolderVeilPaint.setColor(Color.argb(alpha,
+                Color.red(color), Color.green(color), Color.blue(color)));
+        int save = canvas.save();
+        if (mOneUiClipPath != null) canvas.clipPath(mOneUiClipPath);
+        canvas.drawRect(0, 0, getWidth(), getHeight(), mOpenFolderVeilPaint);
+        canvas.restoreToCount(save);
     }
 
     @Override
