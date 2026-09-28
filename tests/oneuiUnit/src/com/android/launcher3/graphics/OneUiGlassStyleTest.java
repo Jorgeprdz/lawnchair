@@ -4,8 +4,6 @@
  */
 package com.android.launcher3.graphics;
 
-import android.graphics.Color;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -90,10 +88,13 @@ public class OneUiGlassStyleTest {
     @Test
     public void glassFolderTintPreservesBrightnessWithoutWallpaperHueCast() {
         int tint = OneUiGlassStyle.neutralizeGlassTint(0xffc9f28f);
-        assertEquals(Color.red(tint), Color.green(tint));
-        assertEquals(Color.green(tint), Color.blue(tint));
-        assertTrue(Color.red(tint) > 0 && Color.red(tint) < 255);
-        assertEquals(0xff, Color.alpha(tint));
+        int red = (tint >>> 16) & 0xff;
+        int green = (tint >>> 8) & 0xff;
+        int blue = tint & 0xff;
+        assertEquals(red, green);
+        assertEquals(green, blue);
+        assertTrue(red > 0 && red < 255);
+        assertEquals(0xff, tint >>> 24);
     }
 
     @Test
