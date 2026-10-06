@@ -3,7 +3,7 @@ name: OneUI 16-dev candidate
 on:
   push:
     branches:
-      - update/16-dev-20260915
+      - update/16-dev-20261006
     paths:
       - '.github/workflows/oneui-16dev-candidate.yml'
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  UPSTREAM_SHA: f8164291da70339b515b41e4230e4c24da9d8557
+  UPSTREAM_SHA: 4793ba3a238bb1a3e786a3471a6d84767ed05267
   ONEUI_BASE_SHA: 1a5e02c524179875c2784e9c871abf660a5b1608
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git merge --no-edit --no-ff -X ours "$UPSTREAM_SHA" -m "chore: candidate Lawnchair 16-dev f816429 preserving OneUI"
+          git merge --no-edit --no-ff -X ours "$UPSTREAM_SHA" -m "chore: candidate Lawnchair 16-dev 4793ba3 preserving OneUI"
           test -z "$(git ls-files -u)"
           git merge-base --is-ancestor "$UPSTREAM_SHA" HEAD
           git merge-base --is-ancestor "$ONEUI_BASE_SHA" HEAD
@@ -125,6 +125,6 @@ jobs:
       - name: Upload verified candidate
         uses: actions/upload-artifact@v7
         with:
-          name: Lawnchair-OneUI-16dev-f816429-verified-candidate
+          name: Lawnchair-OneUI-16dev-4793ba3-verified-candidate
           path: build/outputs/apk/**/*.apk
           if-no-files-found: error
