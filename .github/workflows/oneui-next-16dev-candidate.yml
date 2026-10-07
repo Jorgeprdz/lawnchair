@@ -5,7 +5,7 @@ on:
     branches:
       - update/oneui-next-16dev-20261006
     paths:
-      - '.github/workflows/oneui-16dev-candidate.yml'
+      - '.github/workflows/oneui-next-16dev-candidate.yml'
   workflow_dispatch:
 
 permissions:
